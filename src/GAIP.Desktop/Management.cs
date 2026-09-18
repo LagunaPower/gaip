@@ -1,0 +1,217 @@
+using System.Text;
+using System.Text.Json;
+using Avalonia.Controls;
+using Avalonia.Platform.Storage;
+using GAIP.Core;
+using GAIP.Storage;
+using GAIP.Sync;
+
+namespace GAIP.Desktop;
+
+public sealed partial class MainWindow
+{
+    private async Task Configure()
+    {
+        var form = new FormWindow("Configuration", width: 720);
+        var mode = new ComboBox { ItemsSource = new[] { "Personnel / Local", "Réseau / Partagé" }, SelectedIndex = (int)_config.Mode };
+        var path = Ui.Input(_config.SharedPath, "Chemin absolu du dossier partagé", 2000);
+        var interval = new NumericUpDown { Minimum = 5, Maximum = 86400, Value = _config.SyncSeconds, FormatString = "0" };
+        var backups = new NumericUpDown { Minimum = 1, Maximum = 10000, Value = _config.BackupCount, FormatString = "0" };
+        var separator = Ui.Input(_config.CsvSeparator, ";", 1);
+        var theme = new ComboBox { ItemsSource = new[] { "Système", "Clair", "Sombre" }, SelectedIndex = (int)_config.Theme };
+        var migration = new ComboBox { ItemsSource = new[] { "Utiliser uniquement une base réseau existante", "Initialiser depuis la base actuelle si aucune base réseau n’existe" }, SelectedIndex = 0 };
+        var localChoice = new ComboBox { ItemsSource = new[] { "Copier la base réseau / cache actuel", "Créer une base locale vide" }, SelectedIndex = 0 };
+        form.Add("Mode", mode); form.Add("Dossier partagé", path);
+        form.Fields.Children.Add(Ui.Button("Tester l’accès", async () =>
+        {
+            try
+            {
+                var repository = new FileRepository(path.Text ?? "", UserPaths.User, UserPaths.Machine);
+                await Io(repository.TestAccess); form.Error.Text = "Accès en lecture et écriture vérifié.";
+            }
+            catch (Exception ex) { form.Error.Text = ex.Message; }
+        }));
+        form.Add("Lors du passage vers un partage", migration);
+        form.Add("Lors du passage du partagé vers le local", localChoice);
+        form.Add("Synchronisation (secondes)", interval); form.Add("Sauvegardes conservées", backups);
+        form.Add("Séparateur CSV", separator); form.Add("Thème", theme);
+        form.Fields.Children.Add(Ui.Text($"Données locales : {_localRoot}\nConfiguration : {_configRoot}", 11));
+        form.Fields.Children.Add(Ui.Button("Diagnostic / gestion du verrou", () => Run(Diagnostics)));
+        form.Submit = async () =>
+        {
+            var next = new AppConfig
+            {
+                Mode = (StorageMode)mode.SelectedIndex, SharedPath = path.Text?.Trim() ?? "",
+                SyncSeconds = (int)(interval.Value ?? 60), BackupCount = (int)(backups.Value ?? 30),
+                CsvSeparator = separator.Text ?? ";", Theme = (AppTheme)theme.SelectedIndex
+            };
+            next.Validate();
+            var allowInitialize = migration.SelectedIndex == 1;
+            var emptyLocal = localChoice.SelectedIndex == 1;
+            var source = _session?.HasData == true ? JsonData.Clone(Db) : null;
+            bool storageChanged = next.Mode != _config.Mode || (next.Mode == StorageMode.Shared && next.SharedPath != _config.SharedPath);
+            if (next.Mode == StorageMode.Local && _config.Mode == StorageMode.Shared)
+            {
+                if (!emptyLocal && source is null) throw new InvalidOperationException("Aucune base ni cache valide à copier.");
+                if (!await Confirm("Créer la base locale", "La base locale sera remplacée par votre choix. Une base locale existante sera sauvegardée avant remplacement."))
+                    throw new InvalidOperationException("Changement annulé.");
+            }
+            var opened = await Io(() =>
+            {
+                if (storageChanged && next.Mode == StorageMode.Shared)
+                {
+                    var repository = new FileRepository(next.SharedPath, UserPaths.User, UserPaths.Machine, next.BackupCount);
+                    if (!File.Exists(repository.DataPath))
+                    {
+                        if (!allowInitialize) throw new IOException("Aucune base réseau. Choisissez explicitement son initialisation, ou un autre dossier.");
+                        repository.Initialize(source ?? new());
+                    }
+                }
+                if (next.Mode == StorageMode.Local && _config.Mode == StorageMode.Shared)
+                {
+                    var root = Path.Combine(_localRoot, "local"); Directory.CreateDirectory(root);
+                    var repository = new FileRepository(root, UserPaths.User, UserPaths.Machine, next.BackupCount);
+                    var seed = emptyLocal ? new Database() : source!;
+                    if (File.Exists(repository.DataPath))
+                        repository.Commit(seed, repository.Read().Hash, null, "Passage en local", "Base", "Locale");
+                    else repository.Initialize(seed);
+                }
+                if (_session?.Lease is not null) _session.EndEdit();
+                var session = new DataSession(next, _localRoot, UserPaths.User, UserPaths.Machine); session.Open();
+                UserPaths.SaveConfig(_configRoot, next);
+                return session;
+            });
+            _config = next; _session = opened; _selectedVlan = null; _selectedSite = null; ApplyTheme(); Render();
+        };
+        await form.ShowDialog<bool>(this);
+    }
+
+    private async Task Diagnostics()
+    {
+        if (_session is null) { await Message("Diagnostic", "Aucune session chargée."); return; }
+        var form = new FormWindow("Synchronisation et verrou", "Fermer", 740);
+        form.Fields.Children.Add(Ui.Text($"État : {_session.Status}\nRévision : {Db.Revision}\nSHA-256 : {_session.Hash}\nStockage : {_session.Repository.Root}\nDernière modification : {Db.LastModified.LocalDateTime:g}\nPar : {Db.LastModifiedBy} / {Db.LastModifiedFrom}"));
+        EditLease? lease = null;
+        try { lease = await Io(_session.Repository.ReadLease); }
+        catch (Exception ex) { form.Fields.Children.Add(Ui.Text(ex.Message)); }
+        if (lease is not null)
+        {
+            form.Fields.Children.Add(Ui.Text($"Verrou : {lease.User} / {lease.Machine}\nAcquisition : {lease.AcquiredAt.LocalDateTime:G}\nDernier heartbeat : {lease.Heartbeat.LocalDateTime:G}\nRévision de départ : {lease.StartRevision}"));
+            form.Fields.Children.Add(Ui.Button("Forcer la libération du verrou…", async () =>
+            {
+                try
+                {
+                    if (!await Confirm("Forcer la libération", $"Retirer le verrou de {lease.User} / {lease.Machine} ? Cette session perdra le droit de publier. L’action sera inscrite dans l’historique.", true)) return;
+                    await Io(() => _session.Repository.ForceRelease(lease.Id)); await Refresh(); form.Close(true);
+                }
+                catch (Exception ex) { form.Error.Text = ex.Message; }
+            }));
+        }
+        else form.Fields.Children.Add(Ui.Text("Aucun verrou présent."));
+        await form.ShowDialog<bool>(this);
+    }
+
+    private async Task History(Guid? vlanId = null)
+    {
+        if (_session is null) return;
+        var lines = await Io(() => _session.Repository.History(vlanId));
+        var title = vlanId is null ? "Historique · 1 000 dernières actions" : $"Historique · {VlanLabel(vlanId.Value)} · 1 000 dernières actions liées";
+        var form = new FormWindow(title, "Fermer", 920);
+        if (lines.Count == 0) form.Fields.Children.Add(Ui.Text("Aucune action enregistrée."));
+        foreach (var line in lines)
+        {
+            try
+            {
+                var entry = JsonSerializer.Deserialize<AuditEntry>(line, JsonData.Options)!;
+                var detail = new Expander
+                {
+                    Header = $"{entry.Date.LocalDateTime:g} · r{entry.Revision} · {entry.Action} {entry.ObjectType} {entry.Target} · {entry.User} / {entry.Machine}",
+                    Content = new TextBox { Text = JsonSerializer.Serialize(entry, JsonData.Options), IsReadOnly = true, AcceptsReturn = true, MaxHeight = 300 }
+                };
+                form.Fields.Children.Add(detail);
+            }
+            catch (JsonException) { form.Fields.Children.Add(Ui.Text("Ligne d’historique incomplète ou illisible : " + line)); }
+        }
+        await form.ShowDialog<bool>(this);
+    }
+
+    private string VlanLabel(Guid vlanId)
+    {
+        var site = Db.Sites.Single(s => s.Vlans.Any(v => v.Id == vlanId));
+        var vlan = site.Vlans.Single(v => v.Id == vlanId);
+        return $"{site.Code} / VLAN {vlan.Vid} — {vlan.Name}";
+    }
+    private async Task CsvDialog(Guid? vlanId = null)
+    {
+        var form = new FormWindow(vlanId is null ? "Import / export CSV" : $"Export CSV · {VlanLabel(vlanId.Value)}", "Fermer", 720);
+        if (vlanId is null)
+        {
+            form.Fields.Children.Add(Ui.Text($"UTF-8 · séparateur « {_config.CsvSeparator} ». Importez les VLAN avant les adresses. Les lignes existantes sont mises à jour ; aucune ligne absente du fichier n’est supprimée."));
+            form.Fields.Children.Add(Ui.Button("Importer vlans.csv…", () => Run(() => ImportCsv(CsvKind.Vlans)), CanEdit));
+            form.Fields.Children.Add(Ui.Button("Importer addresses.csv…", () => Run(() => ImportCsv(CsvKind.Addresses)), CanEdit));
+        }
+        else form.Fields.Children.Add(Ui.Text("L’export contient uniquement ce VLAN, son sous-réseau, sa passerelle et ses adresses enregistrées."));
+        form.Fields.Children.Add(Ui.Button(vlanId is null ? "Exporter les VLAN / réseaux…" : "Exporter ce VLAN / réseau…", () => Run(() => ExportCsv(CsvKind.Vlans, vlanId))));
+        form.Fields.Children.Add(Ui.Button("Exporter les adresses IP…", () => Run(() => ExportCsv(CsvKind.Addresses, vlanId))));
+        form.Fields.Children.Add(Ui.Button("Exporter les deux fichiers…", () => Run(() => ExportAll(vlanId))));
+        form.Fields.Children.Add(Ui.Text("Les passerelles figurent dans vlans.csv uniquement.", 12));
+        await form.ShowDialog<bool>(this);
+    }
+    private static FilePickerFileType CsvType => new("CSV UTF-8") { Patterns = ["*.csv"] };
+    private async Task ImportCsv(CsvKind kind)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new() { Title = "Importer CSV", AllowMultiple = false, FileTypeFilter = [CsvType] });
+        if (files.Count == 0) return;
+        string text;
+        await using (var stream = await files[0].OpenReadAsync())
+        using (var reader = new StreamReader(stream, new UTF8Encoding(false, true), true)) text = await reader.ReadToEndAsync();
+        var result = CsvExchange.Import(Db, text, kind, _config.CsvSeparator[0]);
+        var preview = new FormWindow("Vérification de l’import", "Publier l’import", 850);
+        preview.Fields.Children.Add(Ui.Text($"{result.RowCount} enregistrement(s) · {result.Errors.Count} erreur(s)", 18, true));
+        if (result.Errors.Count > 0)
+        {
+            preview.Fields.Children.Add(new TextBox { Text = string.Join("\n", result.Errors), IsReadOnly = true, AcceptsReturn = true, MinHeight = 300 });
+            preview.Save.IsEnabled = false;
+        }
+        else
+        {
+            preview.Fields.Children.Add(Ui.Text("Validation réussie. Le fichier sera importé en une seule publication avec sauvegarde préalable."));
+            var separator = _config.CsvSeparator[0];
+            preview.Submit = () => Save(db =>
+            {
+                // Revalidate against the latest session, not a stale preview.
+                var current = CsvExchange.Import(db, text, kind, separator);
+                if (current.Data is null) throw new ValidationException(current.Errors);
+                db.Sites = current.Data.Sites;
+            }, "Import CSV", kind == CsvKind.Vlans ? "VLAN" : "IP", files[0].Name);
+        }
+        await preview.ShowDialog<bool>(this);
+    }
+    private async Task ExportCsv(CsvKind kind, Guid? vlanId = null)
+    {
+        var text = CsvExchange.Export(Db, kind, _config.CsvSeparator[0], vlanId);
+        var file = await StorageProvider.SaveFilePickerAsync(new()
+        { Title = "Exporter CSV", SuggestedFileName = kind == CsvKind.Vlans ? "vlans.csv" : "addresses.csv", DefaultExtension = "csv", FileTypeChoices = [CsvType], ShowOverwritePrompt = true });
+        if (file is null) return;
+        await using var stream = await file.OpenWriteAsync(); stream.SetLength(0);
+        await using var writer = new StreamWriter(stream, new UTF8Encoding(true)); await writer.WriteAsync(text);
+    }
+    private async Task ExportAll(Guid? vlanId = null)
+    {
+        var exports = new[] { CsvKind.Vlans, CsvKind.Addresses }.ToDictionary(kind => kind, kind => CsvExchange.Export(Db, kind, _config.CsvSeparator[0], vlanId));
+        var folders = await StorageProvider.OpenFolderPickerAsync(new() { Title = vlanId is null ? "Dossier d’export complet" : "Dossier d’export du VLAN", AllowMultiple = false });
+        if (folders.Count == 0) return;
+        var folder = folders[0];
+        var names = new List<string>();
+        await foreach (var item in folder.GetItemsAsync()) names.Add(item.Name);
+        if (names.Any(n => n is "vlans.csv" or "addresses.csv") && !await Confirm("Remplacer les CSV", "Les fichiers vlans.csv et addresses.csv existants seront remplacés. Continuer ?")) return;
+        foreach (var kind in new[] { CsvKind.Vlans, CsvKind.Addresses })
+        {
+            var file = await folder.CreateFileAsync(kind == CsvKind.Vlans ? "vlans.csv" : "addresses.csv") ?? throw new IOException("Impossible de créer le fichier CSV.");
+            await using var stream = await file.OpenWriteAsync(); stream.SetLength(0);
+            await using var writer = new StreamWriter(stream, new UTF8Encoding(true));
+            await writer.WriteAsync(exports[kind]);
+        }
+        await Message("Export terminé", "vlans.csv et addresses.csv ont été exportés.");
+    }
+}

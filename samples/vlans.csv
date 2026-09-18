@@ -1,0 +1,5 @@
+site_code;site_name;vid;vlan_name;vlan_description;cidr;gateway;gateway_comment
+LEVANT;Île du Levant;10;ADMIN;Administration;10.20.10.0/24;10.20.10.1;Firewall principal
+LEVANT;Île du Levant;120;SERVEURS;Applications;10.20.120.0/24;10.20.120.1;Firewall principal
+LEVANT;Île du Levant;150;TRANSIT;Liaison sans adressage;;;
+COUDON;Coudon;120;ADMIN-SERVICES;;10.30.120.0/24;10.30.120.1;Routeur du site

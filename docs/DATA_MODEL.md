@@ -1,0 +1,45 @@
+# Modèle JSON v1
+
+`gaip-data.json` contient l’unique état métier courant. UTF-8, propriétés camelCase, version explicite. Schéma inconnu ou modèle invalide refusés sans réinitialisation silencieuse.
+
+```json
+{
+  "schemaVersion": 1,
+  "revision": 3,
+  "lastModified": "2026-09-18T14:00:00+00:00",
+  "lastModifiedBy": "DOMAINE\\utilisateur",
+  "lastModifiedFrom": "POSTE01",
+  "sites": [{
+    "id": "f3fc5c86-6d0b-4ffc-b949-e018bceac6ef",
+    "code": "LEVANT",
+    "name": "Île du Levant",
+    "description": "",
+    "vlans": [{
+      "id": "93fa0fd9-051d-4c7b-8fb3-a0b1800f5ac2",
+      "vid": 120,
+      "name": "SERVEURS",
+      "description": "Applications",
+      "subnet": {
+        "cidr": "10.20.120.0/24",
+        "gateway": { "address": "10.20.120.1", "comment": "Firewall principal" },
+        "addresses": [{ "address": "10.20.120.25", "hostname": "SRV-APP-01", "description": "Serveur applicatif" }]
+      }
+    }]
+  }]
+}
+```
+
+`subnet` et `gateway` peuvent être null. UUID stables pour sites/VLAN ; IP unique comme clé d’attribution. Pas de statut, réseau calculé ni compteur persisté. La passerelle n’est jamais dans `addresses`.
+
+Révision initiale 0, +1 par publication. Le SHA-256 compare les octets complets, pas uniquement la révision ou la date.
+
+## Annexes
+
+- `edit.lock` : `id`, `user`, `machine`, `acquiredAt`, `heartbeat`, `startRevision`, `startHash`. Nouvel ID à chaque acquisition. Le heartbeat n’autorise jamais une reprise automatique.
+- `history.jsonl` : `date`, `user`, `machine`, `revision`, `action`, `objectType`, `target`, `oldValue`, `newValue`. Avant/après de la base pour publication, ancien verrou pour force-unlock.
+- `backup/gaip-data_<UTC>_rev<révision>_<suffixe>.json` : octets exacts avant publication.
+- `cache/cache.info` : `hash`, `source` absolue, `checkedAt`.
+- `config.json` : `mode` (`Local`/`Shared`), `sharedPath`, `syncSeconds` (5–86400, défaut 60), `backupCount` (1–10000, défaut 30), `csvSeparator` (un caractère, défaut `;`), `theme` (`System`/`Light`/`Dark`).
+- `.gaip-io.guard` : garde technique vide, permanente, sans donnée métier.
+
+Les CSV imposés ne représentent pas tous les champs JSON. Voir `SPECIFICATIONS.md` pour leurs règles ; ne pas les utiliser comme sauvegarde intégrale.
