@@ -39,7 +39,7 @@ public static class UserPaths
     {
         var path = Path.Combine(configRoot, "config.json");
         if (!File.Exists(path)) return new();
-        var config = JsonSerializer.Deserialize<AppConfig>(File.ReadAllBytes(path), JsonData.Options) ?? throw new InvalidDataException("Configuration vide.");
+        var config = JsonSerializer.Deserialize(File.ReadAllBytes(path), StorageJsonContext.Default.AppConfig) ?? throw new InvalidDataException("Configuration vide.");
         config.Validate();
         return config;
     }
@@ -47,6 +47,6 @@ public static class UserPaths
     {
         config.Validate();
         Directory.CreateDirectory(configRoot);
-        JsonData.AtomicWrite(Path.Combine(configRoot, "config.json"), JsonSerializer.SerializeToUtf8Bytes(config, JsonData.Options));
+        JsonData.AtomicWrite(Path.Combine(configRoot, "config.json"), JsonSerializer.SerializeToUtf8Bytes(config, StorageJsonContext.Default.AppConfig));
     }
 }

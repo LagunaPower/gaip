@@ -4,6 +4,7 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
+using Avalonia.VisualTree;
 using GAIP.Desktop;
 using Xunit;
 
@@ -16,10 +17,12 @@ public static class TestAppBuilder
     public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>().UseSkia().UseHeadless(new() { UseHeadlessDrawing = false });
 }
 
-public sealed class DesktopTests
+public sealed partial class DesktopTests
 {
     private static Button Button(Control control, string label) => control.GetLogicalDescendants().OfType<Button>().First(b => b.Content as string == label);
     private static void Click(Button button) => button.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+    private static Task UntilReady(MainWindow main) => Until(() => main.Session?.HasData == true &&
+        main.GetLogicalDescendants().OfType<Button>().Any(b => b.Content as string == "Ajouter un site"));
     private static async Task Until(Func<bool> predicate)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);
@@ -29,24 +32,24 @@ public sealed class DesktopTests
     public async Task MainWindowCreatesSiteVlanGatewayAndAddressThroughForms()
     {
         using var temp = new TempDirectory(); var main = new MainWindow(temp.Sub("data"), temp.Sub("config")); main.Show();
-        await Until(() => main.Session?.HasData == true);
-        Click(Button(main, "+ Site")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any());
+        await UntilReady(main);
+        Click(Button(main, "Ajouter un site")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any());
         var form = main.OwnedWindows.OfType<FormWindow>().Last(); var fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
         fields[0].Text = "LEVANT"; fields[1].Text = "Île du Levant"; fields[2].Text = "Site test";
         await Until(() => form.Save.IsEnabled); Click(form.Save); await Until(() => main.Session!.Data.Sites.Count == 1 && !form.IsVisible);
-        Click(Button(main, "+ VLAN")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        Click(Button(main, "Ajouter un VLAN")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible); fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
         fields[0].Text = "120"; fields[1].Text = "SERVEURS";
         form.Fields.GetLogicalDescendants().OfType<CheckBox>().Single().IsChecked = true;
         fields[3].Text = "10.20.120.0/24"; fields[4].Text = "10.20.120.1"; fields[5].Text = "Pare-feu";
         await Until(() => form.Save.IsEnabled); Click(form.Save); await Until(() => main.Session!.Data.Sites[0].Vlans.Count == 1 && !form.IsVisible);
         var vlanButton = main.GetLogicalDescendants().OfType<Button>().First(b => b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.0/24"));
-        Click(vlanButton); Click(Button(main, "+ Ajouter une IP")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        Click(vlanButton); Click(Button(main, "Ajouter une IP")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible); fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
         fields[0].Text = "10.20.120.25"; fields[1].Text = "SRV-App-01";
         await Until(() => form.Save.IsEnabled); Click(form.Save); await Until(() => main.Session!.Data.Sites[0].Vlans[0].Subnet!.Addresses.Count == 1 && !form.IsVisible);
         Assert.Equal(3, main.Session!.Data.Revision);
-        Assert.Contains(main.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text == "PASSERELLE");
+        await Until(() => main.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "PASSERELLE"));
         main.Close(); await Until(() => !main.IsVisible);
     }
     [AvaloniaFact]
@@ -58,7 +61,7 @@ public sealed class DesktopTests
         TestData.Subnet(db).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRV-APP-01", Description = "Serveur applicatif" });
         var second = TestData.Example("10.30.120.0/24").Sites[0]; second.Code = "COUDON"; second.Name = "Coudon"; db.Sites.Add(second);
         repo.Initialize(db);
-        var main = new MainWindow(data, temp.Sub("config")); main.Show(); await Until(() => main.Session?.HasData == true);
+        var main = new MainWindow(data, temp.Sub("config")); main.Show(); await UntilReady(main);
         await Task.Delay(150);
         var output = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppContext.BaseDirectory, "../../../../../artifacts/screenshots")); Directory.CreateDirectory(output);
         using (var frame = main.CaptureRenderedFrame()) { Assert.NotNull(frame); frame.Save(System.IO.Path.Combine(output, "home.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); }
@@ -67,6 +70,10 @@ public sealed class DesktopTests
         main.Width = 1320; Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark; await Task.Delay(100);
         using (var frame = main.CaptureRenderedFrame()) { Assert.NotNull(frame); frame.Save(System.IO.Path.Combine(output, "home-dark.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); }
         Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
+        var globalSearch = main.GetLogicalDescendants().OfType<TextBox>().Single();
+        Assert.True(globalSearch.Focus()); globalSearch.Text = "10";
+        Assert.True(globalSearch.IsFocused); globalSearch.Text = "10.20";
+        Assert.True(globalSearch.IsFocused); globalSearch.Text = "";
         var vlanButton = main.GetLogicalDescendants().OfType<Button>().First(b => b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.0/24"));
         Click(vlanButton); await Task.Delay(100);
         using (var frame = main.CaptureRenderedFrame()) { Assert.NotNull(frame); frame.Save(System.IO.Path.Combine(output, "subnet.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); }
@@ -79,8 +86,8 @@ public sealed class DesktopTests
         using var temp = new TempDirectory(); var data = temp.Sub("data");
         var repo = new GAIP.Storage.FileRepository(temp.Sub("data/local"), "test", "pc");
         repo.Initialize(new() { Sites = [new() { Code = "A", Name = "Alpha" }, new() { Code = "B", Name = "Beta" }] });
-        var main = new MainWindow(data, temp.Sub("config")); main.Show(); await Until(() => main.Session?.HasData == true);
-        Click(Button(main, "+ VLAN")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        var main = new MainWindow(data, temp.Sub("config")); main.Show(); await UntilReady(main);
+        Click(Button(main, "Ajouter un VLAN")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         var form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
         var fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
         fields[0].Text = "120"; fields[1].Text = "SERVEURS";
@@ -91,7 +98,7 @@ public sealed class DesktopTests
         await Until(() => main.Session!.Data.Sites.All(s => s.Vlans.Count == 1) && !form.IsVisible);
         var first = main.Session!.Data.Sites[0].Vlans[0]; var second = main.Session.Data.Sites[1].Vlans[0]; Assert.NotEqual(first.Id, second.Id);
         var vlanButton = main.GetLogicalDescendants().OfType<Button>().First(b => b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.0/24"));
-        Click(vlanButton); Click(Button(main, "Modifier le VLAN / réseau")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        Click(vlanButton); Click(Button(main, "Modifier le VLAN")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible); fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
         fields[1].Text = "APPLICATIONS"; await Task.Delay(50); Click(form.Save);
         await Until(() => main.Session.Data.Sites[0].Vlans[0].Name == "APPLICATIONS" && !form.IsVisible);
@@ -104,7 +111,7 @@ public sealed class DesktopTests
     {
         using var temp = new TempDirectory(); var data = temp.Sub("data"); var configRoot = temp.Sub("config"); var central = temp.Sub("central");
         new GAIP.Storage.FileRepository(temp.Sub("data/local"), "test", "pc").Initialize(TestData.Example());
-        var main = new MainWindow(data, configRoot); main.Show(); await Until(() => main.Session?.HasData == true);
+        var main = new MainWindow(data, configRoot); main.Show(); await UntilReady(main);
         Click(Button(main, "Configuration")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         var form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
         var combos = form.Fields.GetLogicalDescendants().OfType<ComboBox>().ToArray();

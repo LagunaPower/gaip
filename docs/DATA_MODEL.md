@@ -31,6 +31,8 @@
 
 `subnet` et `gateway` peuvent être null. UUID stables pour sites/VLAN ; IP unique comme clé d’attribution. Pas de statut, réseau calculé ni compteur persisté. La passerelle n’est jamais dans `addresses`.
 
+Chaque site peut porter `displayOrder`, entier positif ou nul choisi via Configuration. Ce rang exprime une préférence utilisateur, pas un calcul réseau. Il est absent des anciennes bases : tri par code dans ce cas. L’enregistrement du classement attribue les rangs 0 à N−1 aux IDs courants ; une liste périmée ou incomplète est refusée. Les sites sans rang suivent les sites classés. Les imports CSV préservent les rangs existants. Les anciens exécutables à lecture JSON stricte ne connaissent pas ce champ : mettre les postes d’un partage à la même version avant d’enregistrer un classement.
+
 Révision initiale 0, +1 par publication. Le SHA-256 compare les octets complets, pas uniquement la révision ou la date.
 
 ## Annexes

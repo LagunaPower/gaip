@@ -33,6 +33,16 @@ Base centrale validée avant copie. Métadonnées `hash`, `source`, `checkedAt`.
 
 ## Linux
 
-Wayland natif sélectionné si `WAYLAND_DISPLAY` existe, sauf `GAIP_USE_X11=1`. En l’absence de Wayland, détection Avalonia standard. Backend Wayland 12.1 expérimental, repli explicite XWayland. Publication autonome non trimée et multi-fichiers pour les dépendances natives.
+Les publications x64 sélectionnent les packages Avalonia par RID : Win32 pour Windows, X11 et Wayland pour Linux, Skia et HarfBuzz dans les deux cas. `Program` configure les mêmes services que les branches de `UsePlatformDetect()` ; les compilations sans RID conservent cette méthode. Linux : ajout de `UseWayland()` uniquement si `XDG_SESSION_TYPE=wayland` et si `GAIP_USE_X11` n’est pas `1`. `WAYLAND_DISPLAY` seul est ignoré (cas WSLg) ; sinon X11/XWayland. Le package Wayland 12.1, expérimental, reste présent dans Linux. Development reste autonome à fichiers séparés ; Release autonome en single-file compressé, sans trimming, ReadyToRun, PDB ni DesignerSupport. Un profil ExperimentalTrimmed Windows x64 séparé active le trimming complet sans NativeAOT. Les sérialisations utilisent des contextes JSON générés ; leur format reste compatible avec les fichiers existants. Voir `PUBLICATION.md`.
+
+## Vue VLAN et identité
+
+`SiteOrdering` porte le tri et la validation du classement utilisateur par UUID. `SiteOrderEditor` garde une copie de la séquence en mémoire jusqu’à Enregistrer ; les publications passent par `DataSession.Save`, comme toute autre modification. La copie CSV conserve `displayOrder` pour éviter de perdre la préférence à l’import. L’ordre physique de la collection métier n’est pas modifié.
+
+`AddressRows` est une collection indexée en lecture seule : les lignes libres sont créées à la demande, sans allocation d’une ligne par IP. La liste Avalonia utilise `VirtualizingStackPanel` dans une zone de hauteur finie, sans ScrollViewer parent. Pas de pagination. Affichage intégral jusqu’au /12 ; au-delà, consultation des IP utilisées et recherche d’une adresse exacte, sans modification des calculs réseau.
+
+Le CSV accepte un identifiant stable de VLAN pour filtrer les deux exports. `VlanHistory` compare les snapshots avant/après des événements existants, sélectionne ceux qui modifient le VLAN ou ses IP et limite les détails à ce VLAN. Le filtrage précède la limite de 1 000 événements ; aucune migration du JSON métier ou de l’historique n’est nécessaire.
+
+Le PNG officiel reste intact dans Assets. Des formats d’icônes dérivés sont produits par un script reproductible. Windows embarque l’ICO dans le PE ; Linux utilise les icônes PNG et un lanceur de bureau installé dans le profil utilisateur. Le nom technique de l’application est `GAIP`.
 
 [Référence Avalonia Linux](https://docs.avaloniaui.net/docs/platform-specific-guides/linux).

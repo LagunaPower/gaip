@@ -37,8 +37,32 @@ public sealed partial class MainWindow
         form.Add("Séparateur CSV", separator); form.Add("Thème", theme);
         form.Fields.Children.Add(Ui.Text($"Données locales : {_localRoot}\nConfiguration : {_configRoot}", 11));
         form.Fields.Children.Add(Ui.Button("Diagnostic / gestion du verrou", () => Run(Diagnostics)));
+        var general = new StackPanel { Spacing = 14 };
+        var generalFields = form.Fields.Children.ToArray(); form.Fields.Children.Clear();
+        foreach (var field in generalFields) general.Children.Add(field);
+        var siteOrder = new SiteOrderEditor(Db.Sites) { IsEnabled = CanEdit };
+        var orderPanel = Ui.Column(Ui.Text("Classez les sites par glisser-déposer, puis enregistrez l’ordre pour l’accueil."), siteOrder,
+            Ui.Text(CanEdit ? "Cet ordre est enregistré dans la base et partagé entre les postes." :
+                "Lecture seule : passez en modification depuis la fenêtre principale pour enregistrer un nouvel ordre.", 12));
+        var tabs = new TabControl { Name = "ConfigurationTabs", ItemsSource = new[]
+        {
+            new TabItem { Header = "Général", Content = general },
+            new TabItem { Header = "Ordre d’affichage", Content = orderPanel }
+        }, SelectedIndex = 0 };
+        tabs.SelectionChanged += (_, _) =>
+        {
+            form.Save.Content = tabs.SelectedIndex == 1 ? "Enregistrer l’ordre" : "Enregistrer";
+            form.Save.IsEnabled = tabs.SelectedIndex != 1 || (CanEdit && Db.Sites.Count > 1);
+        };
+        form.Fields.Children.Add(tabs);
         form.Submit = async () =>
         {
+            if (tabs.SelectedIndex == 1)
+            {
+                if (siteOrder.HasChanges)
+                    await Save(db => SiteOrdering.Apply(db, siteOrder.OrderedIds), "Ordre d’affichage", "Sites", "Accueil");
+                return;
+            }
             var next = new AppConfig
             {
                 Mode = (StorageMode)mode.SelectedIndex, SharedPath = path.Text?.Trim() ?? "",
@@ -122,11 +146,11 @@ public sealed partial class MainWindow
         {
             try
             {
-                var entry = JsonSerializer.Deserialize<AuditEntry>(line, JsonData.Options)!;
+                var entry = JsonSerializer.Deserialize(line, StorageJsonContext.Default.AuditEntry)!;
                 var detail = new Expander
                 {
                     Header = $"{entry.Date.LocalDateTime:g} · r{entry.Revision} · {entry.Action} {entry.ObjectType} {entry.Target} · {entry.User} / {entry.Machine}",
-                    Content = new TextBox { Text = JsonSerializer.Serialize(entry, JsonData.Options), IsReadOnly = true, AcceptsReturn = true, MaxHeight = 300 }
+                    Content = new TextBox { Text = JsonSerializer.Serialize(entry, StorageJsonContext.Default.AuditEntry), IsReadOnly = true, AcceptsReturn = true, MaxHeight = 300 }
                 };
                 form.Fields.Children.Add(detail);
             }

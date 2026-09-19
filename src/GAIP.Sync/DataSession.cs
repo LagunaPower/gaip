@@ -46,11 +46,11 @@ public sealed class DataSession(AppConfig config, string localRoot, string user,
         JsonData.AtomicWrite(dataPath, snapshot.Bytes);
         if (JsonData.HashFile(dataPath) != snapshot.Hash) throw new IOException("Cache non vérifié.");
         JsonData.AtomicWrite(Path.Combine(CacheRoot, "cache.info"), JsonSerializer.SerializeToUtf8Bytes(
-            new CacheInfo(snapshot.Hash, Path.GetFullPath(Config.SharedPath), DateTimeOffset.UtcNow), JsonData.Options));
+            new CacheInfo(snapshot.Hash, Path.GetFullPath(Config.SharedPath), DateTimeOffset.UtcNow), SyncJsonContext.Default.CacheInfo));
     }
     private Snapshot LoadCache()
     {
-        var info = JsonSerializer.Deserialize<CacheInfo>(JsonData.ReadFileBytes(Path.Combine(CacheRoot, "cache.info")), JsonData.Options)
+        var info = JsonSerializer.Deserialize(JsonData.ReadFileBytes(Path.Combine(CacheRoot, "cache.info")), SyncJsonContext.Default.CacheInfo)
             ?? throw new InvalidDataException("Métadonnées du cache absentes.");
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         if (!string.Equals(info.Source, Path.GetFullPath(Config.SharedPath), comparison)) throw new InvalidDataException("Cache provenant d'un autre partage.");

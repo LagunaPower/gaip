@@ -57,7 +57,7 @@ public sealed class FileRepository(string root, string user, string machine, int
         return Read();
     }
     public EditLease? ReadLease() => !File.Exists(LockPath) ? null
-        : JsonSerializer.Deserialize<EditLease>(JsonData.ReadFileBytes(LockPath), JsonData.Options) ?? throw new InvalidDataException("Verrou illisible.");
+        : JsonSerializer.Deserialize(JsonData.ReadFileBytes(LockPath), StorageJsonContext.Default.EditLease) ?? throw new InvalidDataException("Verrou illisible.");
 
     public (EditLease Lease, Snapshot Snapshot) Acquire(string expectedHash)
     {
@@ -69,7 +69,7 @@ public sealed class FileRepository(string root, string user, string machine, int
         var lease = new EditLease { User = user, Machine = machine, StartRevision = snapshot.Data.Revision, StartHash = snapshot.Hash };
         using (var stream = new FileStream(LockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
         {
-            JsonSerializer.Serialize(stream, lease, JsonData.Options);
+            JsonSerializer.Serialize(stream, lease, StorageJsonContext.Default.EditLease);
             stream.Flush(true);
         }
         try
@@ -91,7 +91,7 @@ public sealed class FileRepository(string root, string user, string machine, int
         using var guard = Guard();
         var lease = RequireLease(id);
         lease.Heartbeat = DateTimeOffset.UtcNow;
-        JsonData.AtomicWrite(LockPath, JsonSerializer.SerializeToUtf8Bytes(lease, JsonData.Options));
+        JsonData.AtomicWrite(LockPath, JsonSerializer.SerializeToUtf8Bytes(lease, StorageJsonContext.Default.EditLease));
     }
     public void Release(Guid id)
     {
@@ -152,8 +152,7 @@ public sealed class FileRepository(string root, string user, string machine, int
     }
     private void AppendHistory(AuditEntry entry)
     {
-        var options = new JsonSerializerOptions(JsonData.Options) { WriteIndented = false };
-        var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(entry, options) + "\n");
+        var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(entry, JsonData.CompactContext.AuditEntry) + "\n");
         using var stream = new FileStream(HistoryPath, FileMode.Append, FileAccess.Write, FileShare.Read);
         stream.Write(bytes);
         stream.Flush(true);
@@ -172,10 +171,10 @@ public sealed class FileRepository(string root, string user, string machine, int
             {
                 try
                 {
-                    var entry = JsonSerializer.Deserialize<AuditEntry>(line, JsonData.Options);
+                    var entry = JsonSerializer.Deserialize(line, StorageJsonContext.Default.AuditEntry);
                     var scoped = entry is null ? null : VlanHistory.Project(entry, id);
                     if (scoped is null) continue;
-                    result = JsonSerializer.Serialize(scoped, JsonData.Options);
+                    result = JsonSerializer.Serialize(scoped, StorageJsonContext.Default.AuditEntry);
                 }
                 catch (JsonException) { continue; } // Corrupt lines cannot be attributed reliably.
             }

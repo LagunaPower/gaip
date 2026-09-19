@@ -1,27 +1,21 @@
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using GAIP.Core;
 
 namespace GAIP.Storage;
 
 public static class JsonData
 {
-    public static JsonSerializerOptions Options { get; } = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-        Converters = { new JsonStringEnumConverter() }
-    };
-    public static byte[] Serialize(Database db) => JsonSerializer.SerializeToUtf8Bytes(db, Options);
+    public static JsonSerializerOptions Options => StorageJsonContext.Default.Options;
+    public static StorageJsonContext CompactContext { get; } = new(new JsonSerializerOptions(Options) { WriteIndented = false });
+    public static byte[] Serialize(Database db) => JsonSerializer.SerializeToUtf8Bytes(db, StorageJsonContext.Default.Database);
     public static Database Read(byte[] bytes)
     {
         // Do not silently accept an unrelated or truncated-but-valid JSON document.
         using var document = JsonDocument.Parse(bytes);
         foreach (var name in new[] { "schemaVersion", "revision", "lastModified", "lastModifiedBy", "lastModifiedFrom", "sites" })
             if (!document.RootElement.TryGetProperty(name, out _)) throw new InvalidDataException($"JSON : champ {name} absent.");
-        var db = JsonSerializer.Deserialize<Database>(bytes, Options) ?? throw new InvalidDataException("Base JSON vide.");
+        var db = JsonSerializer.Deserialize(bytes, StorageJsonContext.Default.Database) ?? throw new InvalidDataException("Base JSON vide.");
         ModelValidator.EnsureValid(db);
         return db;
     }

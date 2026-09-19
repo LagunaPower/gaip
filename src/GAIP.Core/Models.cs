@@ -18,6 +18,8 @@ public sealed class Site
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DisplayOrder { get; set; }
     [JsonRequired] public List<Vlan> Vlans { get; set; } = [];
 }
 

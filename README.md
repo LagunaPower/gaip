@@ -24,11 +24,15 @@ $env:NUGET_PACKAGES="$PWD/.nuget/packages"
 ## Interface et parcours
 
 - Accueil : recherche globale, utilisateur système, synchronisation et actualisation. Cartes de sites sur une à trois colonnes, affichant tous leurs VLAN triés sans défilement interne.
-- **+ Site** : code unique, nom, description. **+ VLAN** : VID, nom et cases multi-sites ; CIDR et passerelle facultatifs par site. Les VLAN créés sont indépendants.
-- Cliquer un VLAN ouvre sa fiche/IP. Calculs réseau, passerelle, statistiques, filtres Toutes/Occupées/Libres et pages de 256 adresses. Cliquer une IP permet son édition ; une ligne libre préremplit l’ajout. **Prochaine IP libre** ignore la passerelle.
-- **Modifier le VLAN / réseau**, **Modifier le site**, **Libérer l’adresse** : modifications et suppressions avec validation. Aucun parent non vide n’est supprimé.
+- **Ajouter un site** : code unique, nom, description. **Ajouter un VLAN** : VID, nom et cases multi-sites ; CIDR et passerelle facultatifs par site. Les VLAN créés sont indépendants.
+- Cliquer un VLAN ouvre sa fiche/IP. Le masque décimal est calculé à côté du CIDR, à l’accueil et dans le formulaire. Un `/22` contient 1022 IP utilisables, avec un masque `255.255.252.0`.
+- Par défaut, seules la passerelle et les IP enregistrées sont affichées. **Afficher les adresses libres** affiche toute la plage dans une liste virtualisée à défilement continu, **sans pagination**. Réseau et broadcast exclus. **Ajouter une IP** ouvre le formulaire du VLAN courant ; **Prochaine libre** ignore la passerelle et les IP utilisées.
+- Vue compacte : logo de 96 px sur les deux lignes du bandeau, actions regroupées en haut et état de connexion en pied de fenêtre. Le résumé conserve CIDR, masque, passerelle et compteurs ; **Détails réseau** déplie les bornes et la description du VLAN. **Accueil** suffit pour revenir aux sites. Les champs de saisie n’affichent aucun texte indicatif en fond ; les aides restent disponibles en infobulle.
+- **Modifier le VLAN**, **Modifier le site**, **Libérer l’adresse** : modifications et suppressions avec validation. Aucun parent non vide n’est supprimé.
 - **CSV** : import avec toutes les erreurs détectées avant publication, export VLAN, IP ou les deux. **Historique** : 1 000 dernières actions, détails dépliables.
+- Dans une vue VLAN, **CSV** exporte uniquement ce VLAN et ses IP ; **Historique** affiche ses dernières actions liées, y compris les libérations d’IP, sans exposer les autres VLAN dans les détails. Les ajouts génériques sont accessibles à l’accueil.
 - **Configuration** : mode, chemin partagé, fréquence, rétention, séparateur, thème et diagnostic/verrou.
+- **Configuration → Ordre d’affichage** : déplacer les sites par glisser-déposer, puis **Enregistrer l’ordre**. Monter/Descendre permet aussi un classement au clavier. Annuler conserve l’ordre précédent. L’ordre est commun aux postes ; le mode modification est requis sur un partage. Sans ordre enregistré, tri par code ; les nouveaux sites suivent les sites déjà classés. Les cartes de l’accueil sont espacées de 8 px.
 
 La base initiale est vide. Pour une démonstration volontaire, importer `samples/vlans.csv`, puis `samples/addresses.csv`.
 
@@ -58,13 +62,17 @@ Avant chaque publication, sauvegarde de l’ancienne base. Rétention configurab
 ## Publications autonomes
 
 ```sh
-dotnet publish src/GAIP.Desktop -c Release -r win-x64 --self-contained true -o artifacts/win-x64
-dotnet publish src/GAIP.Desktop -c Release -r linux-x64 --self-contained true -o artifacts/linux-x64
+dotnet publish src/GAIP.Desktop -c Release -r win-x64 -p:PublishProfile=Release
+dotnet publish src/GAIP.Desktop -c Release -r linux-x64 -p:PublishProfile=Release
 ```
 
-Ou `./scripts/publish.ps1` / `sh scripts/publish.sh`. Copier **tout le dossier** produit. Windows : `GAIP.exe`. Linux : `chmod +x GAIP`, puis `./GAIP`. Aucun .NET à installer sur le poste utilisateur. Publication multi-fichiers non trimée pour fiabiliser les bibliothèques natives. `linux-arm64` est accepté par les scripts, mais non validé.
+Ou `./scripts/publish.ps1` / `sh scripts/publish.sh` : profil **Release** par défaut. Les sorties sont dans `artifacts/Release/win-x64/` et `artifacts/Release/linux-x64/`. L’exécutable seul suffit : `GAIP.exe` sous Windows ; `chmod +x GAIP`, puis `./GAIP` sous Linux. Aucun .NET à installer. Le runtime et les bibliothèques natives sont inclus ; .NET extrait automatiquement les bibliothèques natives au démarrage. Les fichiers Linux supplémentaires servent uniquement à installer le lanceur et son icône.
 
-Linux nécessite les bibliothèques graphiques usuelles : fontconfig, EGL/OpenGL, Wayland ; X11/XWayland et bibliothèques associées pour le repli. G@IP sélectionne `UseWayland()` si `WAYLAND_DISPLAY` existe. Ce backend Avalonia 12.1 est expérimental ; repli explicite :
+Le profil **Development** reste autonome à fichiers séparés, avec symboles : `./scripts/publish.ps1 -Profile Development` ou `sh scripts/publish.sh --profile Development`. Sorties dans `artifacts/Development/<RID>/` ; copier tout ce dossier pour diagnostiquer. Les deux profils gardent `PublishTrimmed=false`. Release n’embarque aucun PDB et exclut les références de conception inutiles via MSBuild. `linux-arm64` reste accepté par les scripts, mais non validé. Voir [les profils et vérifications de publication](docs/PUBLICATION.md).
+
+Une publication **ExperimentalTrimmed**, séparée et réservée à Windows x64, est disponible avec `dotnet publish src/GAIP.Desktop -c Release -r win-x64 -p:PublishProfile=ExperimentalTrimmed`. Elle active le trimming complet sans NativeAOT et ne remplace pas la Release standard. Voir [les tailles et validations](docs/PUBLICATION_SIZE.md).
+
+Linux nécessite les bibliothèques graphiques usuelles : fontconfig, EGL/OpenGL, Wayland ; X11/XWayland et bibliothèques associées pour le repli. Les publications x64 sélectionnent les packages et services Avalonia par RID : Win32 sous Windows, X11 par défaut sous Linux, Skia et HarfBuzz dans les deux cas. Les compilations sans RID conservent `UsePlatformDetect()`. Sous Linux, G@IP sélectionne Wayland natif uniquement avec `XDG_SESSION_TYPE=wayland`, sauf override `GAIP_USE_X11=1`. Une variable `WAYLAND_DISPLAY` seule ne déclenche pas Wayland natif : sous WSLg avec un type de session vide, G@IP conserve X11/XWayland. Le package `Avalonia.Wayland` reste inclus dans Linux. Repli explicite :
 
 ```sh
 GAIP_USE_X11=1 ./GAIP
@@ -72,14 +80,20 @@ GAIP_USE_X11=1 ./GAIP
 
 Référence : [documentation Linux Avalonia](https://docs.avaloniaui.net/docs/platform-specific-guides/linux).
 
+## Identité et icônes
+
+Le PNG officiel fourni est conservé à l’identique dans `src/GAIP.Desktop/Assets/gaip-logo.png` et intégré à l’interface. L’icône Windows multi-résolution `GAIP.ico` est intégrée à l’exécutable et aux fenêtres. Les PNG Linux de 16 à 1024 pixels, le lanceur `GAIP.desktop` et `install-desktop.sh` sont inclus dans la publication Linux.
+
+Après copie définitive du dossier Linux, exécuter `sh install-desktop.sh` depuis ce dossier pour enregistrer le lanceur et l’icône dans le menu utilisateur. Déplacer ensuite le dossier nécessite de relancer ce script. Les icônes dérivées se régénèrent sous Windows avec `./scripts/generate-icons.ps1`, sans modifier le PNG source.
+
 ## Limites connues
 
 - IPv4 uniquement. /31 et /32 stockables sans IP attribuable : réseau/broadcast exclus selon le cahier des charges. Les CIDR saisis/importés sont normalisés.
-- Recherche de sous-réseau : IP occupées, hostnames et descriptions ; une IP libre se recherche en entier. Grands réseaux paginés ; recherche globale limitée à 1 000 résultats affichés.
-- Import transactionnel **par fichier**. L’export CSV complet ne remplace pas une sauvegarde JSON : les formats imposés ne représentent pas les sites sans VLAN ni leurs descriptions.
+- Défilement intégral virtualisé jusqu’à 1 048 574 adresses (`/12`), sans limite à 254 et sans pagination. Au-delà, les IP enregistrées restent consultables et une IP libre peut être recherchée en entier ; un message explicite remplace l’énumération intégrale. La recherche des réseaux affichables accepte aussi une partie d’adresse. Recherche globale limitée à 1 000 résultats affichés.
+- Import transactionnel **par fichier**. L’export CSV complet ne remplace pas une sauvegarde JSON : les formats imposés ne représentent pas les sites sans VLAN, leurs descriptions ni leur ordre d’affichage. Un import conserve l’ordre des sites existants.
 - Historique append-only avec valeurs avant/après de la base, sans rétention automatique. Sa consultation demande l’accès au stockage de référence, même si la base reste consultable hors ligne.
 - La sécurité filesystem suppose un stockage respectant les verrous et renommages. Ne pas modifier les JSON par un outil externe pendant une session. La durabilité physique d’un NAS après acquittement dépend de ce NAS.
 - JSON et annexes sont des fichiers distincts : un échec d’historique/cache après publication est signalé, sans annuler les données publiées. En cas de résultat incertain après coupure, actualiser avant de réessayer.
-- Les tests UI utilisent Avalonia Headless. L’exécution sous un compositeur Linux et sur un partage SMB/NFS réel reste à valider sur les environnements cibles.
+- Les parcours UI utilisent Avalonia Headless ; les exécutables Release ont aussi été démarrés réellement sous Windows et Ubuntu 24.04/WSLg (X11/XWayland). Une session GNOME/KDE Wayland native et un partage SMB/NFS réel restent à valider sur les environnements cibles.
 
 Voir [spécifications](docs/SPECIFICATIONS.md), [architecture](docs/ARCHITECTURE.md), [modèle](docs/DATA_MODEL.md) et [validation](docs/VALIDATION.md).

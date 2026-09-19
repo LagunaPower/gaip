@@ -50,7 +50,7 @@ public sealed class CoreTests
     {
         var db = Example(); var subnet = Subnet(db); subnet.Gateway = new() { Address = "10.20.120.1", Comment = "Firewall" };
         Assert.Empty(ModelValidator.Validate(db)); Assert.Equal(1, Queries.UsedCount(subnet)); Assert.Equal(253UL, Queries.FreeCount(subnet));
-        Assert.Equal("10.20.120.2", Queries.NextFree(subnet)); Assert.True(Queries.Page(subnet, AddressFilter.All, "", 0)[0].IsGateway);
+        Assert.Equal("10.20.120.2", Queries.NextFree(subnet)); Assert.True(new AddressRows(subnet)[0].IsGateway);
         subnet.Addresses.Add(new() { Address = "10.20.120.1", Description = "collision" }); Assert.NotEmpty(ModelValidator.Validate(db));
     }
     [Fact]
@@ -108,14 +108,14 @@ public sealed class CoreTests
         Assert.Null(Queries.NextFree(subnet)); Assert.Equal(0UL, Queries.FreeCount(subnet));
     }
     [Fact]
-    public void HugeNetworkPaginationAndNumericalSorting()
+    public void HugeNetworkCountsAndNumericalSorting()
     {
         var subnet = new Subnet { Cidr = "0.0.0.0/0", Addresses = [new() { Address = "10.0.0.100", Hostname = "a" }, new() { Address = "10.0.0.2", Hostname = "b" }] };
-        Assert.Equal(256, Queries.Page(subnet, AddressFilter.All, "", 0).Count);
-        Assert.Equal("10.0.0.2", Queries.Page(subnet, AddressFilter.Used, "", 0)[0].Address);
-        Assert.Equal("255.255.255.254", Queries.Page(subnet, AddressFilter.All, "", 4294967293UL)[0].Address);
-        Assert.Empty(Queries.Page(subnet, AddressFilter.Used, "10.0.0.5", 0));
-        Assert.Single(Queries.Page(subnet, AddressFilter.Free, "10.0.0.5", 0));
+        Assert.Equal(4294967292UL, Queries.FreeCount(subnet));
+        Assert.Equal("10.0.0.2", new AddressRows(subnet)[0].Address);
+        Assert.Equal("255.255.255.254", new AddressRows(subnet, true, "255.255.255.254")[0].Address);
+        Assert.Empty(new AddressRows(subnet, false, "10.0.0.5"));
+        Assert.Single(new AddressRows(subnet, true, "10.0.0.5"));
     }
     [Theory]
     [InlineData("LEVANT")][InlineData("Île")][InlineData("120")][InlineData("SERVEURS")][InlineData("10.20.120.0/24")][InlineData("10.20.120.25")][InlineData("SRV-app")][InlineData("application")]

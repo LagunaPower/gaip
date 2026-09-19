@@ -4,18 +4,38 @@
     <AssemblyName>GAIP</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/GAIP.ico</ApplicationIcon>
-    <PublishTrimmed>false</PublishTrimmed>
+    <PublishTrimmed Condition="'$(PublishTrimmed)' == ''">false</PublishTrimmed>
+    <DefineConstants Condition="'$(RuntimeIdentifier)' == 'win-x64'">$(DefineConstants);GAIP_WINDOWS</DefineConstants>
+    <DefineConstants Condition="'$(RuntimeIdentifier)' == 'linux-x64'">$(DefineConstants);GAIP_LINUX</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets/gaip-logo.png;Assets/GAIP.ico" />
     <ProjectReference Include="../GAIP.Sync/GAIP.Sync.csproj" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.0" Condition="'$(RuntimeIdentifier)' != 'win-x64' And '$(RuntimeIdentifier)' != 'linux-x64'" />
+    <PackageReference Include="Avalonia.Win32" Version="12.1.0" Condition="'$(RuntimeIdentifier)' == 'win-x64'" />
+    <PackageReference Include="Avalonia.X11" Version="12.1.0" Condition="'$(RuntimeIdentifier)' == 'linux-x64'" />
+    <PackageReference Include="Avalonia.Skia" Version="12.1.0" Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'linux-x64'" />
+    <PackageReference Include="Avalonia.HarfBuzz" Version="12.1.0" Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'linux-x64'" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.0" />
-    <PackageReference Include="Avalonia.Wayland" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Wayland" Version="12.1.0" Condition="'$(RuntimeIdentifier)' != 'win-x64'" />
   </ItemGroup>
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64' Or '$(RuntimeIdentifier)' == 'linux-arm64'">
-    <Content Include="Linux/*" Link="%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="Assets/icons/**/*.png" Link="icons/%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Linux/*" Link="%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="Assets/icons/**/*.png" Link="icons/%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
+  <!-- DesignerSupport is a previewer assembly shipped inside Avalonia's main package.
+       No G@IP or runtime Avalonia assembly references it. Exclude it at build/publish
+       resolution time, never by deleting output DLLs. Development retains it. -->
+  <Target Name="ExcludeGaipDevelopmentReferences" AfterTargets="ResolvePackageAssets" Condition="'$(GaipUserRelease)' == 'true'">
+    <ItemGroup>
+      <ResolvedCompileFileDefinitions Remove="@(ResolvedCompileFileDefinitions)" Condition="'%(Filename)' == 'Avalonia.DesignerSupport' Or '%(Filename)' == 'Avalonia.Diagnostics'" />
+      <RuntimeCopyLocalItems Remove="@(RuntimeCopyLocalItems)" Condition="'%(Filename)' == 'Avalonia.DesignerSupport' Or '%(Filename)' == 'Avalonia.Diagnostics'" />
+    </ItemGroup>
+  </Target>
+  <Target Name="ExcludeGaipDevelopmentPublishAssets" AfterTargets="ComputeResolvedFilesToPublishList" Condition="'$(GaipUserRelease)' == 'true'">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb' Or '%(Filename)' == 'Avalonia.DesignerSupport' Or '%(Filename)' == 'Avalonia.Diagnostics'" />
+    </ItemGroup>
+  </Target>
 </Project>

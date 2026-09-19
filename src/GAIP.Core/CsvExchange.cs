@@ -139,7 +139,7 @@ public static class CsvExchange
         LastModifiedBy = source.LastModifiedBy, LastModifiedFrom = source.LastModifiedFrom,
         Sites = source.Sites.Select(s => new Site
         {
-            Id = s.Id, Code = s.Code, Name = s.Name, Description = s.Description,
+            Id = s.Id, Code = s.Code, Name = s.Name, Description = s.Description, DisplayOrder = s.DisplayOrder,
             Vlans = s.Vlans.Select(v => new Vlan
             {
                 Id = v.Id, Vid = v.Vid, Name = v.Name, Description = v.Description,

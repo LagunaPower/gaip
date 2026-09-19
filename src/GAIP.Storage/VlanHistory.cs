@@ -11,7 +11,7 @@ public static class VlanHistory
         var before = Find(entry.OldValue, vlanId);
         var after = Find(entry.NewValue, vlanId);
         if (before.Vlan is null && after.Vlan is null) return null;
-        if (JsonSerializer.Serialize(before.Vlan, JsonData.Options) == JsonSerializer.Serialize(after.Vlan, JsonData.Options)) return null;
+        if (JsonSerializer.Serialize(before.Vlan, StorageJsonContext.Default.Vlan) == JsonSerializer.Serialize(after.Vlan, StorageJsonContext.Default.Vlan)) return null;
         var label = after.Vlan is not null ? $"{after.Code} / VLAN {after.Vlan.Vid}" : $"{before.Code} / VLAN {before.Vlan!.Vid}";
         // Never expose unrelated sites/VLANs inside the contextual event details.
         return entry with { Target = label, OldValue = before.Vlan, NewValue = after.Vlan };
@@ -21,7 +21,7 @@ public static class VlanHistory
     {
         Database? db = snapshot as Database;
         if (snapshot is JsonElement { ValueKind: JsonValueKind.Object } json && json.TryGetProperty("sites", out _))
-            db = json.Deserialize<Database>(JsonData.Options);
+            db = json.Deserialize(StorageJsonContext.Default.Database);
         if (db?.Sites is null) return (null, null);
         foreach (var site in db.Sites)
             if (site.Vlans.FirstOrDefault(v => v.Id == vlanId) is { } vlan) return (site.Code, vlan);

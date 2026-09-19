@@ -1,6 +1,5 @@
 namespace GAIP.Core;
 
-public enum AddressFilter { All, Used, Free }
 public sealed record AddressRow(string Address, string Hostname, string Description, bool IsUsed, bool IsGateway);
 public sealed record SearchResult(Guid SiteId, Guid? VlanId, string? Address, string Label);
 
@@ -26,40 +25,6 @@ public static class Queries
         var used = subnet.Addresses.Select(a => Ipv4Network.ParseAddress(a.Address)).ToHashSet();
         if (subnet.Gateway is { } gw) used.Add(Ipv4Network.ParseAddress(gw.Address));
         return used;
-    }
-
-    // Pages refer to numeric address windows. Even a /0 never needs to be materialized.
-    public static IReadOnlyList<AddressRow> Page(Subnet subnet, AddressFilter filter, string search, ulong offset, int size = 256)
-    {
-        if (size is < 1 or > 4096) throw new ArgumentOutOfRangeException(nameof(size));
-        var network = Ipv4Network.Parse(subnet.Cidr);
-        var stored = subnet.Addresses.ToDictionary(a => Ipv4Network.ParseAddress(a.Address));
-        uint? gateway = subnet.Gateway is { } gw ? Ipv4Network.ParseAddress(gw.Address) : null;
-        bool Matches(AddressRow r) => string.IsNullOrWhiteSpace(search) ||
-            $"{r.Address} {r.Hostname} {r.Description}".Contains(search, StringComparison.OrdinalIgnoreCase);
-        AddressRow Row(uint n) => n == gateway ? new(Ipv4Network.Format(n), "PASSERELLE", subnet.Gateway!.Comment, true, true)
-            : stored.TryGetValue(n, out var ip) ? new(ip.Address, ip.Hostname, ip.Description, true, false)
-            : new(Ipv4Network.Format(n), "Libre", "", false, false);
-        if (filter == AddressFilter.Used || !string.IsNullOrWhiteSpace(search))
-        {
-            var rows = Used(subnet).OrderBy(n => n).Select(Row).Where(Matches).ToList();
-            try
-            {
-                var n = Ipv4Network.ParseAddress(search);
-                if (network.IsUsable(n) && !stored.ContainsKey(n) && n != gateway) rows.Add(Row(n));
-            }
-            catch (FormatException) { }
-            return rows.Where(r => filter switch { AddressFilter.Used => r.IsUsed, AddressFilter.Free => !r.IsUsed, _ => true })
-                .OrderBy(r => Ipv4Network.ParseAddress(r.Address)).Skip((int)Math.Min(offset, int.MaxValue)).Take(size).ToArray();
-        }
-        var result = new List<AddressRow>();
-        for (ulong index = offset; index < network.UsableCount && index < offset + (ulong)size; index++)
-        {
-            var row = Row((uint)(network.First + index));
-            if (filter == AddressFilter.Free && row.IsUsed) continue;
-            result.Add(row);
-        }
-        return result;
     }
 
     public static IEnumerable<SearchResult> Search(Database db, string query)

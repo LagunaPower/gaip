@@ -13,8 +13,26 @@ public static class Ui
         Text = text, FontSize = size, FontWeight = bold ? FontWeight.SemiBold : FontWeight.Normal,
         TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center
     };
-    public static TextBox Input(string value = "", string? hint = null, int max = 500) => new()
-    { Text = value, PlaceholderText = hint, MaxLength = max, MinWidth = 180, HorizontalAlignment = HorizontalAlignment.Stretch };
+    public static TextBox Input(string value = "", string? hint = null, int max = 500)
+    {
+        var input = new TextBox { Text = value, MaxLength = max, MinWidth = 180, HorizontalAlignment = HorizontalAlignment.Stretch };
+        if (hint is not null) ToolTip.SetTip(input, hint);
+        return input;
+    }
+    public static Grid SearchField(TextBox input, string label)
+    {
+        Avalonia.Automation.AutomationProperties.SetName(input, label);
+        input.Padding = new Thickness(30, 6, 8, 6);
+        var grid = new Grid(); grid.Children.Add(input);
+        grid.Children.Add(new Avalonia.Controls.Shapes.Path
+        {
+            Data = Geometry.Parse("M 12,7 A 5,5 0 1 1 2,7 A 5,5 0 1 1 12,7 M 11,11 L 16,16"),
+            Stroke = Brushes.Gray, StrokeThickness = 1.5, Width = 18, Height = 18,
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(8, 0, 0, 0), IsHitTestVisible = false
+        });
+        return grid;
+    }
     public static StackPanel Field(string label, Control input) => new() { Spacing = 5, Children = { Text(label, 12, true), input } };
     public static StackPanel Column(params Control[] children)
     {

@@ -20,6 +20,7 @@ public static class ModelValidator
             Text(site.Code, 50, true, $"{label} / code");
             Text(site.Name, 150, true, $"{label} / nom");
             Text(site.Description, 500, false, $"{label} / description");
+            if (site.DisplayOrder < 0) errors.Add($"{label} : ordre d’affichage négatif.");
             if (!codes.Add(site.Code?.Trim() ?? "")) errors.Add($"Code site déjà utilisé : {site.Code}.");
             if (site.Vlans is null) { errors.Add($"{label} : liste des VLAN absente."); continue; }
             var vids = new HashSet<int>();
