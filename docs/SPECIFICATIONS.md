@@ -17,7 +17,7 @@ G@IP gère sites → VLAN indépendants → zéro ou un sous-réseau IPv4 → at
 
 ## Interface
 
-Cartes sur 3/2/1 colonnes (seuils 1 500/980 pixels disponibles), tous les VLAN affichés sans scroll interne. Le masque IPv4 décimal est calculé et affiché avec le CIDR, jamais stocké. Le logo officiel est intégré, son PNG source conservé et des icônes Windows/Linux générées.
+Cartes responsives avec une largeur minimale cible de 440 px et un maximum configurable de 1 à 6 colonnes (3 par défaut), tous les VLAN affichés sans scroll interne. Le nombre de colonnes s’adapte à la largeur disponible sans dépasser la préférence locale. Les cartes d’une même ligne ont la même hauteur et les actions « Modifier le site » / « Ajouter un VLAN » restent ancrées en bas. Le masque IPv4 décimal est calculé et affiché avec le CIDR, jamais stocké. Le logo officiel est intégré, son PNG source conservé et des icônes Windows/Linux générées.
 
 Cartes de sites espacées de 8 px. Configuration contient Général et Ordre d’affichage. Le second onglet classe les sites par glisser-déposer avec repère d’insertion et défilement aux bords, ou par Monter/Descendre. Enregistrer l’ordre publie ce classement, Annuler le laisse inchangé ; les réglages Général se sauvegardent dans leur onglet. Ordre commun à la base, verrou requis en mode partagé. Tri par code sans préférence ; nouveaux sites en fin de liste après un classement enregistré. Aucun champ numérique ajouté à la fiche du site.
 
