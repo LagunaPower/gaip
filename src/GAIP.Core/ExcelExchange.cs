@@ -310,6 +310,9 @@ public static class ExcelExchange
             writer.WriteEndElement();
 
             writer.WriteStartElement("autoFilter"); writer.WriteAttributeString("ref", $"A3:J{lastRow}"); writer.WriteEndElement();
+            writer.WriteStartElement("mergeCells"); writer.WriteAttributeString("count", "1");
+            writer.WriteStartElement("mergeCell"); writer.WriteAttributeString("ref", "A1:J1"); writer.WriteEndElement();
+            writer.WriteEndElement();
             if (networks.Count > 0)
             {
                 writer.WriteStartElement("hyperlinks");
@@ -328,9 +331,6 @@ public static class ExcelExchange
                 }
                 writer.WriteEndElement();
             }
-            writer.WriteStartElement("mergeCells"); writer.WriteAttributeString("count", "1");
-            writer.WriteStartElement("mergeCell"); writer.WriteAttributeString("ref", "A1:J1"); writer.WriteEndElement();
-            writer.WriteEndElement();
             EndWorksheet(writer);
         });
     }
@@ -380,40 +380,43 @@ public static class ExcelExchange
                 ("IP libres", Queries.FreeCount(subnet).ToString())
             };
 
-            for (var i = 0; i < meta.Length; i++)
+            var finalRow = Math.Max(lastRow, meta.Length + 2);
+            for (var row = 3; row <= finalRow; row++)
             {
-                var metaRow = i + 3;
-                writer.WriteStartElement("row"); writer.WriteAttributeString("r", metaRow.ToString());
-                WriteTextCell(writer, $"F{metaRow}", meta[i].Label, 2);
-                WriteTextCell(writer, $"G{metaRow}", meta[i].Value, 7);
-                writer.WriteEndElement();
-            }
-
-            for (ulong offset = 0; offset < network.UsableCount; offset++)
-            {
-                var ip = network.First + (uint)offset;
-                var row = checked((int)offset + 3);
-                var style = row % 2 == 0 ? 5 : 4;
                 writer.WriteStartElement("row"); writer.WriteAttributeString("r", row.ToString());
-                WriteTextCell(writer, $"A{row}", Ipv4Network.Format(ip), style);
-                if (gateway == ip)
+
+                var offset = row - 3;
+                if ((ulong)offset < network.UsableCount)
                 {
-                    WriteTextCell(writer, $"B{row}", "PASSERELLE", style);
-                    WriteTextCell(writer, $"C{row}", "", style);
-                    WriteTextCell(writer, $"D{row}", subnet.Gateway!.Comment, style);
+                    var ip = network.First + (uint)offset;
+                    var style = row % 2 == 0 ? 5 : 4;
+                    WriteTextCell(writer, $"A{row}", Ipv4Network.Format(ip), style);
+                    if (gateway == ip)
+                    {
+                        WriteTextCell(writer, $"B{row}", "PASSERELLE", style);
+                        WriteTextCell(writer, $"C{row}", "", style);
+                        WriteTextCell(writer, $"D{row}", subnet.Gateway!.Comment, style);
+                    }
+                    else if (stored.TryGetValue(ip, out var address))
+                    {
+                        WriteTextCell(writer, $"B{row}", "UTILISÉE", style);
+                        WriteTextCell(writer, $"C{row}", address.Hostname, style);
+                        WriteTextCell(writer, $"D{row}", address.Description, style);
+                    }
+                    else
+                    {
+                        WriteTextCell(writer, $"B{row}", "LIBRE", style);
+                        WriteTextCell(writer, $"C{row}", "", style);
+                        WriteTextCell(writer, $"D{row}", "", style);
+                    }
                 }
-                else if (stored.TryGetValue(ip, out var address))
+
+                if (offset < meta.Length)
                 {
-                    WriteTextCell(writer, $"B{row}", "UTILISÉE", style);
-                    WriteTextCell(writer, $"C{row}", address.Hostname, style);
-                    WriteTextCell(writer, $"D{row}", address.Description, style);
+                    WriteTextCell(writer, $"F{row}", meta[offset].Label, 2);
+                    WriteTextCell(writer, $"G{row}", meta[offset].Value, 7);
                 }
-                else
-                {
-                    WriteTextCell(writer, $"B{row}", "LIBRE", style);
-                    WriteTextCell(writer, $"C{row}", "", style);
-                    WriteTextCell(writer, $"D{row}", "", style);
-                }
+
                 writer.WriteEndElement();
             }
 
