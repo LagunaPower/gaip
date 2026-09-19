@@ -3,9 +3,7 @@
     <parameter name="version" required="true" />
     <parameter name="fileVersion" required="true" />
   </parameters>
-  <msi-file path="GAIP.msi"
-            subject="G@IP — Gestion d’Adresses IP"
-            author="LagunaPower">
+  <msi-file path="GAIP.msi">
     <pe-file path="GAIP.exe"
              product-name="G@IP — Gestion d’Adresses IP"
              product-version="${version}"
