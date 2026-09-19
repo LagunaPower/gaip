@@ -332,7 +332,7 @@ public sealed partial class DesktopTests
 
         await Until(() => !form.IsVisible);
 
-        Click(Button(main, "CSV"));
+        Click(Button(main, "CSV / Excel"));
 
         await Until(() =>
             main.OwnedWindows
@@ -347,6 +347,7 @@ public sealed partial class DesktopTests
         Assert.Contains(
             "LEVANT / VLAN 120",
             form.Title);
+        Assert.NotNull(Button(form, "Exporter le classeur Excel complet…"));
 
         Assert.DoesNotContain(
             form.GetLogicalDescendants().OfType<Button>(),
