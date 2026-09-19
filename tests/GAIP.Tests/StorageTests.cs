@@ -184,8 +184,10 @@ public sealed class StorageTests
     [Fact]
     public void ConfigRoundTripsAndValidates()
     {
-        using var temp = new TempDirectory(); var config = new AppConfig { Theme = AppTheme.Dark, BackupCount = 12, CsvSeparator = ",", SyncSeconds = 90 };
-        UserPaths.SaveConfig(temp.Path, config); var copy = UserPaths.LoadConfig(temp.Path); Assert.Equal(AppTheme.Dark, copy.Theme); Assert.Equal(12, copy.BackupCount);
-        config.SyncSeconds = 0; Assert.Throws<InvalidDataException>(config.Validate);
+        using var temp = new TempDirectory(); var config = new AppConfig { Theme = AppTheme.Dark, BackupCount = 12, CsvSeparator = ",", SyncSeconds = 90, MaxHomeColumns = 6 };
+        UserPaths.SaveConfig(temp.Path, config); var copy = UserPaths.LoadConfig(temp.Path);
+        Assert.Equal(AppTheme.Dark, copy.Theme); Assert.Equal(12, copy.BackupCount); Assert.Equal(6, copy.MaxHomeColumns);
+        config.MaxHomeColumns = 7; Assert.Throws<InvalidDataException>(config.Validate);
+        config.MaxHomeColumns = 3; config.SyncSeconds = 0; Assert.Throws<InvalidDataException>(config.Validate);
     }
 }
