@@ -5,7 +5,7 @@ GAIP.Desktop → GAIP.Sync → GAIP.Storage → GAIP.Core
 GAIP.Tests → ces projets + Avalonia.Headless.XUnit
 ```
 
-- **Core** : modèles, IPv4 uint/ulong, validation globale, requêtes, CSV transactionnel en mémoire. Indépendant de l’OS, du filesystem et d’Avalonia. Des attributs System.Text.Json imposent la présence des IDs/collections.
+- **Core** : modèles, IPv4 uint/ulong, validation globale, requêtes, CSV transactionnel en mémoire et export Excel OOXML en flux. Indépendant de l’OS, du filesystem et d’Avalonia. Des attributs System.Text.Json imposent la présence des IDs/collections.
 - **Storage** : JSON strict, SHA-256, configuration et chemins OS, repository filesystem, verrous, sauvegardes et historique.
 - **Sync** : sessions local/partagé, cache vérifié et associé à sa source, états consultation/édition/hors ligne, publication d’une copie.
 - **Desktop** : contrôles Avalonia en C#, fenêtres/formulaires et contrôleur de présentation. Règles dans Core. Sémaphore de session, I/O hors du thread UI. Heartbeat maintenu pendant les formulaires.
