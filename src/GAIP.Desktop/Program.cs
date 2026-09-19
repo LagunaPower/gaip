@@ -4,8 +4,31 @@ namespace GAIP.Desktop;
 
 public static class Program
 {
+    private const string SingleInstanceName = "GAIP.SingleInstance";
+
     [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    public static void Main(string[] args)
+    {
+        using var singleInstance = TryAcquireSingleInstance(SingleInstanceName);
+        if (singleInstance is null) return;
+
+        try { BuildAvaloniaApp().StartWithClassicDesktopLifetime(args); }
+        finally { singleInstance.ReleaseMutex(); }
+    }
+
+    public static Mutex? TryAcquireSingleInstance(string name)
+    {
+        var options = new NamedWaitHandleOptions
+        {
+            CurrentUserOnly = true,
+            CurrentSessionOnly = false
+        };
+        var mutex = new Mutex(true, name, options, out var createdNew);
+        if (createdNew) return mutex;
+        mutex.Dispose();
+        return null;
+    }
+
     public static AppBuilder BuildAvaloniaApp()
     {
         var builder = AppBuilder.Configure<App>();
