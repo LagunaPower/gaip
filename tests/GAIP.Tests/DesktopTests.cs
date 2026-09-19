@@ -63,6 +63,7 @@ public sealed partial class DesktopTests
         repo.Initialize(db);
         var main = new MainWindow(data, temp.Sub("config")); main.Show(); await UntilReady(main);
         await Task.Delay(150);
+        Assert.DoesNotContain(main.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text == "255.255.255.0");
         var output = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppContext.BaseDirectory, "../../../../../artifacts/screenshots")); Directory.CreateDirectory(output);
         using (var frame = main.CaptureRenderedFrame()) { Assert.NotNull(frame); frame.Save(System.IO.Path.Combine(output, "home.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); }
         main.Width = 800; await Task.Delay(100);
@@ -73,7 +74,10 @@ public sealed partial class DesktopTests
         var globalSearch = main.GetLogicalDescendants().OfType<TextBox>().Single();
         Assert.True(globalSearch.Focus()); globalSearch.Text = "10";
         Assert.True(globalSearch.IsFocused); globalSearch.Text = "10.20";
-        Assert.True(globalSearch.IsFocused); globalSearch.Text = "";
+        Assert.True(globalSearch.IsFocused);
+        var clearSearch = main.GetLogicalDescendants().OfType<Button>().Single(b => b.Name == "ClearSearch");
+        Assert.True(clearSearch.IsVisible); Click(clearSearch);
+        Assert.Equal("", globalSearch.Text); Assert.True(globalSearch.IsFocused);
         var vlanButton = main.GetLogicalDescendants().OfType<Button>().First(b => b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.0/24"));
         Click(vlanButton); await Task.Delay(100);
         using (var frame = main.CaptureRenderedFrame()) { Assert.NotNull(frame); frame.Save(System.IO.Path.Combine(output, "subnet.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); }
@@ -115,10 +119,15 @@ public sealed partial class DesktopTests
         var second = Assert.IsType<Border>(cards.Children[1]);
         Assert.InRange(Math.Abs(first.Bounds.Height - second.Bounds.Height), 0, 0.5);
 
+        var scroll = main.GetLogicalDescendants().OfType<ScrollViewer>().Single(s => s.Name == "SiteCardsScroll");
+        Assert.True(cards.Bounds.Height >= scroll.Bounds.Height - 1);
+        Assert.All(cards.RowDefinitions, row => Assert.Equal(GridUnitType.Star, row.Height.GridUnitType));
+
         var firstContent = Assert.IsType<Grid>(first.Child);
         Assert.Equal(3, firstContent.RowDefinitions.Count);
         var actions = firstContent.Children.OfType<WrapPanel>().Single();
         Assert.Equal(2, Grid.GetRow(actions));
+        Assert.Equal(HorizontalAlignment.Center, actions.HorizontalAlignment);
         Assert.Contains(actions.Children.OfType<Button>(), b => b.Content as string == "Modifier le site");
         Assert.Contains(actions.Children.OfType<Button>(), b => b.Content as string == "Ajouter un VLAN");
 
