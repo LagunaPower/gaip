@@ -47,6 +47,14 @@ L’import VLAN crée les sites manquants ; pour un site existant son nom est co
 
 L’export complet écrit les deux CSV ; les passerelles restent dans le fichier VLAN. Ce format n’est pas une sauvegarde intégrale du modèle.
 
+## Excel
+
+L’export Excel produit un classeur `.xlsx` complet. Le premier onglet, **Sites et VLAN**, liste tous les sites et VLAN ; la cellule VLAN contient un lien hypertexte vers l’onglet du réseau lorsqu’un sous-réseau est défini.
+
+Chaque sous-réseau possède un onglet dédié. Les informations réseau (site, VLAN, description, CIDR, masque, réseau, broadcast, première/dernière IP utilisable, passerelle, commentaire et compteurs) sont affichées en haut de feuille. Le tableau contient toutes les adresses IPv4 utilisables, y compris la passerelle, avec l’état `PASSERELLE`, `UTILISÉE` ou `LIBRE`, le hostname et la description.
+
+Un VLAN sans sous-réseau reste visible dans l’onglet principal mais n’a pas d’onglet réseau. Un réseau dépassant la capacité maximale d’une feuille Excel est refusé avec un message explicite.
+
 ## Changements de mode
 
 Local → partagé : base existante ou initialisation expressément sélectionnée, seulement si absente. Partagé → local : copie base/cache ou base vide, confirmation et sauvegarde préalable si une base locale existe. Aucune fusion automatique.
