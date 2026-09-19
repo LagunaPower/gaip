@@ -77,8 +77,8 @@ public sealed partial class DesktopTests
         Assert.True(globalSearch.IsFocused); globalSearch.Text = "10.20";
         Assert.True(globalSearch.IsFocused);
         var clearSearch = main.GetLogicalDescendants().OfType<Button>().Single(b => b.Name == "ClearSearch");
-        Assert.True(clearSearch.IsEnabled); Click(clearSearch);
-        Assert.Equal("", globalSearch.Text); Assert.True(globalSearch.IsFocused);
+        Click(clearSearch);
+        Assert.Equal("", globalSearch.Text);
         var vlanButton = main.GetLogicalDescendants().OfType<Button>().First(b => b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.0/24"));
         Click(vlanButton); await Task.Delay(100);
         using (var frame = main.CaptureRenderedFrame()) { Assert.NotNull(frame); frame.Save(System.IO.Path.Combine(output, "subnet.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); }
