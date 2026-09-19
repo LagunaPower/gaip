@@ -25,7 +25,7 @@ Fiche VLAN : seules passerelle et attributions visibles par défaut. Case « Aff
 
 Les libellés de création sont textuels, sans préfixe « + ». Dans la fiche VLAN, seul « Ajouter une IP » est proposé comme ajout, avec « Prochaine libre » dans le formulaire. CSV exporte uniquement le VLAN affiché et ses attributions. Historique filtre ses événements (dont modifications/libérations d’IP), avant la limite de 1 000 résultats, et masque les détails des autres VLAN.
 
-Validations métier en direct, calculs réseau et passerelle réévalués pendant la saisie. Une validation de formulaire = une publication ; aucun changement en attente. Thèmes système/clair/sombre. Une seule instance de G@IP peut être active par utilisateur sur une machine, toutes sessions de cet utilisateur confondues ; un autre utilisateur de la même machine peut lancer sa propre instance.
+Validations métier en direct, calculs réseau et passerelle réévalués pendant la saisie. Une validation de formulaire = une publication ; aucun changement en attente. Thèmes système/clair/sombre. Une seule instance de G@IP peut être active par utilisateur sur une machine, toutes sessions de cet utilisateur confondues ; un autre utilisateur de la même machine peut lancer sa propre instance. Un second lancement pour le même utilisateur affiche « G@IP est déjà en cours d’exécution pour cet utilisateur. » puis se ferme sans ouvrir une seconde fenêtre principale.
 
 ## Stockage partagé
 
