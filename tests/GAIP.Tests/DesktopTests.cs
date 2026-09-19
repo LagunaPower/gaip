@@ -85,6 +85,7 @@ public sealed partial class DesktopTests
     {
         using var temp = new TempDirectory();
         var data = temp.Sub("data");
+        var local = temp.Sub("data/local");
         var configRoot = temp.Sub("config");
         var sites = Enumerable.Range(1, 6).Select(index => new GAIP.Core.Site
         {
@@ -94,7 +95,7 @@ public sealed partial class DesktopTests
                 .Select(vid => new GAIP.Core.Vlan { Vid = vid, Name = $"VLAN {vid}" })
                 .ToList()
         }).ToList();
-        new GAIP.Storage.FileRepository(System.IO.Path.Combine(data, "local"), "test", "pc")
+        new GAIP.Storage.FileRepository(local, "test", "pc")
             .Initialize(new GAIP.Core.Database { Sites = sites });
         GAIP.Storage.UserPaths.SaveConfig(configRoot, new GAIP.Storage.AppConfig { MaxHomeColumns = 6 });
 
