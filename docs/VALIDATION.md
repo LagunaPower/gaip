@@ -19,6 +19,7 @@ Validation mise à jour le 19 septembre 2026, sur Windows x64 et Ubuntu 24.04 so
 | Modèle | Passerelle, IP hors réseau, chevauchement inter-sites, unicités, VID, réservations, champs multilignes, casse, absence de cascade, réduction réseau |
 | Consultation | Compteurs avec passerelle, prochaine libre, IP enregistrées par défaut, plage complète sans pagination, tri numérique, recherches partielles/exactes, garde des très grands réseaux, recherche globale |
 | CSV | Création et mise à jour, UTF-8, séparateur alternatif, guillemets, erreurs multiples, doublons, chevauchements, absence d’import partiel ; export contextuel par GUID même avec VID identique sur un autre site |
+| Excel | Classeur `.xlsx` valide, onglet Sites et VLAN, lien hypertexte VLAN → réseau, un onglet par sous-réseau, informations réseau, passerelle/attributions/libres et garde de capacité Excel |
 | Historique VLAN | Événements du VLAN et de ses IP, libération, changement de VID, exclusion des événements étrangers et projection des détails, filtrage avant limite de 1000 |
 | Stockage | JSON aller-retour, IDs stables et collections obligatoires, rejet JSON invalide, SHA-256 connu, révisions, backups/rétention et audit |
 | Échecs I/O | Sauvegarde impossible, remplacement impossible, temporaire incomplet, hash périmé, central inaccessible |
