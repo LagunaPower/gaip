@@ -24,6 +24,7 @@ $env:NUGET_PACKAGES="$PWD/.nuget/packages"
 ## Interface et parcours
 
 - Accueil : recherche globale, utilisateur système, synchronisation et actualisation. Cartes de sites responsives avec largeur minimale cible d’environ 430 px et maximum configurable de 1 à 6 colonnes (3 par défaut), affichant tous leurs VLAN triés sans défilement interne. Les rangées occupent la hauteur disponible, les cartes d’une même rangée ont la même hauteur et leurs deux boutons sont centrés en bas.
+- Lancement : une seule instance de G@IP par utilisateur et par machine, y compris si le même utilisateur possède plusieurs sessions ouvertes.
 - **Ajouter un site** : code unique, nom, description. **Ajouter un VLAN** : VID, nom et cases multi-sites ; CIDR et passerelle facultatifs par site. Les VLAN créés sont indépendants.
 - Cliquer un VLAN ouvre sa fiche/IP. À l’accueil, seule la notation CIDR est affichée pour garder les lignes compactes ; le masque décimal reste calculé et visible dans la fiche réseau et les formulaires. Un `/22` contient 1022 IP utilisables, avec un masque `255.255.252.0`.
 - Par défaut, seules la passerelle et les IP enregistrées sont affichées. **Afficher les adresses libres** affiche toute la plage dans une liste virtualisée à défilement continu, **sans pagination**. Réseau et broadcast exclus. **Ajouter une IP** ouvre le formulaire du VLAN courant ; **Prochaine libre** ignore la passerelle et les IP utilisées.
