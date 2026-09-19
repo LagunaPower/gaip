@@ -1,0 +1,18 @@
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="GAIP-standard.exe"
+             product-name="G@IP — Gestion d’Adresses IP"
+             product-version="${version}"
+             company-name="LagunaPower"
+             original-filename="GAIP.exe">
+      <authenticode-sign />
+    </pe-file>
+    <pe-file path="GAIP-trimmed.exe"
+             product-name="G@IP — Gestion d’Adresses IP"
+             product-version="${version}"
+             company-name="LagunaPower"
+             original-filename="GAIP.exe">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
