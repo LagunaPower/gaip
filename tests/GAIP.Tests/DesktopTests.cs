@@ -51,6 +51,15 @@ public sealed partial class DesktopTests
         await Until(() => form.Save.IsEnabled); Click(form.Save); await Until(() => main.Session!.Data.Sites[0].Vlans[0].Subnet!.Addresses.Count == 1 && !form.IsVisible);
         Assert.Equal(3, main.Session!.Data.Revision);
         await Until(() => main.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "PASSERELLE"));
+
+        Click(Button(main, "Modifier le VLAN"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        var cidr = form.Fields.GetLogicalDescendants().OfType<TextBox>().Single(t => t.Text == "10.20.120.0/24");
+        Assert.True(cidr.IsReadOnly);
+        Assert.False(cidr.IsEnabled);
+        form.Close(false); await Until(() => !form.IsVisible);
+
         main.Close(); await Until(() => !main.IsVisible);
     }
     [AvaloniaFact]

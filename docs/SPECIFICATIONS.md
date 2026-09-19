@@ -12,7 +12,7 @@ G@IP gère sites → VLAN indépendants → zéro ou un sous-réseau IPv4 → at
 - Description/commentaire 500 caractères sur une ligne ; hostname 255 ; nom 150 ; code 50.
 - VLAN et IP triés numériquement.
 - Suppression site sans VLAN seulement ; VLAN sans attribution **ni passerelle** seulement. Libération d’une IP avec confirmation. Aucune cascade.
-- Dès qu’un sous-réseau contient au moins une IP attribuée, son CIDR ne peut plus être modifié ni retiré tant que toutes les IP n’ont pas été libérées. Une passerelle seule ne fige pas le CIDR ; elle doit rester utilisable dans le nouveau réseau ou être ajustée/supprimée.
+- Dès qu’un sous-réseau contient au moins une IP attribuée, son CIDR ne peut plus être modifié ni retiré tant que toutes les IP n’ont pas été libérées ; le champ CIDR est alors désactivé dans la fiche VLAN. Une passerelle seule ne fige pas le CIDR ; elle doit rester utilisable dans le nouveau réseau ou être ajustée/supprimée.
 - /31 et /32 admis sans IP utilisable. /0 calculé sans débordement ni énumération intégrale.
 
 ## Interface
