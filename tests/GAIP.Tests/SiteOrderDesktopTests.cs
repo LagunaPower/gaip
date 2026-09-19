@@ -15,7 +15,7 @@ namespace GAIP.Tests;
 public sealed partial class DesktopTests
 {
     [AvaloniaFact]
-    public async Task SiteOrderTabIsReadOnlyWithoutSharedEditLock()
+    public async Task SiteOrderTabIsWritableWithoutManualSharedEditLock()
     {
         using var temp = new TempDirectory(); var config = temp.Sub("config"); var central = temp.Sub("central");
         new FileRepository(central, "seed", "pc").Initialize(new() { Sites = [new() { Code = "A", Name = "Alpha" }, new() { Code = "B", Name = "Bravo" }] });
@@ -24,7 +24,8 @@ public sealed partial class DesktopTests
         Click(Button(main, "Configuration")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         var form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
         form.GetLogicalDescendants().OfType<TabControl>().Single().SelectedIndex = 1; await Task.Delay(100);
-        Assert.False(form.Save.IsEnabled); Assert.False(form.GetVisualDescendants().OfType<SiteOrderEditor>().Single().IsEnabled);
+        Assert.True(form.Save.IsEnabled); Assert.True(form.GetVisualDescendants().OfType<SiteOrderEditor>().Single().IsEnabled);
+        Assert.False(main.Session!.IsEditing); Assert.False(File.Exists(main.Session.Repository.LockPath));
         form.Close(false); await Until(() => !form.IsVisible); main.Close(); await Until(() => !main.IsVisible);
     }
     [AvaloniaFact]
