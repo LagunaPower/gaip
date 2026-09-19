@@ -65,6 +65,8 @@ Les versions publiées de G@IP sont disponibles dans les [GitHub Releases](https
 
 Les releases Windows destinées au public utilisent la chaîne de signature décrite dans [SIGNING.md](SIGNING.md). Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
 
+À chaque tag `vMAJOR.MINOR.PATCH`, la Release publie les archives portables standard et trimmed, ainsi qu’un **MSI Windows x64**, un **DEB amd64** et un **RPM x86_64**. Les trois paquets installables sont construits à partir de la variante trimmed ; les archives standard restent disponibles comme solution de repli.
+
 ## Publications autonomes
 
 ```sh
