@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 using GAIP.Desktop;
