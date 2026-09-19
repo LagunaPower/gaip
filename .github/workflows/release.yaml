@@ -178,13 +178,11 @@ jobs:
             }
           }
 
-      - name: Créer les archives Windows et leurs SHA-256
+      - name: Préparer les fichiers Windows à publier
         shell: pwsh
         env:
-          TAG: ${{ github.ref_name }}
           SIGNPATH_ENABLED: ${{ vars.SIGNPATH_ENABLED }}
         run: |
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
           New-Item -ItemType Directory -Force -Path package-standard | Out-Null
           New-Item -ItemType Directory -Force -Path package-trimmed | Out-Null
 
@@ -193,13 +191,20 @@ jobs:
             $trimmedSource = "signing-output/GAIP-trimmed.exe"
           }
           else {
-            Write-Warning "SignPath n'est pas activé : la Release Windows sera non signée."
+            Write-Warning "SignPath n'est pas activé : les binaires Windows seront non signés."
             $standardSource = "artifacts/Release/win-x64/GAIP.exe"
             $trimmedSource = "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe"
           }
 
           Copy-Item $standardSource "package-standard/GAIP.exe"
           Copy-Item $trimmedSource "package-trimmed/GAIP.exe"
+
+      - name: Créer les archives Windows et leurs SHA-256
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
 
           $standard = "dist/GAIP-$env:TAG-win-x64.zip"
           Compress-Archive -Path "package-standard/GAIP.exe" -DestinationPath $standard -Force
@@ -211,13 +216,110 @@ jobs:
           $trimmedHash = (Get-FileHash -Algorithm SHA256 $trimmed).Hash.ToLowerInvariant()
           "$trimmedHash  $([System.IO.Path]::GetFileName($trimmed))" | Set-Content -NoNewline "$trimmed.sha256"
 
+      - name: Installer WiX Toolset
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 6.0.2
+          $wix = Join-Path $env:USERPROFILE ".dotnet\tools\wix.exe"
+          & $wix --version
+          "WIX_EXE=$wix" >> $env:GITHUB_ENV
+
+      - name: Construire le MSI trimmed
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path signing-msi-input | Out-Null
+
+          $gaipExe = (Resolve-Path "package-trimmed/GAIP.exe").Path
+          $gaipIcon = (Resolve-Path "src/GAIP.Desktop/Assets/GAIP.ico").Path
+
+          & $env:WIX_EXE build `
+            "packaging/windows/Package.wxs" `
+            -arch x64 `
+            -d "Version=${{ steps.version.outputs.version }}" `
+            -d "GaipExe=$gaipExe" `
+            -d "GaipIcon=$gaipIcon" `
+            -pdbtype none `
+            -o "signing-msi-input/GAIP.msi"
+
+          if (-not (Test-Path "signing-msi-input/GAIP.msi")) {
+            throw "Le MSI n'a pas été généré."
+          }
+
+      - name: Charger le MSI non signé
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
+        id: upload-unsigned-msi
+        uses: actions/upload-artifact@v7
+        with:
+          name: gaip-windows-msi-unsigned
+          path: signing-msi-input/GAIP.msi
+          if-no-files-found: error
+
+      - name: Signer le MSI avec SignPath
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+          project-slug: '${{ vars.SIGNPATH_PROJECT_SLUG }}'
+          signing-policy-slug: '${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}'
+          artifact-configuration-slug: '${{ vars.SIGNPATH_MSI_ARTIFACT_CONFIGURATION_SLUG }}'
+          github-artifact-id: '${{ steps.upload-unsigned-msi.outputs.artifact-id }}'
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signing-msi-output
+          parameters: |
+            version: "${{ steps.version.outputs.version }}"
+            fileVersion: "${{ steps.version.outputs.file_version }}"
+
+      - name: Vérifier la signature Authenticode du MSI
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
+        shell: pwsh
+        run: |
+          $file = "signing-msi-output/GAIP.msi"
+          if (-not (Test-Path $file)) {
+            throw "MSI signé introuvable: $file"
+          }
+
+          $signature = Get-AuthenticodeSignature $file
+          Write-Host "$file : $($signature.Status) - $($signature.SignerCertificate.Subject)"
+
+          if ($signature.Status -ne "Valid") {
+            throw "Signature Authenticode invalide pour le MSI : $($signature.Status)"
+          }
+
+      - name: Finaliser le MSI et son SHA-256
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+          SIGNPATH_ENABLED: ${{ vars.SIGNPATH_ENABLED }}
+        run: |
+          $destination = "dist/GAIP-$env:TAG-win-x64.msi"
+
+          if ($env:SIGNPATH_ENABLED -eq "true") {
+            Copy-Item "signing-msi-output/GAIP.msi" $destination
+          }
+          else {
+            Write-Warning "SignPath n'est pas activé : le MSI sera non signé."
+            Copy-Item "signing-msi-input/GAIP.msi" $destination
+          }
+
+          $hash = (Get-FileHash -Algorithm SHA256 $destination).Hash.ToLowerInvariant()
+          "$hash  $([System.IO.Path]::GetFileName($destination))" | Set-Content -NoNewline "$destination.sha256"
+
       - name: Ajouter les fichiers Windows à la Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release upload $env:TAG "dist/GAIP-$env:TAG-win-x64.zip" "dist/GAIP-$env:TAG-win-x64.zip.sha256" "dist/GAIP-$env:TAG-win-x64-trimmed.zip" "dist/GAIP-$env:TAG-win-x64-trimmed.zip.sha256" --clobber
+          gh release upload $env:TAG `
+            "dist/GAIP-$env:TAG-win-x64.zip" `
+            "dist/GAIP-$env:TAG-win-x64.zip.sha256" `
+            "dist/GAIP-$env:TAG-win-x64-trimmed.zip" `
+            "dist/GAIP-$env:TAG-win-x64-trimmed.zip.sha256" `
+            "dist/GAIP-$env:TAG-win-x64.msi" `
+            "dist/GAIP-$env:TAG-win-x64.msi.sha256" `
+            --clobber
 
 
   publish-linux:
@@ -234,6 +336,20 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Déterminer la version
+        id: version
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag invalide: $TAG" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Publier G@IP Linux standard
         run: >
           dotnet publish
@@ -241,6 +357,9 @@ jobs:
           -c Release
           -r linux-x64
           -p:PublishProfile=Release
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:InformationalVersion=${{ steps.version.outputs.version }}
+          -p:IncludeSourceRevisionInInformationalVersion=false
 
       - name: Publier G@IP Linux trimmed
         run: >
@@ -249,10 +368,36 @@ jobs:
           -c Release
           -r linux-x64
           -p:PublishProfile=ExperimentalTrimmed
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:InformationalVersion=${{ steps.version.outputs.version }}
+          -p:IncludeSourceRevisionInInformationalVersion=false
 
-      - name: Créer les archives Linux et leurs SHA-256
+      - name: Installer les outils de packaging Linux
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm
+
+      - name: Construire DEB et RPM à partir du binaire trimmed
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          chmod +x packaging/linux/build-packages.sh packaging/linux/gaip
+          chmod +x artifacts/ExperimentalTrimmed/linux-x64/GAIP
+          packaging/linux/build-packages.sh "$VERSION" "artifacts/ExperimentalTrimmed/linux-x64" dist
+
+      - name: Vérifier les paquets Linux
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          dpkg-deb --info "dist/gaip_${VERSION}_amd64.deb"
+          dpkg-deb --contents "dist/gaip_${VERSION}_amd64.deb" | grep -E '/usr/lib/gaip/GAIP$|/usr/bin/gaip$|/usr/share/applications/gaip.desktop$'
+          rpm -qip "dist/gaip-${VERSION}-1.x86_64.rpm"
+          rpm -qlp "dist/gaip-${VERSION}-1.x86_64.rpm" | grep -E '^/usr/lib/gaip/GAIP$|^/usr/bin/gaip$|^/usr/share/applications/gaip.desktop$'
+
+      - name: Créer les archives Linux et les SHA-256
         env:
           TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p dist
 
@@ -264,9 +409,22 @@ jobs:
           tar -C artifacts/ExperimentalTrimmed/linux-x64 -czf "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" .
           sha256sum "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" > "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz.sha256"
 
+          sha256sum "dist/gaip_${VERSION}_amd64.deb" > "dist/gaip_${VERSION}_amd64.deb.sha256"
+          sha256sum "dist/gaip-${VERSION}-1.x86_64.rpm" > "dist/gaip-${VERSION}-1.x86_64.rpm.sha256"
+
       - name: Ajouter les fichiers Linux à la Release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release upload "$TAG" "dist/GAIP-$TAG-linux-x64.tar.gz" "dist/GAIP-$TAG-linux-x64.tar.gz.sha256" "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz.sha256" --clobber
+          gh release upload "$TAG" \
+            "dist/GAIP-$TAG-linux-x64.tar.gz" \
+            "dist/GAIP-$TAG-linux-x64.tar.gz.sha256" \
+            "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" \
+            "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz.sha256" \
+            "dist/gaip_${VERSION}_amd64.deb" \
+            "dist/gaip_${VERSION}_amd64.deb.sha256" \
+            "dist/gaip-${VERSION}-1.x86_64.rpm" \
+            "dist/gaip-${VERSION}-1.x86_64.rpm.sha256" \
+            --clobber
