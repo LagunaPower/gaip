@@ -318,6 +318,14 @@ public sealed partial class DesktopTests
             t => Assert.True(
                 string.IsNullOrEmpty(t.PlaceholderText)));
 
+        Assert.Equal(
+            "10.20.120.2",
+            form.Fields
+                .GetLogicalDescendants()
+                .OfType<TextBox>()
+                .First()
+                .Text);
+
         Click(Button(form, "Prochaine libre"));
 
         Assert.Equal(
@@ -395,4 +403,67 @@ public sealed partial class DesktopTests
 
         await Until(() => !main.IsVisible);
     }
+    [AvaloniaFact]
+    public async Task SharedAddressSaveUsesShortLockAndRejectsConcurrentDuplicate()
+    {
+        using var temp = new TempDirectory();
+        var data = temp.Sub("data");
+        var config = temp.Sub("config");
+        var central = temp.Sub("central");
+        var database = TestData.Example();
+        TestData.Subnet(database).Gateway = new() { Address = "10.20.120.1", Comment = "Firewall" };
+        var repository = new FileRepository(central, "seed", "pc");
+        repository.Initialize(database);
+        UserPaths.SaveConfig(config, new() { Mode = StorageMode.Shared, SharedPath = central });
+
+        var main = new MainWindow(data, config);
+        main.Show();
+        await UntilReady(main);
+
+        Assert.DoesNotContain(main.GetLogicalDescendants().OfType<Button>(),
+            b => b.Content as string is "Passer en modification" or "Terminer la modification");
+
+        var vlanButton = main.GetLogicalDescendants().OfType<Button>().First(b =>
+            b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.0/24"));
+        Click(vlanButton);
+        Click(Button(main, "Ajouter une IP"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+
+        var form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        var fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
+        Assert.Equal("10.20.120.2", fields[0].Text);
+        fields[1].Text = "MINE";
+        await Until(() => form.Save.IsEnabled);
+
+        var competing = new FileRepository(central, "other", "pc2");
+        var snapshot = competing.Read();
+        var lease = competing.Acquire(snapshot.Hash).Lease;
+        var candidate = JsonData.Clone(snapshot.Data);
+        TestData.Subnet(candidate).Addresses.Add(new() { Address = "10.20.120.2", Hostname = "OTHER" });
+        competing.Commit(candidate, snapshot.Hash, lease.Id, "Attribution", "IP", "10.20.120.2");
+        competing.Release(lease.Id);
+
+        Click(form.Save);
+        await Until(() => form.Error.Text?.Contains("déjà utilisée") == true);
+        Assert.True(form.IsVisible);
+        Assert.False(main.Session!.IsEditing);
+        Assert.False(File.Exists(main.Session.Repository.LockPath));
+        Assert.Single(TestData.Subnet(repository.Read().Data).Addresses);
+
+        fields[0].Text = "10.20.120.3";
+        await Until(() => form.Save.IsEnabled);
+        Click(form.Save);
+        await Until(() => !form.IsVisible);
+
+        var saved = TestData.Subnet(repository.Read().Data).Addresses.OrderBy(a => a.Address).ToArray();
+        Assert.Equal(2, saved.Length);
+        Assert.Equal("OTHER", saved[0].Hostname);
+        Assert.Equal("MINE", saved[1].Hostname);
+        Assert.False(main.Session.IsEditing);
+        Assert.False(File.Exists(main.Session.Repository.LockPath));
+
+        main.Close();
+        await Until(() => !main.IsVisible);
+    }
+
 }
