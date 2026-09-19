@@ -44,12 +44,12 @@ public static class Ui
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 4, 0),
-            IsVisible = !string.IsNullOrEmpty(input.Text)
+            IsEnabled = !string.IsNullOrEmpty(input.Text)
         };
         Avalonia.Automation.AutomationProperties.SetName(clear, $"Vider {label}");
         ToolTip.SetTip(clear, "Vider la recherche");
         clear.Click += (_, _) => { input.Text = ""; input.Focus(); };
-        input.TextChanged += (_, _) => clear.IsVisible = !string.IsNullOrEmpty(input.Text);
+        input.TextChanged += (_, _) => clear.IsEnabled = !string.IsNullOrEmpty(input.Text);
         grid.Children.Add(clear);
         return grid;
     }
