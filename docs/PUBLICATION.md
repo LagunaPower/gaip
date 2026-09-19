@@ -30,7 +30,7 @@ Le workflow de Release produit aussi trois paquets installables, tous construits
 
 Le MSI installe l’application dans `Program Files\LagunaPower\G@IP`, crée un raccourci dans le menu Démarrer et prend en charge les mises à niveau majeures. Les paquets Linux installent le binaire autonome sous `/usr/lib/gaip/GAIP`, le lanceur `/usr/bin/gaip`, l’entrée de menu et les icônes hicolor.
 
-Les sources de packaging sont sous `packaging/`. Le script Linux vérifie les prérequis de construction et le workflow inspecte le contenu des DEB/RPM avant publication. Chaque paquet est accompagné d’un SHA-256.
+Les sources de packaging sont sous `packaging/`. Le script Linux vérifie les prérequis de construction et le workflow inspecte le contenu des DEB/RPM avant publication. Les Releases ne génèrent pas de fichiers `.sha256` séparés.
 
 Lorsque SignPath est activé, le MSI est construit à partir de l’exécutable trimmed déjà signé, puis le MSI lui-même est soumis à une seconde signature Authenticode. La configuration correspondante est `.signpath/artifact-configurations/windows-msi.xml`.
 
