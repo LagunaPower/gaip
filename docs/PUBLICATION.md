@@ -8,9 +8,9 @@ Les fichiers `src/GAIP.Desktop/Properties/PublishProfiles/Development.pubxml` et
 | Release | Release | Self-contained, single-file | Aucun PDB publié ou incorporé au bundle | `artifacts/Release/<RID>` |
 | ExperimentalTrimmed | Release | Self-contained, single-file, trimming complet, Windows x64 et Linux x64 | Aucun PDB | `artifacts/ExperimentalTrimmed/<RID>` |
 
-Les scripts publient `win-x64` et `linux-x64` par défaut. `PublishTrimmed` reste faux dans Development et Release. Release conserve `SelfContained=true`, `PublishSingleFile=true`, `IncludeNativeLibrariesForSelfExtract=true`, `EnableCompressionInSingleFile=true` et `PublishReadyToRun=false`. Les bibliothèques natives sont incorporées ; les assemblages managés restent chargés depuis le bundle. Le mécanisme d’extraction suit les [règles .NET pour le single-file](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview#native-libraries).
+Les scripts publient `win-x64` et `linux-x64` par défaut. Avec le profil par défaut `Release`, ils produisent pour chaque RID x64 la publication standard dans `artifacts/Release/<RID>` puis la variante `ExperimentalTrimmed` dans `artifacts/ExperimentalTrimmed/<RID>`. `linux-arm64` reste standard uniquement, le profil trimmed étant volontairement limité à Windows x64 et Linux x64. Avec `Development`, seule la publication de développement est générée. `PublishTrimmed` reste faux dans Development et Release. Release conserve `SelfContained=true`, `PublishSingleFile=true`, `IncludeNativeLibrariesForSelfExtract=true`, `EnableCompressionInSingleFile=true` et `PublishReadyToRun=false`. Les bibliothèques natives sont incorporées ; les assemblages managés restent chargés depuis le bundle. Le mécanisme d’extraction suit les [règles .NET pour le single-file](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview#native-libraries).
 
-L'expérience ne remplace jamais la sortie Release des scripts. Commande explicite :
+La variante expérimentale ne remplace jamais la sortie Release standard : les scripts conservent les deux sorties séparées. Pour ne publier que la variante trimmed manuellement, utiliser :
 
 ```sh
 dotnet publish src/GAIP.Desktop -c Release -r <RID> -p:PublishProfile=ExperimentalTrimmed
