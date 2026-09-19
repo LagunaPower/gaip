@@ -1,4 +1,8 @@
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+    <parameter name="fileVersion" required="true" />
+  </parameters>
   <zip-file>
     <pe-file path="GAIP-standard.exe"
              product-name="G@IP — Gestion d’Adresses IP"
