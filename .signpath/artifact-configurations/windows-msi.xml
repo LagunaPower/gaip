@@ -1,0 +1,20 @@
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+    <parameter name="fileVersion" required="true" />
+  </parameters>
+  <msi-file path="GAIP.msi"
+            subject="G@IP — Gestion d’Adresses IP"
+            author="LagunaPower">
+    <pe-file path="GAIP.exe"
+             product-name="G@IP — Gestion d’Adresses IP"
+             product-version="${version}"
+             file-version="${fileVersion}"
+             company-name="LagunaPower"
+             copyright="Copyright © LagunaPower 2026"
+             original-filename="GAIP.exe">
+      <authenticode-verify />
+    </pe-file>
+    <authenticode-sign />
+  </msi-file>
+</artifact-configuration>
