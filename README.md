@@ -1,6 +1,6 @@
 # G@IP — Gestion d’Adresses IP
 
-Application desktop C# / .NET 10 / Avalonia 12.1 pour gérer sites, VLAN et plans IPv4. Sans SQL, serveur, inventaire matériel ou compte applicatif. Windows x64 et Linux x64 ; Wayland natif prioritaire, repli XWayland explicite.
+Application desktop C# / .NET 10 / Avalonia 12.1 pour gérer sites, VLAN et plans IPv4. Sans SQL, serveur, inventaire matériel ou compte applicatif. Windows x64 et Linux x64 ; Wayland natif prioritaire, repli XWayland explicite. G@IP est un logiciel open source distribué sous licence MIT.
 
 ## Compiler, tester, lancer
 
@@ -95,5 +95,9 @@ Après copie définitive du dossier Linux, exécuter `sh install-desktop.sh` dep
 - La sécurité filesystem suppose un stockage respectant les verrous et renommages. Ne pas modifier les JSON par un outil externe pendant une session. La durabilité physique d’un NAS après acquittement dépend de ce NAS.
 - JSON et annexes sont des fichiers distincts : un échec d’historique/cache après publication est signalé, sans annuler les données publiées. En cas de résultat incertain après coupure, actualiser avant de réessayer.
 - Les parcours UI utilisent Avalonia Headless ; les exécutables Release ont aussi été démarrés réellement sous Windows et Ubuntu 24.04/WSLg (X11/XWayland). Une session GNOME/KDE Wayland native et un partage SMB/NFS réel restent à valider sur les environnements cibles.
+
+## Licence
+
+G@IP est distribué sous licence [MIT](LICENSE). Vous pouvez l’utiliser, le modifier et le redistribuer dans les conditions prévues par cette licence.
 
 Voir [spécifications](docs/SPECIFICATIONS.md), [architecture](docs/ARCHITECTURE.md), [modèle](docs/DATA_MODEL.md) et [validation](docs/VALIDATION.md).
