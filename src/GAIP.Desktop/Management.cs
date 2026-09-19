@@ -42,10 +42,10 @@ public sealed partial class MainWindow
         var general = new StackPanel { Spacing = 14 };
         var generalFields = form.Fields.Children.ToArray(); form.Fields.Children.Clear();
         foreach (var field in generalFields) general.Children.Add(field);
-        var siteOrder = new SiteOrderEditor(Db.Sites) { IsEnabled = CanEdit };
+        var siteOrder = new SiteOrderEditor(Db.Sites) { IsEnabled = CanWrite };
         var orderPanel = Ui.Column(Ui.Text("Classez les sites par glisser-déposer, puis enregistrez l’ordre pour l’accueil."), siteOrder,
-            Ui.Text(CanEdit ? "Cet ordre est enregistré dans la base et partagé entre les postes." :
-                "Lecture seule : passez en modification depuis la fenêtre principale pour enregistrer un nouvel ordre.", 12));
+            Ui.Text(CanWrite ? "Le verrou partagé sera pris uniquement pendant l’enregistrement de l’ordre." :
+                "Lecture seule : le stockage partagé est actuellement hors ligne.", 12));
         var tabs = new TabControl { Name = "ConfigurationTabs", ItemsSource = new[]
         {
             new TabItem { Header = "Général", Content = general },
@@ -54,7 +54,7 @@ public sealed partial class MainWindow
         tabs.SelectionChanged += (_, _) =>
         {
             form.Save.Content = tabs.SelectedIndex == 1 ? "Enregistrer l’ordre" : "Enregistrer";
-            form.Save.IsEnabled = tabs.SelectedIndex != 1 || (CanEdit && Db.Sites.Count > 1);
+            form.Save.IsEnabled = tabs.SelectedIndex != 1 || (CanWrite && Db.Sites.Count > 1);
         };
         form.Fields.Children.Add(tabs);
         form.Submit = async () =>
@@ -174,8 +174,8 @@ public sealed partial class MainWindow
         if (vlanId is null)
         {
             form.Fields.Children.Add(Ui.Text($"UTF-8 · séparateur « {_config.CsvSeparator} ». Importez les VLAN avant les adresses. Les lignes existantes sont mises à jour ; aucune ligne absente du fichier n’est supprimée."));
-            form.Fields.Children.Add(Ui.Button("Importer vlans.csv…", () => Run(() => ImportCsv(CsvKind.Vlans)), CanEdit));
-            form.Fields.Children.Add(Ui.Button("Importer addresses.csv…", () => Run(() => ImportCsv(CsvKind.Addresses)), CanEdit));
+            form.Fields.Children.Add(Ui.Button("Importer vlans.csv…", () => Run(() => ImportCsv(CsvKind.Vlans)), CanWrite));
+            form.Fields.Children.Add(Ui.Button("Importer addresses.csv…", () => Run(() => ImportCsv(CsvKind.Addresses)), CanWrite));
         }
         else form.Fields.Children.Add(Ui.Text("Les exports CSV contiennent uniquement ce VLAN. L’export Excel produit toujours le classeur complet."));
         form.Fields.Children.Add(Ui.Button(vlanId is null ? "Exporter les VLAN / réseaux…" : "Exporter ce VLAN / réseau…", () => Run(() => ExportCsv(CsvKind.Vlans, vlanId))));
