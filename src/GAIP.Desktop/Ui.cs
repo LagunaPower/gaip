@@ -22,7 +22,7 @@ public static class Ui
     public static Grid SearchField(TextBox input, string label)
     {
         Avalonia.Automation.AutomationProperties.SetName(input, label);
-        input.Padding = new Thickness(30, 6, 8, 6);
+        input.Padding = new Thickness(30, 6, 32, 6);
         var grid = new Grid(); grid.Children.Add(input);
         grid.Children.Add(new Avalonia.Controls.Shapes.Path
         {
@@ -31,6 +31,26 @@ public static class Ui
             HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(8, 0, 0, 0), IsHitTestVisible = false
         });
+        var clear = new Button
+        {
+            Name = "ClearSearch",
+            Content = "×",
+            FontSize = 18,
+            Padding = new Thickness(0),
+            Width = 26,
+            Height = 26,
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 4, 0),
+            IsVisible = !string.IsNullOrEmpty(input.Text)
+        };
+        Avalonia.Automation.AutomationProperties.SetName(clear, $"Vider {label}");
+        ToolTip.SetTip(clear, "Vider la recherche");
+        clear.Click += (_, _) => { input.Text = ""; input.Focus(); };
+        input.TextChanged += (_, _) => clear.IsVisible = !string.IsNullOrEmpty(input.Text);
+        grid.Children.Add(clear);
         return grid;
     }
     public static StackPanel Field(string label, Control input) => new() { Spacing = 5, Children = { Text(label, 12, true), input } };
