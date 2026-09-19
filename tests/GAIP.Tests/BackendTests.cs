@@ -5,6 +5,24 @@ namespace GAIP.Tests;
 
 public sealed class BackendTests
 {
+    [Fact]
+    public void SingleInstanceIsExclusivePerUserAndCanBeReacquiredAfterRelease()
+    {
+        var name = $"GAIP.Tests.{Guid.NewGuid():N}";
+        using var first = Program.TryAcquireSingleInstance(name);
+        Assert.NotNull(first);
+
+        using var second = Program.TryAcquireSingleInstance(name);
+        Assert.Null(second);
+
+        first!.ReleaseMutex();
+        first.Dispose();
+
+        using var third = Program.TryAcquireSingleInstance(name);
+        Assert.NotNull(third);
+        third!.ReleaseMutex();
+    }
+
     [Theory]
     [InlineData(false, "wayland", null, false)]
     [InlineData(false, null, null, false)]
