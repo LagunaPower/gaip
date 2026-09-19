@@ -10,7 +10,12 @@ public static class Program
     public static void Main(string[] args)
     {
         using var singleInstance = TryAcquireSingleInstance(SingleInstanceName);
-        if (singleInstance is null) return;
+        if (singleInstance is null)
+        {
+            App.StartupMessage = "G@IP est déjà en cours d’exécution pour cet utilisateur.";
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            return;
+        }
 
         try { BuildAvaloniaApp().StartWithClassicDesktopLifetime(args); }
         finally { singleInstance.ReleaseMutex(); }
