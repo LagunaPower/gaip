@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=G@IP
+GenericName=Gestion d’Adresses IP
+Comment=Gestion de sites, VLAN et plans IPv4
+Exec=gaip
+Icon=GAIP
+Terminal=false
+Categories=Network;Utility;
+StartupWMClass=GAIP
