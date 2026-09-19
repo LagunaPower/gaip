@@ -6,7 +6,7 @@ Free code signing provided by [SignPath.io](https://signpath.io/), certificate b
 
 ## Scope
 
-The Windows release executables produced by the GitHub Actions release workflow are intended to be Authenticode-signed through SignPath. The standard and trimmed Windows executables are built from this public repository on GitHub-hosted runners before they are submitted for signing.
+The Windows release executables and MSI installer produced by the GitHub Actions release workflow are intended to be Authenticode-signed through SignPath. The standard and trimmed Windows executables are built from this public repository on GitHub-hosted runners before they are submitted for signing. The MSI is built from the signed trimmed executable and is then submitted for its own Authenticode signature.
 
 Unsigned development builds and local builds are not covered by this policy.
 
@@ -29,9 +29,10 @@ Release signing is performed only from the repository's tag-triggered GitHub Act
 
 The SignPath integration is enabled only after the SignPath Foundation project has been approved and the required GitHub repository secret and variables have been configured. Once enabled, a signing failure stops the Windows release job; the workflow does not silently substitute an unsigned executable.
 
-The SignPath artifact configuration used for Windows executables is stored in:
+The SignPath artifact configurations are stored in:
 
-`.signpath/artifact-configurations/windows-executables.xml`
+- `.signpath/artifact-configurations/windows-executables.xml`
+- `.signpath/artifact-configurations/windows-msi.xml`
 
 Release tags use the `vMAJOR.MINOR.PATCH` form. The version embedded in the Windows executable is derived from the tag and is checked by the SignPath artifact configuration.
 
