@@ -6,19 +6,33 @@ Les fichiers `src/GAIP.Desktop/Properties/PublishProfiles/Development.pubxml` et
 |---|---|---|---|---|
 | Development | Debug | Self-contained, fichiers séparés | PDB conservés | `artifacts/Development/<RID>` |
 | Release | Release | Self-contained, single-file | Aucun PDB publié ou incorporé au bundle | `artifacts/Release/<RID>` |
-| ExperimentalTrimmed | Release | Self-contained, single-file, trimming complet, Windows x64 seulement | Aucun PDB | `artifacts/ExperimentalTrimmed/win-x64` |
+| ExperimentalTrimmed | Release | Self-contained, single-file, trimming complet, Windows x64 et Linux x64 | Aucun PDB | `artifacts/ExperimentalTrimmed/<RID>` |
 
 Les scripts publient `win-x64` et `linux-x64` par défaut. `PublishTrimmed` reste faux dans Development et Release. Release conserve `SelfContained=true`, `PublishSingleFile=true`, `IncludeNativeLibrariesForSelfExtract=true`, `EnableCompressionInSingleFile=true` et `PublishReadyToRun=false`. Les bibliothèques natives sont incorporées ; les assemblages managés restent chargés depuis le bundle. Le mécanisme d’extraction suit les [règles .NET pour le single-file](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview#native-libraries).
 
 L'expérience ne remplace jamais la sortie Release des scripts. Commande explicite :
 
 ```sh
-dotnet publish src/GAIP.Desktop -c Release -r win-x64 -p:PublishProfile=ExperimentalTrimmed
+dotnet publish src/GAIP.Desktop -c Release -r <RID> -p:PublishProfile=ExperimentalTrimmed
 ```
 
 Ce profil importe Release puis active `PublishTrimmed=true`, `TrimMode=full` et `TrimmerSingleWarn=false`. Aucun NativeAOT, aucune suppression d'avertissements. Le JSON métier, la configuration, les verrous, l'historique et les informations de cache utilisent des contextes System.Text.Json générés à la compilation ; les tests vérifient leur compatibilité avec le format existant.
 
 Les icônes Linux et `install-desktop.sh` sont des fichiers facultatifs d’intégration au menu ; ils ne sont pas nécessaires au démarrage de `GAIP`. Les scripts refusent une sortie Release contenant des PDB, DLL, SO ou manifestes de runtime séparés. Ils ne suppriment aucune DLL après publication. Les anciens dossiers `artifacts/win-x64` et `artifacts/linux-x64` ne sont plus les sorties des scripts.
+
+## Paquets installables
+
+Le workflow de Release produit aussi trois paquets installables, tous construits à partir de la publication **ExperimentalTrimmed** :
+
+- Windows x64 : `GAIP-vX.Y.Z-win-x64.msi`, construit avec WiX Toolset 6.0.2 ;
+- Debian/Ubuntu amd64 : `gaip_X.Y.Z_amd64.deb` ;
+- RHEL/Fedora/AlmaLinux x86_64 : `gaip-X.Y.Z-1.x86_64.rpm`.
+
+Le MSI installe l’application dans `Program Files\LagunaPower\G@IP`, crée un raccourci dans le menu Démarrer et prend en charge les mises à niveau majeures. Les paquets Linux installent le binaire autonome sous `/usr/lib/gaip/GAIP`, le lanceur `/usr/bin/gaip`, l’entrée de menu et les icônes hicolor.
+
+Les sources de packaging sont sous `packaging/`. Le script Linux vérifie les prérequis de construction et le workflow inspecte le contenu des DEB/RPM avant publication. Chaque paquet est accompagné d’un SHA-256.
+
+Lorsque SignPath est activé, le MSI est construit à partir de l’exécutable trimmed déjà signé, puis le MSI lui-même est soumis à une seconde signature Authenticode. La configuration correspondante est `.signpath/artifact-configurations/windows-msi.xml`.
 
 ## Dépendances de développement
 
@@ -49,7 +63,7 @@ Si SignPath est activé, un échec de signature bloque la publication Windows : 
 Configuration GitHub attendue :
 
 - secret `SIGNPATH_API_TOKEN` ;
-- variables `SIGNPATH_ENABLED`, `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG` et `SIGNPATH_ARTIFACT_CONFIGURATION_SLUG`.
+- variables `SIGNPATH_ENABLED`, `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG`, `SIGNPATH_ARTIFACT_CONFIGURATION_SLUG` et `SIGNPATH_MSI_ARTIFACT_CONFIGURATION_SLUG`.
 
 La configuration d’artefact SignPath correspondante est versionnée dans `.signpath/artifact-configurations/windows-executables.xml`. La politique publique est décrite dans [SIGNING.md](../SIGNING.md).
 
