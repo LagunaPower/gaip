@@ -158,7 +158,7 @@ public sealed partial class MainWindow : Window
             var vlan = site.Vlans.Single(v => v.Id == context);
             _actions.Children.Add(Ui.Button("Modifier le VLAN", () => Run(() => EditVlan(site, vlan)), CanEdit));
         }
-        _actions.Children.Add(Ui.Button("CSV", () => Run(() => CsvDialog(context))));
+        _actions.Children.Add(Ui.Button("CSV / Excel", () => Run(() => CsvDialog(context))));
         _actions.Children.Add(Ui.Button("Historique", () => Run(() => History(context))));
         _actions.Children.Add(Ui.Button("Configuration", () => Run(Configure)));
         foreach (var action in _actions.Children)
