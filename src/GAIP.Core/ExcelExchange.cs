@@ -297,12 +297,12 @@ public static class ExcelExchange
                 WriteTextCell(writer, $"A{row}", site.Code, 4);
                 WriteTextCell(writer, $"B{row}", site.Name, 4);
                 WriteTextCell(writer, $"C{row}", site.Description, 4);
-                WriteNumberCell(writer, $"D{row}", vlan.Vid, byVlan.ContainsKey(vlan.Id) ? 6 : 4);
+                WriteNumberCell(writer, $"D{row}", (ulong)vlan.Vid, byVlan.ContainsKey(vlan.Id) ? 6 : 4);
                 WriteTextCell(writer, $"E{row}", vlan.Name, 4);
                 WriteTextCell(writer, $"F{row}", vlan.Description, 4);
                 WriteTextCell(writer, $"G{row}", vlan.Subnet?.Cidr ?? "", 4);
                 WriteTextCell(writer, $"H{row}", vlan.Subnet?.Gateway?.Address ?? "", 4);
-                WriteNumberCell(writer, $"I{row}", vlan.Subnet is null ? 0 : Queries.UsedCount(vlan.Subnet), 4);
+                WriteNumberCell(writer, $"I{row}", (ulong)(vlan.Subnet is null ? 0 : Queries.UsedCount(vlan.Subnet)), 4);
                 WriteNumberCell(writer, $"J{row}", vlan.Subnet is null ? 0 : Queries.FreeCount(vlan.Subnet), 4);
                 writer.WriteEndElement();
                 row++;
