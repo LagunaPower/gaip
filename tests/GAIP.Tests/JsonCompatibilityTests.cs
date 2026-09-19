@@ -30,6 +30,24 @@ public sealed class JsonCompatibilityTests
         Assert.Equal(AppTheme.Dark, JsonSerializer.Deserialize(old, StorageJsonContext.Default.AppConfig)!.Theme);
     }
     [Fact]
+    public void ConfigurationWithoutHomeColumnsUsesDefault()
+    {
+        const string old = """
+            {
+              "mode": "Local",
+              "sharedPath": "",
+              "syncSeconds": 60,
+              "backupCount": 30,
+              "csvSeparator": ";",
+              "theme": "System"
+            }
+            """;
+        var config = JsonSerializer.Deserialize(old, StorageJsonContext.Default.AppConfig)!;
+        config.Validate();
+        Assert.Equal(3, config.MaxHomeColumns);
+    }
+
+    [Fact]
     public void GeneratedHistoryPreservesAllExistingSnapshotKinds()
     {
         var db = TestData.Example();
