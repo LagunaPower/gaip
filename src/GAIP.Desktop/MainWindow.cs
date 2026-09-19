@@ -124,10 +124,22 @@ public sealed partial class MainWindow : Window
     private async Task Save(Action<Database> mutation, string action, string type, string target)
     {
         if (_session is null) throw new InvalidOperationException("Base non chargée.");
-        await Io(() => _session.Save(mutation, action, type, target)); Render();
-        if (_session.Warning is { } warning) await Message("Publication effectuée avec avertissement", warning);
+        var automaticLease = _session.Config.Mode == StorageMode.Shared && _session.Lease is null;
+        string? warning = null;
+        try
+        {
+            if (automaticLease) await Io(_session.BeginEdit);
+            await Io(() => _session.Save(mutation, action, type, target));
+            warning = _session.Warning;
+        }
+        finally
+        {
+            if (automaticLease && _session.Lease is not null) await Io(_session.EndEdit);
+        }
+        Render();
+        if (warning is not null) await Message("Publication effectuée avec avertissement", warning);
     }
-    private bool CanEdit => _session?.IsEditing == true;
+    private bool CanWrite => _session is { HasData: true, IsOffline: false };
     private Database Db => _session?.Data ?? new();
     private void ApplyTheme()
     {
@@ -145,20 +157,17 @@ public sealed partial class MainWindow : Window
             if (_actions.Children[i] != _globalSearch) _actions.Children.RemoveAt(i);
         _actions.Children.Insert(0, Ui.Button("Accueil", () => { _selectedSite = null; _selectedVlan = null; _search.Text = ""; Render(); }));
         _actions.Children.Insert(1, Ui.Button("Actualiser", () => Run(Refresh)));
-        if (_config.Mode == StorageMode.Shared)
-            _actions.Children.Add(Ui.Button(CanEdit ? "Terminer la modification" : "Passer en modification", () => Run(async () =>
-            { if (CanEdit) await Io(_session.EndEdit); else await Io(_session.BeginEdit); }), !_session.IsOffline || CanEdit));
         Guid? context = string.IsNullOrWhiteSpace(_search.Text) && Db.Sites.Any(s => s.Vlans.Any(v => v.Id == _selectedVlan)) ? _selectedVlan : null;
         if (context is null)
         {
-            _actions.Children.Add(Ui.Button("Ajouter un site", () => Run(() => EditSite(null)), CanEdit));
-            _actions.Children.Add(Ui.Button("Ajouter un VLAN", () => Run(() => EditVlan(null, null)), CanEdit && Db.Sites.Count > 0));
+            _actions.Children.Add(Ui.Button("Ajouter un site", () => Run(() => EditSite(null)), CanWrite));
+            _actions.Children.Add(Ui.Button("Ajouter un VLAN", () => Run(() => EditVlan(null, null)), CanWrite && Db.Sites.Count > 0));
         }
         else
         {
             var site = Db.Sites.Single(s => s.Vlans.Any(v => v.Id == context));
             var vlan = site.Vlans.Single(v => v.Id == context);
-            _actions.Children.Add(Ui.Button("Modifier le VLAN", () => Run(() => EditVlan(site, vlan)), CanEdit));
+            _actions.Children.Add(Ui.Button("Modifier le VLAN", () => Run(() => EditVlan(site, vlan)), CanWrite));
         }
         _actions.Children.Add(Ui.Button("CSV / Excel", () => Run(() => CsvDialog(context))));
         _actions.Children.Add(Ui.Button("Historique", () => Run(() => History(context))));
@@ -210,8 +219,8 @@ public sealed partial class MainWindow : Window
             if (site.Vlans.Count == 0) details.Children.Add(Ui.Text("Aucun VLAN. Créez le premier plan d’adressage.", 12));
 
             var siteActions = Ui.Row(
-                Ui.Button("Modifier le site", () => Run(() => EditSite(site)), CanEdit),
-                Ui.Button("Ajouter un VLAN", () => Run(() => EditVlan(site, null)), CanEdit));
+                Ui.Button("Modifier le site", () => Run(() => EditSite(site)), CanWrite),
+                Ui.Button("Ajouter un VLAN", () => Run(() => EditVlan(site, null)), CanWrite));
             siteActions.HorizontalAlignment = HorizontalAlignment.Center;
 
             var content = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), RowSpacing = 12 };
@@ -230,7 +239,7 @@ public sealed partial class MainWindow : Window
         {
             _body.Content = Ui.Scroll(Ui.Column(summary, Ui.Card(Ui.Column(Ui.Text("Bienvenue dans G@IP", 22, true),
                 Ui.Text("Créez un site, ajoutez ses VLAN et définissez vos sous-réseaux. Votre base est actuellement vide."),
-                Ui.Button("Ajouter un site", () => Run(() => EditSite(null)), CanEdit)))));
+                Ui.Button("Ajouter un site", () => Run(() => EditSite(null)), CanWrite)))));
             return;
         }
 
@@ -348,7 +357,7 @@ public sealed partial class MainWindow : Window
                 button.Padding = new Thickness(8, 2); button.Height = 34;
                 button.HorizontalAlignment = HorizontalAlignment.Stretch; button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
                 if (!row.IsUsed) button.Opacity = .7;
-                button.IsEnabled = CanEdit; ToolTip.SetTip(button, $"{row.Address} · {row.Hostname} · {row.Description}");
+                button.IsEnabled = CanWrite; ToolTip.SetTip(button, $"{row.Address} · {row.Hostname} · {row.Description}");
                 return button;
             })
         };
@@ -376,7 +385,7 @@ public sealed partial class MainWindow : Window
         var filters = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 12 };
         filters.Children.Add(Ui.SearchField(search, "Filtrer les adresses IP, hostnames ou descriptions"));
         Grid.SetColumn(showFree, 1); filters.Children.Add(showFree);
-        var add = Ui.Button("Ajouter une IP", () => Run(() => EditAddress(site.Id, vlan.Id, null)), CanEdit);
+        var add = Ui.Button("Ajouter une IP", () => Run(() => EditAddress(site.Id, vlan.Id, null)), CanWrite);
         Grid.SetColumn(add, 2); filters.Children.Add(add); stack.Children.Add(filters);
         stack.Children.Add(AddressGrid("Adresse IP", "Nom / Hostname", "Description", true));
         // Finite viewport is essential: never put the virtualized list in an outer ScrollViewer.
