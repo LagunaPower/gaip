@@ -154,6 +154,7 @@ jobs:
           output-artifact-directory: signing-output
           parameters: |
             version: "${{ steps.version.outputs.version }}"
+            fileVersion: "${{ steps.version.outputs.file_version }}"
 
       - name: Vérifier les signatures Authenticode
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
