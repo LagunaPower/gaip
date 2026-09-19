@@ -81,6 +81,51 @@ public sealed partial class DesktopTests
     }
 
     [AvaloniaFact]
+    public async Task HomeColumnsRespectConfiguredMaximumAndKeepActionsAtCardBottom()
+    {
+        using var temp = new TempDirectory();
+        var data = temp.Sub("data");
+        var configRoot = temp.Sub("config");
+        var sites = Enumerable.Range(1, 6).Select(index => new GAIP.Core.Site
+        {
+            Code = $"S{index}",
+            Name = $"Site {index}",
+            Vlans = Enumerable.Range(1, index % 3 + 1)
+                .Select(vid => new GAIP.Core.Vlan { Vid = vid, Name = $"VLAN {vid}" })
+                .ToList()
+        }).ToList();
+        new GAIP.Storage.FileRepository(System.IO.Path.Combine(data, "local"), "test", "pc")
+            .Initialize(new GAIP.Core.Database { Sites = sites });
+        GAIP.Storage.UserPaths.SaveConfig(configRoot, new GAIP.Storage.AppConfig { MaxHomeColumns = 6 });
+
+        var main = new MainWindow(data, configRoot) { Width = 2800 };
+        main.Show();
+        await UntilReady(main);
+        var cards = main.GetLogicalDescendants().OfType<Grid>().Single(g => g.Name == "SiteCards");
+        await Until(() => cards.ColumnDefinitions.Count == 6);
+        Assert.Equal(6, cards.ColumnDefinitions.Count);
+
+        main.Width = 1320;
+        await Until(() => cards.ColumnDefinitions.Count == 2);
+        await Task.Delay(50);
+        Assert.Equal(2, cards.ColumnDefinitions.Count);
+
+        var first = Assert.IsType<Border>(cards.Children[0]);
+        var second = Assert.IsType<Border>(cards.Children[1]);
+        Assert.InRange(Math.Abs(first.Bounds.Height - second.Bounds.Height), 0, 0.5);
+
+        var firstContent = Assert.IsType<Grid>(first.Child);
+        Assert.Equal(3, firstContent.RowDefinitions.Count);
+        var actions = firstContent.Children.OfType<WrapPanel>().Single();
+        Assert.Equal(2, Grid.GetRow(actions));
+        Assert.Contains(actions.Children.OfType<Button>(), b => b.Content as string == "Modifier le site");
+        Assert.Contains(actions.Children.OfType<Button>(), b => b.Content as string == "Ajouter un VLAN");
+
+        main.Close();
+        await Until(() => !main.IsVisible);
+    }
+
+    [AvaloniaFact]
     public async Task MultiSiteFormBlocksOverlapsAndCreatesIndependentVlans()
     {
         using var temp = new TempDirectory(); var data = temp.Sub("data");
