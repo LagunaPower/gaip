@@ -31,6 +31,28 @@ Les icônes Linux et `install-desktop.sh` sont des fichiers facultatifs d’int�
 - Aucun fichier `Default*.pubxml` n'appartient au projet. Les profils génériques trouvés appartiennent au SDK local, sous `.tools/dotnet/sdk/10.0.401/Sdks/Microsoft.NET.Sdk.Publish/targets/PublishProfiles/`, et restent intacts.
 - Aucune DLL n'est supprimée manuellement dans les artefacts.
 
+## Signature Windows
+
+La chaîne de Release peut signer les exécutables Windows standard et trimmed avec SignPath avant la création des archives ZIP. L’intégration reste désactivée tant que la variable de dépôt `SIGNPATH_ENABLED` n’est pas égale à `true`.
+
+Quand elle est activée, le workflow :
+
+1. dérive la version du tag `vMAJOR.MINOR.PATCH` et l’intègre dans les métadonnées PE ;
+2. publie les deux exécutables Windows ;
+3. charge les exécutables non signés comme artefact GitHub Actions ;
+4. soumet cet artefact à `signpath/github-action-submit-signing-request@v3` ;
+5. attend le résultat signé et vérifie localement que les deux signatures Authenticode sont valides ;
+6. construit les ZIP uniquement à partir des exécutables signés.
+
+Si SignPath est activé, un échec de signature bloque la publication Windows : il n’y a pas de repli silencieux vers un exécutable non signé.
+
+Configuration GitHub attendue :
+
+- secret `SIGNPATH_API_TOKEN` ;
+- variables `SIGNPATH_ENABLED`, `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG` et `SIGNPATH_ARTIFACT_CONFIGURATION_SLUG`.
+
+La configuration d’artefact SignPath correspondante est versionnée dans `.signpath/artifact-configurations/windows-executables.xml`. La politique publique est décrite dans [SIGNING.md](../SIGNING.md).
+
 ## Vérifications de démarrage
 
 `scripts/smoke-windows.ps1` copie seulement `GAIP.exe` dans un dossier de test, démarre le processus en fenêtre masquée, détecte sa fenêtre Win32 G@IP par PID, attend puis demande une fermeture normale. Il utilise la configuration du compte courant et ne déclenche aucune édition métier.
