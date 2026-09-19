@@ -176,7 +176,8 @@ public sealed partial class DesktopTests
         Click(form.Save); await Until(() => main.Session!.Config.Mode == GAIP.Storage.StorageMode.Shared && !form.IsVisible);
         Assert.Single(main.Session!.Data.Sites); Assert.False(main.Session.IsEditing);
         Assert.Equal(GAIP.Storage.AppTheme.Dark, GAIP.Storage.UserPaths.LoadConfig(configRoot).Theme);
-        Click(Button(main, "Passer en modification")); await Until(() => main.Session.IsEditing); Assert.True(File.Exists(main.Session.Repository.LockPath));
+        Assert.DoesNotContain(main.GetLogicalDescendants().OfType<Button>(), b => b.Content as string is "Passer en modification" or "Terminer la modification");
+        Assert.False(File.Exists(main.Session.Repository.LockPath));
         Click(Button(main, "Configuration")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible); combos = form.Fields.GetLogicalDescendants().OfType<ComboBox>().ToArray();
         combos[0].SelectedIndex = 0; combos[2].SelectedIndex = 1; Click(form.Save);
