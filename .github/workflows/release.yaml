@@ -199,7 +199,7 @@ jobs:
           Copy-Item $standardSource "package-standard/GAIP.exe"
           Copy-Item $trimmedSource "package-trimmed/GAIP.exe"
 
-      - name: Créer les archives Windows et leurs SHA-256
+      - name: Créer les archives Windows
         shell: pwsh
         env:
           TAG: ${{ github.ref_name }}
@@ -208,13 +208,8 @@ jobs:
 
           $standard = "dist/GAIP-$env:TAG-win-x64.zip"
           Compress-Archive -Path "package-standard/GAIP.exe" -DestinationPath $standard -Force
-          $standardHash = (Get-FileHash -Algorithm SHA256 $standard).Hash.ToLowerInvariant()
-          "$standardHash  $([System.IO.Path]::GetFileName($standard))" | Set-Content -NoNewline "$standard.sha256"
-
           $trimmed = "dist/GAIP-$env:TAG-win-x64-trimmed.zip"
           Compress-Archive -Path "package-trimmed/GAIP.exe" -DestinationPath $trimmed -Force
-          $trimmedHash = (Get-FileHash -Algorithm SHA256 $trimmed).Hash.ToLowerInvariant()
-          "$trimmedHash  $([System.IO.Path]::GetFileName($trimmed))" | Set-Content -NoNewline "$trimmed.sha256"
 
       - name: Installer WiX Toolset
         shell: pwsh
@@ -287,7 +282,7 @@ jobs:
             throw "Signature Authenticode invalide pour le MSI : $($signature.Status)"
           }
 
-      - name: Finaliser le MSI et son SHA-256
+      - name: Finaliser le MSI
         shell: pwsh
         env:
           TAG: ${{ github.ref_name }}
@@ -303,8 +298,6 @@ jobs:
             Copy-Item "signing-msi-input/GAIP.msi" $destination
           }
 
-          $hash = (Get-FileHash -Algorithm SHA256 $destination).Hash.ToLowerInvariant()
-          "$hash  $([System.IO.Path]::GetFileName($destination))" | Set-Content -NoNewline "$destination.sha256"
 
       - name: Ajouter les fichiers Windows à la Release
         shell: pwsh
@@ -314,11 +307,8 @@ jobs:
         run: |
           gh release upload $env:TAG `
             "dist/GAIP-$env:TAG-win-x64.zip" `
-            "dist/GAIP-$env:TAG-win-x64.zip.sha256" `
             "dist/GAIP-$env:TAG-win-x64-trimmed.zip" `
-            "dist/GAIP-$env:TAG-win-x64-trimmed.zip.sha256" `
             "dist/GAIP-$env:TAG-win-x64.msi" `
-            "dist/GAIP-$env:TAG-win-x64.msi.sha256" `
             --clobber
 
 
@@ -394,7 +384,7 @@ jobs:
           rpm -qip "dist/gaip-${VERSION}-1.x86_64.rpm"
           rpm -qlp "dist/gaip-${VERSION}-1.x86_64.rpm" | grep -E '^/usr/lib/gaip/GAIP$|^/usr/bin/gaip$|^/usr/share/applications/gaip.desktop$'
 
-      - name: Créer les archives Linux et les SHA-256
+      - name: Créer les archives Linux
         env:
           TAG: ${{ github.ref_name }}
           VERSION: ${{ steps.version.outputs.version }}
@@ -403,14 +393,8 @@ jobs:
 
           chmod +x artifacts/Release/linux-x64/GAIP
           tar -C artifacts/Release/linux-x64 -czf "dist/GAIP-$TAG-linux-x64.tar.gz" .
-          sha256sum "dist/GAIP-$TAG-linux-x64.tar.gz" > "dist/GAIP-$TAG-linux-x64.tar.gz.sha256"
-
           chmod +x artifacts/ExperimentalTrimmed/linux-x64/GAIP
           tar -C artifacts/ExperimentalTrimmed/linux-x64 -czf "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" .
-          sha256sum "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" > "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz.sha256"
-
-          sha256sum "dist/gaip_${VERSION}_amd64.deb" > "dist/gaip_${VERSION}_amd64.deb.sha256"
-          sha256sum "dist/gaip-${VERSION}-1.x86_64.rpm" > "dist/gaip-${VERSION}-1.x86_64.rpm.sha256"
 
       - name: Ajouter les fichiers Linux à la Release
         env:
@@ -420,11 +404,7 @@ jobs:
         run: |
           gh release upload "$TAG" \
             "dist/GAIP-$TAG-linux-x64.tar.gz" \
-            "dist/GAIP-$TAG-linux-x64.tar.gz.sha256" \
             "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" \
-            "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz.sha256" \
             "dist/gaip_${VERSION}_amd64.deb" \
-            "dist/gaip_${VERSION}_amd64.deb.sha256" \
             "dist/gaip-${VERSION}-1.x86_64.rpm" \
-            "dist/gaip-${VERSION}-1.x86_64.rpm.sha256" \
             --clobber
