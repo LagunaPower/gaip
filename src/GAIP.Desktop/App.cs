@@ -30,7 +30,7 @@ public sealed class App : Application
             CanResize = false,
             WindowStartupLocation = WindowStartupLocation.CenterScreen
         };
-        var close = Ui.Button("Fermer", window.Close);
+        var close = Ui.Button("Fermer", () => window.Close());
         close.HorizontalAlignment = HorizontalAlignment.Center;
         window.Content = new Border
         {
