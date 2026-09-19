@@ -27,13 +27,13 @@ $env:NUGET_PACKAGES="$PWD/.nuget/packages"
 - Lancement : une seule instance de G@IP par utilisateur et par machine, y compris si le même utilisateur possède plusieurs sessions ouvertes. Un second lancement affiche un message puis se ferme ; un autre utilisateur de la machine peut lancer sa propre instance.
 - **Ajouter un site** : code unique, nom, description. **Ajouter un VLAN** : VID, nom et cases multi-sites ; CIDR et passerelle facultatifs par site. Les VLAN créés sont indépendants.
 - Cliquer un VLAN ouvre sa fiche/IP. À l’accueil, seule la notation CIDR est affichée pour garder les lignes compactes ; le masque décimal reste calculé et visible dans la fiche réseau et les formulaires. Un `/22` contient 1022 IP utilisables, avec un masque `255.255.252.0`.
-- Par défaut, seules la passerelle et les IP enregistrées sont affichées. **Afficher les adresses libres** affiche toute la plage dans une liste virtualisée à défilement continu, **sans pagination**. Réseau et broadcast exclus. **Ajouter une IP** ouvre le formulaire du VLAN courant ; **Prochaine libre** ignore la passerelle et les IP utilisées.
+- Par défaut, seules la passerelle et les IP enregistrées sont affichées. **Afficher les adresses libres** affiche toute la plage dans une liste virtualisée à défilement continu, **sans pagination**. Réseau et broadcast exclus. **Ajouter une IP** ouvre le formulaire du VLAN courant avec la première adresse libre préremplie ; **Prochaine libre** recalcule cette adresse en ignorant la passerelle et les IP utilisées.
 - Vue compacte : logo de 96 px sur les deux lignes du bandeau, actions regroupées en haut et état de connexion en pied de fenêtre. Le résumé conserve CIDR, masque, passerelle et compteurs ; **Détails réseau** déplie les bornes et la description du VLAN. **Accueil** suffit pour revenir aux sites. Les champs de recherche disposent d’une croix pour les vider en un clic ; les champs de saisie n’affichent aucun texte indicatif en fond et les aides restent disponibles en infobulle.
 - **Modifier le VLAN**, **Modifier le site**, **Libérer l’adresse** : modifications et suppressions avec validation. Aucun parent non vide n’est supprimé.
 - **CSV** : import avec toutes les erreurs détectées avant publication, export VLAN, IP ou les deux. **Excel** : export `.xlsx` complet avec un onglet Sites et VLAN, des liens hypertextes vers un onglet par réseau, les informations réseau et toutes les IP utilisables. **Historique** : 1 000 dernières actions, détails dépliables.
 - Dans une vue VLAN, **CSV** exporte uniquement ce VLAN et ses IP ; **Historique** affiche ses dernières actions liées, y compris les libérations d’IP, sans exposer les autres VLAN dans les détails. Les ajouts génériques sont accessibles à l’accueil.
 - **Configuration** : mode, chemin partagé, fréquence, rétention, séparateur, thème et diagnostic/verrou.
-- **Configuration → Ordre d’affichage** : déplacer les sites par glisser-déposer, puis **Enregistrer l’ordre**. Monter/Descendre permet aussi un classement au clavier. Annuler conserve l’ordre précédent. L’ordre est commun aux postes ; le mode modification est requis sur un partage. Sans ordre enregistré, tri par code ; les nouveaux sites suivent les sites déjà classés. Les cartes de l’accueil sont espacées de 8 px.
+- **Configuration → Ordre d’affichage** : déplacer les sites par glisser-déposer, puis **Enregistrer l’ordre**. Monter/Descendre permet aussi un classement au clavier. Annuler conserve l’ordre précédent. L’ordre est commun aux postes ; en mode partagé, le verrou est pris automatiquement uniquement pendant l’enregistrement. Sans ordre enregistré, tri par code ; les nouveaux sites suivent les sites déjà classés. Les cartes de l’accueil sont espacées de 8 px.
 
 La base initiale est vide. Pour une démonstration volontaire, importer `samples/vlans.csv`, puis `samples/addresses.csv`.
 
@@ -43,7 +43,7 @@ Local : chaque formulaire publie immédiatement avec sauvegarde et historique. A
 
 Partagé : choisir un dossier filesystem existant accessible en lecture/écriture (`\\NAS\IPAM` ou `/mnt/ipam`). Utiliser une base existante ou autoriser explicitement l’initialisation depuis la base actuelle, seulement si absente. Aucun merge automatique.
 
-**Passer en modification** actualise le cache, prend le verrou et revérifie le hash central. Chaque formulaire publie immédiatement. **Terminer la modification** libère le verrou. Heartbeat toutes les 10 s ; actualisation en consultation toutes les 60 s, configurable. **Actualiser** force la vérification.
+En mode partagé, il n’y a plus de bouton de passage en modification. L’utilisateur peut ouvrir directement un formulaire d’ajout, de modification, de libération, d’import ou de classement. Au clic sur **Enregistrer** ou après confirmation d’une suppression/libération, G@IP actualise la base, prend automatiquement le verrou, revérifie le hash et toutes les règles métier, publie puis libère immédiatement le verrou. Si un autre poste a publié entre-temps, la nouvelle base est prise en compte avant validation ; une IP devenue utilisée est donc rejetée sans écrasement et le formulaire reste ouvert pour correction. **Actualiser** force la vérification hors publication.
 
 Hors ligne : cache validé consultable, modifications interdites. Sans cache valide, erreur explicite. Un verrou n’expire pas automatiquement : **Configuration → Diagnostic / gestion du verrou** propose sa libération forcée, avec détenteur, dates et saisie de `LIBÉRER`. L’ancien détenteur ne peut ensuite plus publier, même avant son prochain heartbeat.
 
@@ -56,7 +56,7 @@ Hors ligne : cache validé consultable, modifications interdites. Sans cache val
 | Base locale | `local/gaip-data.json` sous les données | idem |
 | Cache partagé | `cache/gaip-data.json` et `cache/cache.info` | idem |
 
-Stockage de référence : `gaip-data.json`, `history.jsonl`, `backup/`, `edit.lock` pendant une édition partagée. `.gaip-io.guard` est un fichier technique permanent de coordination ; ne pas le supprimer pendant l’utilisation. Les temporaires `.tmp` ne sont jamais lus comme base.
+Stockage de référence : `gaip-data.json`, `history.jsonl`, `backup/`, `edit.lock` pendant une publication partagée. `.gaip-io.guard` est un fichier technique permanent de coordination ; ne pas le supprimer pendant l’utilisation. Les temporaires `.tmp` ne sont jamais lus comme base.
 
 Avant chaque publication, sauvegarde de l’ancienne base. Rétention configurable, 30 par défaut. Pas de restauration dans l’interface ; une restauration manuelle se fait avec tous les clients fermés et après conservation de la base courante.
 
