@@ -167,21 +167,24 @@ public sealed partial class MainWindow
     }
     private async Task CsvDialog(Guid? vlanId = null)
     {
-        var form = new FormWindow(vlanId is null ? "Import / export CSV" : $"Export CSV · {VlanLabel(vlanId.Value)}", "Fermer", 720);
+        var form = new FormWindow(vlanId is null ? "Import / export CSV et Excel" : $"Export · {VlanLabel(vlanId.Value)}", "Fermer", 720);
         if (vlanId is null)
         {
             form.Fields.Children.Add(Ui.Text($"UTF-8 · séparateur « {_config.CsvSeparator} ». Importez les VLAN avant les adresses. Les lignes existantes sont mises à jour ; aucune ligne absente du fichier n’est supprimée."));
             form.Fields.Children.Add(Ui.Button("Importer vlans.csv…", () => Run(() => ImportCsv(CsvKind.Vlans)), CanEdit));
             form.Fields.Children.Add(Ui.Button("Importer addresses.csv…", () => Run(() => ImportCsv(CsvKind.Addresses)), CanEdit));
         }
-        else form.Fields.Children.Add(Ui.Text("L’export contient uniquement ce VLAN, son sous-réseau, sa passerelle et ses adresses enregistrées."));
+        else form.Fields.Children.Add(Ui.Text("Les exports CSV contiennent uniquement ce VLAN. L’export Excel produit toujours le classeur complet."));
         form.Fields.Children.Add(Ui.Button(vlanId is null ? "Exporter les VLAN / réseaux…" : "Exporter ce VLAN / réseau…", () => Run(() => ExportCsv(CsvKind.Vlans, vlanId))));
         form.Fields.Children.Add(Ui.Button("Exporter les adresses IP…", () => Run(() => ExportCsv(CsvKind.Addresses, vlanId))));
-        form.Fields.Children.Add(Ui.Button("Exporter les deux fichiers…", () => Run(() => ExportAll(vlanId))));
+        form.Fields.Children.Add(Ui.Button("Exporter les deux fichiers CSV…", () => Run(() => ExportAll(vlanId))));
+        form.Fields.Children.Add(Ui.Button("Exporter le classeur Excel complet…", () => Run(ExportExcel)));
+        form.Fields.Children.Add(Ui.Text("Excel : le premier onglet liste les sites et VLAN avec des liens vers un onglet par réseau. Chaque onglet réseau contient ses informations et toutes les adresses IP utilisables.", 12));
         form.Fields.Children.Add(Ui.Text("Les passerelles figurent dans vlans.csv uniquement.", 12));
         await form.ShowDialog<bool>(this);
     }
     private static FilePickerFileType CsvType => new("CSV UTF-8") { Patterns = ["*.csv"] };
+    private static FilePickerFileType ExcelType => new("Classeur Excel") { Patterns = ["*.xlsx"] };
     private async Task ImportCsv(CsvKind kind)
     {
         var files = await StorageProvider.OpenFilePickerAsync(new() { Title = "Importer CSV", AllowMultiple = false, FileTypeFilter = [CsvType] });
@@ -220,6 +223,26 @@ public sealed partial class MainWindow
         await using var stream = await file.OpenWriteAsync(); stream.SetLength(0);
         await using var writer = new StreamWriter(stream, new UTF8Encoding(true)); await writer.WriteAsync(text);
     }
+    private async Task ExportExcel()
+    {
+        var snapshot = JsonData.Clone(Db);
+        var file = await StorageProvider.SaveFilePickerAsync(new()
+        {
+            Title = "Exporter Excel",
+            SuggestedFileName = "GAIP.xlsx",
+            DefaultExtension = "xlsx",
+            FileTypeChoices = [ExcelType],
+            ShowOverwritePrompt = true
+        });
+        if (file is null) return;
+
+        await using var stream = await file.OpenWriteAsync();
+        stream.SetLength(0);
+        await Task.Run(() => ExcelExchange.Export(snapshot, stream));
+        await stream.FlushAsync();
+        await Message("Export terminé", "Le classeur Excel a été exporté.");
+    }
+
     private async Task ExportAll(Guid? vlanId = null)
     {
         var exports = new[] { CsvKind.Vlans, CsvKind.Addresses }.ToDictionary(kind => kind, kind => CsvExchange.Export(Db, kind, _config.CsvSeparator[0], vlanId));
