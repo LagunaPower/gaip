@@ -34,6 +34,7 @@ public sealed partial class MainWindow : Window
     private bool _showFreeAddresses;
     private string _subnetSearch = "";
     private Grid? _siteCards;
+    private ScrollViewer? _siteCardsScroll;
     public DataSession? Session => _session;
 
     public MainWindow() : this(UserPaths.Root, UserPaths.ConfigRoot) { }
@@ -168,6 +169,7 @@ public sealed partial class MainWindow : Window
         }
         ToolTip.SetTip(_status, _status.Text);
         _siteCards = null;
+        _siteCardsScroll = null;
         if (!string.IsNullOrWhiteSpace(_search.Text)) { RenderSearch(); return; }
         if (_selectedVlan is { } vlanId)
         {
@@ -197,9 +199,7 @@ public sealed partial class MainWindow : Window
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("48,*,Auto"), ColumnSpacing = 8 };
                 row.Children.Add(Ui.Text(vlan.Vid.ToString(), 13, true));
                 var name = Ui.Text(vlan.Name, 13); Grid.SetColumn(name, 1); row.Children.Add(name);
-                var cidr = new StackPanel { Spacing = 2 };
-                cidr.Children.Add(Ui.Text(vlan.Subnet?.Cidr ?? "—", 12));
-                if (vlan.Subnet is { } network) cidr.Children.Add(Ui.Text(Ipv4Network.Parse(network.Cidr).DottedMask, 11));
+                var cidr = Ui.Text(vlan.Subnet?.Cidr ?? "—", 12);
                 Grid.SetColumn(cidr, 2); row.Children.Add(cidr);
                 var button = Ui.Button("", () => OpenVlan(site.Id, vlan.Id)); button.Content = row;
                 button.Background = Brushes.Transparent; button.BorderThickness = new Thickness(0, 0, 0, 1);
@@ -211,6 +211,8 @@ public sealed partial class MainWindow : Window
             var siteActions = Ui.Row(
                 Ui.Button("Modifier le site", () => Run(() => EditSite(site)), CanEdit),
                 Ui.Button("Ajouter un VLAN", () => Run(() => EditVlan(site, null)), CanEdit));
+            siteActions.HorizontalAlignment = HorizontalAlignment.Center;
+
             var content = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), RowSpacing = 12 };
             content.Children.Add(details);
             Grid.SetRow(siteActions, 2); content.Children.Add(siteActions);
@@ -221,24 +223,49 @@ public sealed partial class MainWindow : Window
             card.VerticalAlignment = VerticalAlignment.Stretch;
             _siteCards.Children.Add(card);
         }
-        var stack = Ui.Column(Ui.Text($"{Db.Sites.Count} sites  ·  {count} VLAN  ·  {used} IP utilisées", 13), _siteCards);
-        if (Db.Sites.Count == 0) stack.Children.Add(Ui.Card(Ui.Column(Ui.Text("Bienvenue dans G@IP", 22, true),
-            Ui.Text("Créez un site, ajoutez ses VLAN et définissez vos sous-réseaux. Votre base est actuellement vide."),
-            Ui.Button("Ajouter un site", () => Run(() => EditSite(null)), CanEdit))));
-        _body.Content = Ui.Scroll(stack); ResizeCards();
+
+        var summary = Ui.Text($"{Db.Sites.Count} sites  ·  {count} VLAN  ·  {used} IP utilisées", 13);
+        if (Db.Sites.Count == 0)
+        {
+            _body.Content = Ui.Scroll(Ui.Column(summary, Ui.Card(Ui.Column(Ui.Text("Bienvenue dans G@IP", 22, true),
+                Ui.Text("Créez un site, ajoutez ses VLAN et définissez vos sous-réseaux. Votre base est actuellement vide."),
+                Ui.Button("Ajouter un site", () => Run(() => EditSite(null)), CanEdit)))));
+            return;
+        }
+
+        _siteCardsScroll = new ScrollViewer
+        {
+            Name = "SiteCardsScroll",
+            Content = _siteCards,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            VerticalContentAlignment = VerticalAlignment.Stretch
+        };
+        _siteCardsScroll.SizeChanged += (_, _) => ResizeCards();
+
+        var home = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 8 };
+        home.Children.Add(summary);
+        Grid.SetRow(_siteCardsScroll, 1); home.Children.Add(_siteCardsScroll);
+        _body.Content = home;
+        ResizeCards();
     }
     private void ResizeSearch() => _globalSearch.Width = Math.Clamp(Width - 900, 120, 440);
     private void ResizeCards()
     {
         if (_siteCards is null) return;
 
-        const double minCardWidth = 440;
+        const double minCardWidth = 430;
         const double gap = 8;
-        var available = Math.Max(300, Bounds.Width - 32);
+        var viewportWidth = _siteCardsScroll?.Bounds.Width ?? 0;
+        var available = Math.Max(300, viewportWidth > 0 ? viewportWidth : Bounds.Width - 32);
         var fittingColumns = Math.Max(1, (int)Math.Floor((available + gap) / (minCardWidth + gap)));
         var columns = Math.Min(_config.MaxHomeColumns, Math.Min(fittingColumns, Math.Max(1, _siteCards.Children.Count)));
 
         _siteCards.Width = available;
+        if (_siteCardsScroll is { Bounds.Height: > 0 } scroll)
+            _siteCards.MinHeight = scroll.Bounds.Height;
+
         _siteCards.ColumnDefinitions.Clear();
         _siteCards.RowDefinitions.Clear();
         for (var column = 0; column < columns; column++)
@@ -246,7 +273,7 @@ public sealed partial class MainWindow : Window
 
         var rows = (_siteCards.Children.Count + columns - 1) / columns;
         for (var row = 0; row < rows; row++)
-            _siteCards.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            _siteCards.RowDefinitions.Add(new RowDefinition { Height = GridLength.Star });
 
         for (var index = 0; index < _siteCards.Children.Count; index++)
         {
