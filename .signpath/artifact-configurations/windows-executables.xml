@@ -3,14 +3,18 @@
     <pe-file path="GAIP-standard.exe"
              product-name="G@IP — Gestion d’Adresses IP"
              product-version="${version}"
+             file-version="${fileVersion}"
              company-name="LagunaPower"
+             copyright="Copyright © LagunaPower 2026"
              original-filename="GAIP.exe">
       <authenticode-sign />
     </pe-file>
     <pe-file path="GAIP-trimmed.exe"
              product-name="G@IP — Gestion d’Adresses IP"
              product-version="${version}"
+             file-version="${fileVersion}"
              company-name="LagunaPower"
+             copyright="Copyright © LagunaPower 2026"
              original-filename="GAIP.exe">
       <authenticode-sign />
     </pe-file>
