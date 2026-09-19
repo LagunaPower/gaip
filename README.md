@@ -70,7 +70,7 @@ Ou `./scripts/publish.ps1` / `sh scripts/publish.sh` : profil **Release** par d�
 
 Le profil **Development** reste autonome à fichiers séparés, avec symboles : `./scripts/publish.ps1 -Profile Development` ou `sh scripts/publish.sh --profile Development`. Sorties dans `artifacts/Development/<RID>/` ; copier tout ce dossier pour diagnostiquer. Les deux profils gardent `PublishTrimmed=false`. Release n’embarque aucun PDB et exclut les références de conception inutiles via MSBuild. `linux-arm64` reste accepté par les scripts, mais non validé. Voir [les profils et vérifications de publication](docs/PUBLICATION.md).
 
-Une publication **ExperimentalTrimmed**, séparée et réservée à Windows x64, est disponible avec `dotnet publish src/GAIP.Desktop -c Release -r win-x64 -p:PublishProfile=ExperimentalTrimmed`. Elle active le trimming complet sans NativeAOT et ne remplace pas la Release standard. Voir [les tailles et validations](docs/PUBLICATION_SIZE.md).
+Une publication **ExperimentalTrimmed**, séparée, est disponible pour `win-x64` et `linux-x64` avec `dotnet publish src/GAIP.Desktop -c Release -r <RID> -p:PublishProfile=ExperimentalTrimmed`. Elle active le trimming complet sans NativeAOT et ne remplace pas la Release standard. Voir [les tailles et validations](docs/PUBLICATION_SIZE.md).
 
 Linux nécessite les bibliothèques graphiques usuelles : fontconfig, EGL/OpenGL, Wayland ; X11/XWayland et bibliothèques associées pour le repli. Les publications x64 sélectionnent les packages et services Avalonia par RID : Win32 sous Windows, X11 par défaut sous Linux, Skia et HarfBuzz dans les deux cas. Les compilations sans RID conservent `UsePlatformDetect()`. Sous Linux, G@IP sélectionne Wayland natif uniquement avec `XDG_SESSION_TYPE=wayland`, sauf override `GAIP_USE_X11=1`. Une variable `WAYLAND_DISPLAY` seule ne déclenche pas Wayland natif : sous WSLg avec un type de session vide, G@IP conserve X11/XWayland. Le package `Avalonia.Wayland` reste inclus dans Linux. Repli explicite :
 
@@ -95,6 +95,14 @@ Après copie définitive du dossier Linux, exécuter `sh install-desktop.sh` dep
 - La sécurité filesystem suppose un stockage respectant les verrous et renommages. Ne pas modifier les JSON par un outil externe pendant une session. La durabilité physique d’un NAS après acquittement dépend de ce NAS.
 - JSON et annexes sont des fichiers distincts : un échec d’historique/cache après publication est signalé, sans annuler les données publiées. En cas de résultat incertain après coupure, actualiser avant de réessayer.
 - Les parcours UI utilisent Avalonia Headless ; les exécutables Release ont aussi été démarrés réellement sous Windows et Ubuntu 24.04/WSLg (X11/XWayland). Une session GNOME/KDE Wayland native et un partage SMB/NFS réel restent à valider sur les environnements cibles.
+
+## Code signing policy
+
+La politique de signature publique de G@IP est décrite dans [SIGNING.md](SIGNING.md).
+
+Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+Les exécutables Windows des releases sont destinés à être signés Authenticode par la chaîne GitHub Actions/SignPath une fois le projet SignPath Foundation approuvé et l’intégration activée. Les builds locaux et de développement ne sont pas couverts par cette politique.
 
 ## Licence
 
