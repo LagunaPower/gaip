@@ -6,6 +6,7 @@ on:
       - "v*.*.*"
 
 permissions:
+  actions: read
   contents: write
 
 env:
@@ -65,6 +66,7 @@ jobs:
           gh release create "$TAG" \
             --verify-tag \
             --title "G@IP $TAG" \
+            --notes "Code signing policy: https://github.com/LagunaPower/gaip/blob/$TAG/SIGNING.md" \
             --generate-notes
 
 
@@ -82,6 +84,20 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Déterminer la version
+        id: version
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          $version = $env:TAG -replace '^v', ''
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Le tag doit respecter vMAJOR.MINOR.PATCH, reçu: $env:TAG"
+          }
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "file_version=$version.0" >> $env:GITHUB_OUTPUT
+
       - name: Publier G@IP Windows standard
         run: >
           dotnet publish
@@ -89,6 +105,10 @@ jobs:
           -c Release
           -r win-x64
           -p:PublishProfile=Release
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:InformationalVersion=${{ steps.version.outputs.version }}
+          -p:FileVersion=${{ steps.version.outputs.file_version }}
+          -p:IncludeSourceRevisionInInformationalVersion=false
 
       - name: Publier G@IP Windows trimmed
         run: >
@@ -97,21 +117,96 @@ jobs:
           -c Release
           -r win-x64
           -p:PublishProfile=ExperimentalTrimmed
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:InformationalVersion=${{ steps.version.outputs.version }}
+          -p:FileVersion=${{ steps.version.outputs.file_version }}
+          -p:IncludeSourceRevisionInInformationalVersion=false
+
+      - name: Préparer les exécutables pour SignPath
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path signing-input | Out-Null
+          Copy-Item "artifacts/Release/win-x64/GAIP.exe" "signing-input/GAIP-standard.exe"
+          Copy-Item "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe" "signing-input/GAIP-trimmed.exe"
+
+      - name: Charger les exécutables non signés
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
+        id: upload-unsigned-windows
+        uses: actions/upload-artifact@v7
+        with:
+          name: gaip-windows-unsigned
+          path: signing-input/
+          if-no-files-found: error
+
+      - name: Signer les exécutables Windows avec SignPath
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+          project-slug: '${{ vars.SIGNPATH_PROJECT_SLUG }}'
+          signing-policy-slug: '${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}'
+          artifact-configuration-slug: '${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}'
+          github-artifact-id: '${{ steps.upload-unsigned-windows.outputs.artifact-id }}'
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signing-output
+          parameters: |
+            version: "${{ steps.version.outputs.version }}"
+
+      - name: Vérifier les signatures Authenticode
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
+        shell: pwsh
+        run: |
+          $files = @(
+            "signing-output/GAIP-standard.exe",
+            "signing-output/GAIP-trimmed.exe"
+          )
+
+          foreach ($file in $files) {
+            if (-not (Test-Path $file)) {
+              throw "Exécutable signé introuvable: $file"
+            }
+
+            $signature = Get-AuthenticodeSignature $file
+            Write-Host "$file : $($signature.Status) - $($signature.SignerCertificate.Subject)"
+
+            if ($signature.Status -ne "Valid") {
+              throw "Signature Authenticode invalide pour $file : $($signature.Status)"
+            }
+          }
 
       - name: Créer les archives Windows et leurs SHA-256
         shell: pwsh
         env:
           TAG: ${{ github.ref_name }}
+          SIGNPATH_ENABLED: ${{ vars.SIGNPATH_ENABLED }}
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
+          New-Item -ItemType Directory -Force -Path package-standard | Out-Null
+          New-Item -ItemType Directory -Force -Path package-trimmed | Out-Null
+
+          if ($env:SIGNPATH_ENABLED -eq "true") {
+            $standardSource = "signing-output/GAIP-standard.exe"
+            $trimmedSource = "signing-output/GAIP-trimmed.exe"
+          }
+          else {
+            Write-Warning "SignPath n'est pas activé : la Release Windows sera non signée."
+            $standardSource = "artifacts/Release/win-x64/GAIP.exe"
+            $trimmedSource = "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe"
+          }
+
+          Copy-Item $standardSource "package-standard/GAIP.exe"
+          Copy-Item $trimmedSource "package-trimmed/GAIP.exe"
 
           $standard = "dist/GAIP-$env:TAG-win-x64.zip"
-          Compress-Archive -Path "artifacts/Release/win-x64/GAIP.exe" -DestinationPath $standard -Force
+          Compress-Archive -Path "package-standard/GAIP.exe" -DestinationPath $standard -Force
           $standardHash = (Get-FileHash -Algorithm SHA256 $standard).Hash.ToLowerInvariant()
           "$standardHash  $([System.IO.Path]::GetFileName($standard))" | Set-Content -NoNewline "$standard.sha256"
 
           $trimmed = "dist/GAIP-$env:TAG-win-x64-trimmed.zip"
-          Compress-Archive -Path "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe" -DestinationPath $trimmed -Force
+          Compress-Archive -Path "package-trimmed/GAIP.exe" -DestinationPath $trimmed -Force
           $trimmedHash = (Get-FileHash -Algorithm SHA256 $trimmed).Hash.ToLowerInvariant()
           "$trimmedHash  $([System.IO.Path]::GetFileName($trimmed))" | Set-Content -NoNewline "$trimmed.sha256"
 
