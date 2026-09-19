@@ -66,6 +66,9 @@ public sealed partial class MainWindow
         {
             var check = new CheckBox { Content = $"{site.Code} — {site.Name}", IsChecked = site.Id == owner?.Id, IsEnabled = existing is null };
             var cidr = Ui.Input(existing?.Subnet?.Cidr ?? "", "10.20.120.0/24 ou vide", 18);
+            var cidrLocked = existing?.Subnet?.Addresses.Count > 0;
+            cidr.IsReadOnly = cidrLocked;
+            if (cidrLocked) ToolTip.SetTip(cidr, "Libérez toutes les adresses IP avant de modifier le sous-réseau.");
             var gateway = Ui.Input(existing?.Subnet?.Gateway?.Address ?? "", "Facultative", 15);
             var comment = Ui.Input(existing?.Subnet?.Gateway?.Comment ?? "");
             var summary = Ui.Text("Aucun sous-réseau", 12);

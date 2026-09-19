@@ -5,7 +5,7 @@ Validation mise à jour le 20 septembre 2026, sur Windows x64 et Ubuntu 24.04 so
 ## Résultats automatisés
 
 - `dotnet build GAIP.sln -c Release --no-restore` : **réussi, 0 erreur, 0 avertissement**.
-- `dotnet test GAIP.sln -c Release` : **112 tests réussis, 0 échec, 0 ignoré** sur Linux et Windows. Le parcours partagé couvre désormais l’acquisition/libération automatique du verrou et le rejet d’une IP devenue occupée pendant qu’un formulaire d’ajout est ouvert.
+- `dotnet test GAIP.sln -c Release` : **115 tests réussis, 0 échec, 0 ignoré** sur Linux et Windows. Le parcours partagé couvre l’acquisition/libération automatique du verrou et le rejet d’une IP devenue occupée pendant qu’un formulaire d’ajout est ouvert. La règle de gel du CIDR après première attribution IP est couverte dans le Core, le stockage, l’import CSV et l’interface.
 - Release republiée pour `win-x64` et `linux-x64`, compressée, sans trimming ni PDB. Development, précédemment publié à fichiers séparés, conserve son profil inchangé. Aucun fichier DLL/SO séparé dans Release. DesignerSupport conservé en Development, absent des dépendances Release ; Diagnostics absent des deux.
 - ExperimentalTrimmed publiée séparément pour `win-x64` : **0 avertissement de trimming**, 21,76 Mio. Le test natif démarre l'exécutable seul puis le ferme normalement, code 0 et stderr vide. L'utilisateur indique que cette version semble fonctionner ; cela ne constitue pas une validation exhaustive de ses parcours graphiques. Voir [le rapport de taille](PUBLICATION_SIZE.md).
 - Nouvel exécutable Release Windows copié seul et réellement démarré : fenêtre native `G@IP — Gestion d’Adresses IP` détectée, fermeture normale, **code de sortie 0**, stderr vide.
@@ -16,9 +16,9 @@ Validation mise à jour le 20 septembre 2026, sur Windows x64 et Ubuntu 24.04 so
 | Domaine | Vérifié |
 |---|---|
 | IPv4 | /0, /12, /22, /23, /24, /30, /31, /32, valeurs limites, première/dernière, réseau/broadcast, syntaxe stricte ; /22 : masque 255.255.252.0, 1022 adresses consécutives, masque absent du JSON |
-| Modèle | Passerelle, IP hors réseau, chevauchement inter-sites, unicités, VID, réservations, champs multilignes, casse, absence de cascade, réduction réseau |
+| Modèle | Passerelle, IP hors réseau, chevauchement inter-sites, unicités, VID, réservations, champs multilignes, casse, absence de cascade, CIDR figé dès qu’une IP est attribuée avec passerelle seule explicitement exclue |
 | Consultation | Compteurs avec passerelle, prochaine libre, IP enregistrées par défaut, plage complète sans pagination, tri numérique, recherches partielles/exactes, garde des très grands réseaux, recherche globale |
-| CSV | Création et mise à jour, UTF-8, séparateur alternatif, guillemets, erreurs multiples, doublons, chevauchements, absence d’import partiel ; export contextuel par GUID même avec VID identique sur un autre site |
+| CSV | Création et mise à jour, UTF-8, séparateur alternatif, guillemets, erreurs multiples, doublons, chevauchements, absence d’import partiel, refus de changement de CIDR avec IP attribuées ; export contextuel par GUID même avec VID identique sur un autre site |
 | Excel | Classeur `.xlsx` valide, onglet Sites et VLAN, lien hypertexte VLAN → réseau, un onglet par sous-réseau, informations réseau, passerelle/attributions/libres et garde de capacité Excel |
 | Historique VLAN | Événements du VLAN et de ses IP, libération, changement de VID, exclusion des événements étrangers et projection des détails, filtrage avant limite de 1000 |
 | Stockage | JSON aller-retour, IDs stables et collections obligatoires, rejet JSON invalide, SHA-256 connu, révisions, backups/rétention et audit |
@@ -46,7 +46,7 @@ Captures générées : `artifacts/screenshots/home.png`, `home-narrow.png`, `hom
 ## Vérification manuelle conseillée
 
 1. Lancer l’application, créer un site, puis un VLAN avec réseau et passerelle. Ajouter une IP et une réservation sans hostname.
-2. Rechercher l’IP/hostname, cocher « Afficher les adresses libres » et parcourir un /22 jusqu’à sa dernière IP, puis libérer une adresse. Essayer un chevauchement puis une réduction de réseau invalidant une IP.
+2. Rechercher l’IP/hostname, cocher « Afficher les adresses libres » et parcourir un /22 jusqu’à sa dernière IP. Avec une IP attribuée, vérifier que le CIDR du VLAN est en lecture seule ; après libération de toutes les IP, vérifier qu’il redevient modifiable. Une passerelle seule ne doit pas le verrouiller.
 3. Importer les CSV d’exemple dans une base de test vide. Exporter les deux formats et ouvrir dans Excel/LibreOffice.
 4. Depuis deux postes sur un partage de test, ouvrir le même VLAN et préparer la même IP. Publier depuis le premier, puis vérifier que le second est refusé sans écrasement, que son formulaire reste ouvert et que le verrou disparaît après chaque tentative. Utiliser le diagnostic pour contrôler un éventuel verrou résiduel.
 5. Couper l’accès au partage : consultation conservée, publication interdite. Rétablir puis actualiser. Vérifier historique et sauvegardes.

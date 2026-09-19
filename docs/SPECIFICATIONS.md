@@ -12,7 +12,7 @@ G@IP gère sites → VLAN indépendants → zéro ou un sous-réseau IPv4 → at
 - Description/commentaire 500 caractères sur une ligne ; hostname 255 ; nom 150 ; code 50.
 - VLAN et IP triés numériquement.
 - Suppression site sans VLAN seulement ; VLAN sans attribution **ni passerelle** seulement. Libération d’une IP avec confirmation. Aucune cascade.
-- Changement de CIDR revalidé avec toutes les attributions et la passerelle, affichage des adresses invalides.
+- Dès qu’un sous-réseau contient au moins une IP attribuée, son CIDR ne peut plus être modifié ni retiré tant que toutes les IP n’ont pas été libérées. Une passerelle seule ne fige pas le CIDR ; elle doit rester utilisable dans le nouveau réseau ou être ajustée/supprimée.
 - /31 et /32 admis sans IP utilisable. /0 calculé sans débordement ni énumération intégrale.
 
 ## Interface
@@ -43,7 +43,7 @@ UTF-8, BOM en export, séparateur configurable (`;` par défaut). Guillemets et 
 
 `addresses.csv` : `site_code;vid;ip;hostname;description`.
 
-L’import VLAN crée les sites manquants ; pour un site existant son nom est conservé. Les VLAN sont créés/mis à jour par clé site/VID en conservant les IP. L’import IP crée/met à jour l’attribution du VLAN. Doublons dans un fichier refusés, aucune suppression des lignes absentes. L’aperçu affiche toutes les erreurs détectées ; revalidation sur la base courante à la publication. Une erreur empêche tout le fichier.
+L’import VLAN crée les sites manquants ; pour un site existant son nom est conservé. Les VLAN sont créés/mis à jour par clé site/VID en conservant les IP. Un import VLAN ne peut pas modifier ou retirer le CIDR d’un VLAN qui possède déjà des IP attribuées. L’import IP crée/met à jour l’attribution du VLAN. Doublons dans un fichier refusés, aucune suppression des lignes absentes. L’aperçu affiche toutes les erreurs détectées ; revalidation sur la base courante à la publication. Une erreur empêche tout le fichier.
 
 L’export complet écrit les deux CSV ; les passerelles restent dans le fichier VLAN. Ce format n’est pas une sauvegarde intégrale du modèle.
 

@@ -114,6 +114,7 @@ public sealed class FileRepository(string root, string user, string machine, int
         var old = Read();
         if (old.Hash != expectedHash) throw new IOException("Conflit : la base centrale a changé. Rien n'a été publié ; actualisez.");
         ModelValidator.EnsureValid(candidate);
+        ModelValidator.EnsureTransitionValid(old.Data, candidate);
         var db = JsonData.Clone(candidate);
         db.Revision = checked(old.Data.Revision + 1);
         db.LastModified = DateTimeOffset.UtcNow;

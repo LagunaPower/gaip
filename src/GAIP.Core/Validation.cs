@@ -81,9 +81,41 @@ public static class ModelValidator
         }
     }
 
+    public static IReadOnlyList<string> ValidateTransition(Database before, Database after)
+    {
+        var errors = new List<string>();
+        var currentVlans = after.Sites.SelectMany(s => s.Vlans).ToDictionary(v => v.Id);
+        foreach (var site in before.Sites)
+            foreach (var vlan in site.Vlans)
+            {
+                if (vlan.Subnet is not { Addresses.Count: > 0 } previousSubnet) continue;
+                if (!currentVlans.TryGetValue(vlan.Id, out var currentVlan) || currentVlan.Subnet is not { } currentSubnet)
+                {
+                    errors.Add($"Impossible de modifier le sous-réseau de {site.Code} / VLAN {vlan.Vid} : ce VLAN contient des adresses IP attribuées. Libérez d'abord toutes les adresses IP.");
+                    continue;
+                }
+                try
+                {
+                    if (Ipv4Network.Parse(previousSubnet.Cidr) != Ipv4Network.Parse(currentSubnet.Cidr))
+                        errors.Add($"Impossible de modifier le sous-réseau de {site.Code} / VLAN {vlan.Vid} : ce VLAN contient des adresses IP attribuées. Libérez d'abord toutes les adresses IP.");
+                }
+                catch (FormatException)
+                {
+                    // La validation structurelle signale séparément les CIDR invalides.
+                }
+            }
+        return errors;
+    }
+
     public static void EnsureValid(Database db)
     {
         var errors = Validate(db);
+        if (errors.Count > 0) throw new ValidationException(errors);
+    }
+
+    public static void EnsureTransitionValid(Database before, Database after)
+    {
+        var errors = ValidateTransition(before, after);
         if (errors.Count > 0) throw new ValidationException(errors);
     }
 

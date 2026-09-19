@@ -54,6 +54,17 @@ public sealed class StorageTests
         Assert.Equal(start.Hash, repo.Read().Hash); Assert.Empty(repo.History());
     }
     [Fact]
+    public void PublicationRejectsCidrChangeWhenAddressesAreAssigned()
+    {
+        using var temp = new TempDirectory(); var repo = temp.Repository(); var initial = Example();
+        Subnet(initial).Addresses.Add(new() { Address = "10.20.120.2", Hostname = "host" });
+        var start = repo.Initialize(initial);
+        var changed = JsonData.Clone(start.Data); Subnet(changed).Cidr = "10.20.120.0/23";
+        var ex = Assert.Throws<ValidationException>(() => repo.Commit(changed, start.Hash, null, "Modification", "VLAN", "120"));
+        Assert.Contains("Libérez d'abord toutes les adresses IP.", ex.Message);
+        Assert.Equal(start.Hash, repo.Read().Hash); Assert.Empty(repo.History());
+    }
+    [Fact]
     public void FailedBackupNeverReplacesCurrentFile()
     {
         using var temp = new TempDirectory(); var repo = temp.Repository(); var start = repo.Initialize(Example());

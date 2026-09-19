@@ -70,6 +70,7 @@ public static class CsvExchange
             catch (FormatException ex) { errors.Add($"{label} : {ex.Message}"); }
         }
         errors.AddRange(ModelValidator.Validate(db));
+        if (errors.Count == 0) errors.AddRange(ModelValidator.ValidateTransition(source, db));
         return new(errors.Count == 0 ? db : null, errors, rows.Count - 1);
     }
 

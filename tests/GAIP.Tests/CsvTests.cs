@@ -43,6 +43,15 @@ public sealed class CsvTests
         Assert.Null(result.Data); Assert.NotEmpty(result.Errors); Assert.Single(Subnet(db).Addresses);
     }
     [Fact]
+    public void ImportCannotChangeNetworkWithAssignedAddresses()
+    {
+        var db = Example(); Subnet(db).Addresses.Add(new() { Address = "10.20.120.2", Hostname = "host" });
+        var text = CsvExchange.VlanHeader + "\nLEVANT;Île du Levant;120;SERVEURS;;10.20.120.0/23;;";
+        var result = CsvExchange.Import(db, text, CsvKind.Vlans);
+        Assert.Null(result.Data); Assert.Contains(result.Errors, e => e.Contains("Libérez d'abord toutes les adresses IP."));
+        Assert.Equal("10.20.120.0/24", Subnet(db).Cidr);
+    }
+    [Fact]
     public void ExistingIpUpdatesWithoutDuplicatingAndMissingRowsRemain()
     {
         var db = Example(); Subnet(db).Addresses = [new() { Address = "10.20.120.2", Hostname = "old" }, new() { Address = "10.20.120.3", Hostname = "keep" }];

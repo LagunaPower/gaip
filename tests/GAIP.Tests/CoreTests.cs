@@ -95,6 +95,24 @@ public sealed class CoreTests
         Subnet(db).Cidr = "10.20.120.0/25"; Assert.Contains(ModelValidator.Validate(db), e => e.Contains("10.20.120.200"));
     }
     [Fact]
+    public void AssignedAddressesFreezeCidrButGatewayAloneDoesNot()
+    {
+        var before = Example();
+        Subnet(before).Addresses.Add(new() { Address = "10.20.120.2", Hostname = "host" });
+        var changed = JsonData.Clone(before);
+        Subnet(changed).Cidr = "10.20.120.0/23";
+        Assert.Empty(ModelValidator.Validate(changed));
+        Assert.Contains(ModelValidator.ValidateTransition(before, changed), e => e.Contains("Libérez d'abord toutes les adresses IP."));
+
+        var gatewayOnly = Example();
+        Subnet(gatewayOnly).Gateway = new() { Address = "10.20.120.1", Comment = "Firewall" };
+        var moved = JsonData.Clone(gatewayOnly);
+        Subnet(moved).Cidr = "10.20.121.0/24";
+        Subnet(moved).Gateway!.Address = "10.20.121.1";
+        Assert.Empty(ModelValidator.Validate(moved));
+        Assert.Empty(ModelValidator.ValidateTransition(gatewayOnly, moved));
+    }
+    [Fact]
     public void DescriptionsAreSingleLineAndBounded()
     {
         var db = Example(); db.Sites[0].Description = "one\ntwo"; Assert.NotEmpty(ModelValidator.Validate(db));
