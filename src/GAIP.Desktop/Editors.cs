@@ -14,7 +14,7 @@ public sealed partial class MainWindow
             try
             {
                 var copy = JsonData.Clone(Db); mutation()(copy); ModelValidator.EnsureValid(copy);
-                form.Error.Text = ""; form.Save.IsEnabled = CanEdit;
+                form.Error.Text = ""; form.Save.IsEnabled = CanWrite;
             }
             catch (Exception ex) { form.Error.Text = ex.Message; form.Save.IsEnabled = false; }
         }
@@ -48,7 +48,7 @@ public sealed partial class MainWindow
                 await Save(db => ModelValidator.DeleteSite(db, existing.Id), "Suppression", "Site", existing.Code); form.Close(true);
             }
             catch (Exception ex) { form.Error.Text = ex.Message; }
-        }, CanEdit));
+        }, CanWrite));
         await form.ShowDialog<bool>(this);
     }
 
@@ -122,7 +122,7 @@ public sealed partial class MainWindow
         LiveValidation(form, Mutation, textFields);
         foreach (var field in networks) field.Selected.IsCheckedChanged += (_, _) =>
         {
-            try { var copy = JsonData.Clone(Db); Mutation()(copy); ModelValidator.EnsureValid(copy); form.Error.Text = ""; form.Save.IsEnabled = CanEdit; }
+            try { var copy = JsonData.Clone(Db); Mutation()(copy); ModelValidator.EnsureValid(copy); form.Error.Text = ""; form.Save.IsEnabled = CanWrite; }
             catch (Exception ex) { form.Error.Text = ex.Message; form.Save.IsEnabled = false; }
         };
         form.Submit = () => Save(Mutation(), existing is null ? "Création multi-sites" : "Modification", "VLAN", vid.Text ?? "");
@@ -135,18 +135,18 @@ public sealed partial class MainWindow
                 _selectedVlan = null; form.Close(true);
             }
             catch (Exception ex) { form.Error.Text = ex.Message; }
-        }, CanEdit));
+        }, CanWrite));
         await form.ShowDialog<bool>(this);
     }
 
     private async Task EditAddress(Guid siteId, Guid vlanId, AddressRow? row)
     {
+        Subnet Subnet(Database db) => db.Sites.Single(s => s.Id == siteId).Vlans.Single(v => v.Id == vlanId).Subnet ?? throw new InvalidOperationException("Sous-réseau supprimé.");
         var form = new FormWindow(row?.IsUsed == true ? "Modifier l’adresse IP" : "Ajouter une adresse IP");
-        var address = Ui.Input(row?.Address ?? "", "10.20.120.25", 15);
+        var address = Ui.Input(row?.Address ?? Queries.NextFree(Subnet(Db)) ?? "", "10.20.120.25", 15);
         var hostname = Ui.Input(row?.IsUsed == true ? row.Hostname : "", "Facultatif si une description est renseignée", 255);
         var description = Ui.Input(row?.Description ?? "");
         form.Add("Adresse IPv4", address); form.Add("Nom / Hostname", hostname); form.Add("Description", description);
-        Subnet Subnet(Database db) => db.Sites.Single(s => s.Id == siteId).Vlans.Single(v => v.Id == vlanId).Subnet ?? throw new InvalidOperationException("Sous-réseau supprimé.");
         form.Fields.Children.Add(Ui.Button("Prochaine libre", () =>
         {
             address.Text = Queries.NextFree(Subnet(Db)) ?? "";
@@ -172,7 +172,7 @@ public sealed partial class MainWindow
                 await Save(db => Subnet(db).Addresses.RemoveAll(a => a.Address == row.Address), "Libération", "IP", row.Address); form.Close(true);
             }
             catch (Exception ex) { form.Error.Text = ex.Message; }
-        }, CanEdit));
+        }, CanWrite));
         await form.ShowDialog<bool>(this);
     }
 }
