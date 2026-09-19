@@ -59,6 +59,12 @@ Stockage de référence : `gaip-data.json`, `history.jsonl`, `backup/`, `edit.lo
 
 Avant chaque publication, sauvegarde de l’ancienne base. Rétention configurable, 30 par défaut. Pas de restauration dans l’interface ; une restauration manuelle se fait avec tous les clients fermés et après conservation de la base courante.
 
+## Téléchargements
+
+Les versions publiées de G@IP sont disponibles dans les [GitHub Releases](https://github.com/LagunaPower/gaip/releases).
+
+Les releases Windows destinées au public utilisent la chaîne de signature décrite dans [SIGNING.md](SIGNING.md). Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
 ## Publications autonomes
 
 ```sh
