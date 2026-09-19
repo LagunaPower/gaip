@@ -69,7 +69,7 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Publier G@IP Windows
+      - name: Publier G@IP Windows standard
         run: >
           dotnet publish
           src/GAIP.Desktop/GAIP.Desktop.csproj
@@ -77,24 +77,79 @@ jobs:
           -r win-x64
           -p:PublishProfile=Release
 
-      - name: Vérifier la présence de GAIP.exe
+      - name: Publier G@IP Windows trimmed
+        run: >
+          dotnet publish
+          src/GAIP.Desktop/GAIP.Desktop.csproj
+          -c Release
+          -r win-x64
+          -p:PublishProfile=ExperimentalTrimmed
+          -p:Version=0.0.0
+          -p:InformationalVersion=0.0.0
+          -p:FileVersion=0.0.0.0
+          -p:IncludeSourceRevisionInInformationalVersion=false
+
+      - name: Vérifier les exécutables
         shell: pwsh
         run: |
-          $exe = "artifacts/Release/win-x64/GAIP.exe"
+          $files = @(
+            "artifacts/Release/win-x64/GAIP.exe",
+            "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe"
+          )
 
-          if (-not (Test-Path $exe)) {
-            throw "GAIP.exe introuvable"
+          foreach ($file in $files) {
+            if (-not (Test-Path $file)) {
+              throw "Exécutable introuvable: $file"
+            }
+            Get-Item $file | Select-Object Name, Length, FullName | Format-List
           }
 
-          Get-Item $exe |
+      - name: Installer WiX Toolset
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 6.0.2
+          $wix = Join-Path $env:USERPROFILE ".dotnet\tools\wix.exe"
+          & $wix --version
+          "WIX_EXE=$wix" >> $env:GITHUB_ENV
+
+      - name: Construire et vérifier le MSI
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/Packaging | Out-Null
+          $gaipExe = (Resolve-Path "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe").Path
+          $gaipIcon = (Resolve-Path "src/GAIP.Desktop/Assets/GAIP.ico").Path
+
+          & $env:WIX_EXE build `
+            "packaging/windows/Package.wxs" `
+            -arch x64 `
+            -d "Version=0.0.0" `
+            -d "GaipExe=$gaipExe" `
+            -d "GaipIcon=$gaipIcon" `
+            -pdbtype none `
+            -o "artifacts/Packaging/GAIP-ci-win-x64.msi"
+
+          if (-not (Test-Path "artifacts/Packaging/GAIP-ci-win-x64.msi")) {
+            throw "MSI de validation introuvable"
+          }
+
+          Get-Item "artifacts/Packaging/GAIP-ci-win-x64.msi" |
             Select-Object Name, Length, FullName |
             Format-List
 
-      - name: Publier l'artefact Windows
+      - name: Publier l'artefact Windows standard
         uses: actions/upload-artifact@v7
         with:
           name: GAIP-win-x64
           path: artifacts/Release/win-x64/
+          if-no-files-found: error
+
+      - name: Publier les artefacts Windows de packaging
+        uses: actions/upload-artifact@v7
+        with:
+          name: GAIP-win-x64-packaging
+          path: |
+            artifacts/ExperimentalTrimmed/win-x64/
+            artifacts/Packaging/GAIP-ci-win-x64.msi
           if-no-files-found: error
 
 
@@ -112,7 +167,7 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Publier G@IP Linux
+      - name: Publier G@IP Linux standard
         run: >
           dotnet publish
           src/GAIP.Desktop/GAIP.Desktop.csproj
@@ -120,14 +175,52 @@ jobs:
           -r linux-x64
           -p:PublishProfile=Release
 
-      - name: Vérifier l'exécutable
+      - name: Publier G@IP Linux trimmed
+        run: >
+          dotnet publish
+          src/GAIP.Desktop/GAIP.Desktop.csproj
+          -c Release
+          -r linux-x64
+          -p:PublishProfile=ExperimentalTrimmed
+          -p:Version=0.0.0
+          -p:InformationalVersion=0.0.0
+          -p:IncludeSourceRevisionInInformationalVersion=false
+
+      - name: Vérifier les exécutables
         run: |
           test -f artifacts/Release/linux-x64/GAIP
-          ls -lh artifacts/Release/linux-x64/
+          test -f artifacts/ExperimentalTrimmed/linux-x64/GAIP
+          ls -lh artifacts/Release/linux-x64/GAIP artifacts/ExperimentalTrimmed/linux-x64/GAIP
 
-      - name: Publier l'artefact Linux
+      - name: Installer les outils de packaging Linux
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm
+
+      - name: Construire et vérifier DEB et RPM
+        run: |
+          chmod +x packaging/linux/build-packages.sh packaging/linux/gaip
+          chmod +x artifacts/ExperimentalTrimmed/linux-x64/GAIP
+          packaging/linux/build-packages.sh 0.0.0 artifacts/ExperimentalTrimmed/linux-x64 artifacts/Packaging
+
+          dpkg-deb --info artifacts/Packaging/gaip_0.0.0_amd64.deb
+          dpkg-deb --contents artifacts/Packaging/gaip_0.0.0_amd64.deb | grep -E '/usr/lib/gaip/GAIP$|/usr/bin/gaip$|/usr/share/applications/gaip.desktop$'
+          rpm -qip artifacts/Packaging/gaip-0.0.0-1.x86_64.rpm
+          rpm -qlp artifacts/Packaging/gaip-0.0.0-1.x86_64.rpm | grep -E '^/usr/lib/gaip/GAIP$|^/usr/bin/gaip$|^/usr/share/applications/gaip.desktop$'
+
+      - name: Publier l'artefact Linux standard
         uses: actions/upload-artifact@v7
         with:
           name: GAIP-linux-x64
           path: artifacts/Release/linux-x64/
+          if-no-files-found: error
+
+      - name: Publier les artefacts Linux de packaging
+        uses: actions/upload-artifact@v7
+        with:
+          name: GAIP-linux-x64-packaging
+          path: |
+            artifacts/ExperimentalTrimmed/linux-x64/
+            artifacts/Packaging/*.deb
+            artifacts/Packaging/*.rpm
           if-no-files-found: error
