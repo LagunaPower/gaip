@@ -12,7 +12,7 @@ public static class Program
         using var singleInstance = TryAcquireSingleInstance(SingleInstanceName);
         if (singleInstance is null)
         {
-            App.StartupMessage = "G@IP est déjà en cours d’exécution pour cet utilisateur.";
+            App.StartupMessage = "G@IP est déjà en cours d’exécution.";
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             return;
         }
