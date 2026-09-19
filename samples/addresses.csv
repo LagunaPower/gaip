@@ -1,5 +1,5 @@
 site_code;vid;ip;hostname;description
-LEVANT;10;10.20.10.10;POSTE-ADMIN;Poste administration
-LEVANT;120;10.20.120.25;SRV-APP-01;Serveur applicatif
-LEVANT;120;10.20.120.50;;Réservée futur serveur sauvegarde
-COUDON;120;10.30.120.10;SRV-ADMIN;Services administratifs
+DEMO-A;10;192.0.2.10;DEMO-PC-01;Poste fictif
+DEMO-A;20;198.51.100.25;DEMO-SRV-01;Serveur fictif
+DEMO-A;20;198.51.100.50;;Réservation fictive
+DEMO-B;20;203.0.113.10;DEMO-SRV-02;Service fictif

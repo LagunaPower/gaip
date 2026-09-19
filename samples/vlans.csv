@@ -1,5 +1,5 @@
 site_code;site_name;vid;vlan_name;vlan_description;cidr;gateway;gateway_comment
-LEVANT;Île du Levant;10;ADMIN;Administration;10.20.10.0/24;10.20.10.1;Firewall principal
-LEVANT;Île du Levant;120;SERVEURS;Applications;10.20.120.0/24;10.20.120.1;Firewall principal
-LEVANT;Île du Levant;150;TRANSIT;Liaison sans adressage;;;
-COUDON;Coudon;120;ADMIN-SERVICES;;10.30.120.0/24;10.30.120.1;Routeur du site
+DEMO-A;Site de démonstration A;10;EXEMPLE-POSTES;Postes fictifs;192.0.2.0/24;192.0.2.1;Passerelle fictive A
+DEMO-A;Site de démonstration A;20;EXEMPLE-SERVEURS;Serveurs fictifs;198.51.100.0/24;198.51.100.1;Passerelle fictive B
+DEMO-A;Site de démonstration A;30;EXEMPLE-SANS-RESEAU;VLAN fictif sans adressage;;;
+DEMO-B;Site de démonstration B;20;EXEMPLE-SERVICES;Services fictifs;203.0.113.0/24;203.0.113.1;Passerelle fictive C
