@@ -19,6 +19,7 @@ public sealed partial class MainWindow
         var backups = new NumericUpDown { Minimum = 1, Maximum = 10000, Value = _config.BackupCount, FormatString = "0" };
         var separator = Ui.Input(_config.CsvSeparator, ";", 1);
         var theme = new ComboBox { ItemsSource = new[] { "Système", "Clair", "Sombre" }, SelectedIndex = (int)_config.Theme };
+        var homeColumns = new NumericUpDown { Minimum = 1, Maximum = 6, Value = _config.MaxHomeColumns, FormatString = "0" };
         var migration = new ComboBox { ItemsSource = new[] { "Utiliser uniquement une base réseau existante", "Initialiser depuis la base actuelle si aucune base réseau n’existe" }, SelectedIndex = 0 };
         var localChoice = new ComboBox { ItemsSource = new[] { "Copier la base réseau / cache actuel", "Créer une base locale vide" }, SelectedIndex = 0 };
         form.Add("Mode", mode); form.Add("Dossier partagé", path);
@@ -35,6 +36,7 @@ public sealed partial class MainWindow
         form.Add("Lors du passage du partagé vers le local", localChoice);
         form.Add("Synchronisation (secondes)", interval); form.Add("Sauvegardes conservées", backups);
         form.Add("Séparateur CSV", separator); form.Add("Thème", theme);
+        form.Add("Colonnes maximum sur l’accueil", homeColumns);
         form.Fields.Children.Add(Ui.Text($"Données locales : {_localRoot}\nConfiguration : {_configRoot}", 11));
         form.Fields.Children.Add(Ui.Button("Diagnostic / gestion du verrou", () => Run(Diagnostics)));
         var general = new StackPanel { Spacing = 14 };
@@ -67,7 +69,8 @@ public sealed partial class MainWindow
             {
                 Mode = (StorageMode)mode.SelectedIndex, SharedPath = path.Text?.Trim() ?? "",
                 SyncSeconds = (int)(interval.Value ?? 60), BackupCount = (int)(backups.Value ?? 30),
-                CsvSeparator = separator.Text ?? ";", Theme = (AppTheme)theme.SelectedIndex
+                CsvSeparator = separator.Text ?? ";", Theme = (AppTheme)theme.SelectedIndex,
+                MaxHomeColumns = (int)(homeColumns.Value ?? 3)
             };
             next.Validate();
             var allowInitialize = migration.SelectedIndex == 1;
