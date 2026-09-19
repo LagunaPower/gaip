@@ -73,7 +73,7 @@ Architecture: amd64
 Maintainer: LagunaPower <80133998+LagunaPower@users.noreply.github.com>
 Homepage: https://github.com/LagunaPower/gaip
 Installed-Size: $INSTALLED_SIZE
-Depends: ca-certificates, libc6, libgcc-s1 | libgcc1, libgssapi-krb5-2, libstdc++6, libssl3 | libssl3t64, libicu72 | libicu74 | libicu76 | libicu78, tzdata, zlib1g, libx11-6, libice6, libsm6, libfontconfig1, libwayland-client0, libxkbcommon0, libegl1
+Depends: ca-certificates, libc6, libgcc-s1 | libgcc1, libgssapi-krb5-2, libstdc++6, libssl3 | libssl3t64, libicu72 | libicu74 | libicu76 | libicu78, tzdata, zlib1g, libx11-6, libice6, libsm6, libfontconfig1, libwayland-client0, libxkbcommon0, libegl1, libgl1
 Description: Gestion d'Adresses IP
  G@IP est une application desktop de gestion de sites, VLAN, sous-réseaux
  IPv4, passerelles et adresses IP attribuées.
@@ -144,6 +144,7 @@ Requires:       fontconfig
 Requires:       wayland-libs
 Requires:       libxkbcommon
 Requires:       mesa-libEGL
+Requires:       mesa-libGL
 
 %description
 G@IP est une application desktop de gestion de sites, VLAN, sous-réseaux
