@@ -157,6 +157,7 @@ IPv4, passerelles et adresses IP attribuées.
 
 %install
 rm -rf %{buildroot}
+mkdir -p %{buildroot}
 cp -a usr %{buildroot}/
 
 %post
