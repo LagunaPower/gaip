@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+
+  tests:
+    name: Tests - ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2022
+          - ubuntu-24.04
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v7
+
+      - name: Installer .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Afficher la version .NET
+        run: dotnet --info
+
+      - name: Restaurer les dépendances
+        run: dotnet restore GAIP.sln
+
+      - name: Compiler
+        run: dotnet build GAIP.sln -c Release --no-restore
+
+      - name: Exécuter les tests
+        run: dotnet test GAIP.sln -c Release --no-build
+
+
+  publish-windows:
+    name: Publication Windows x64
+    runs-on: windows-2022
+    needs: tests
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v7
+
+      - name: Installer .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Publier G@IP Windows
+        run: >
+          dotnet publish
+          src/GAIP.Desktop/GAIP.Desktop.csproj
+          -c Release
+          -r win-x64
+          -p:PublishProfile=Release
+
+      - name: Vérifier la présence de GAIP.exe
+        shell: pwsh
+        run: |
+          $exe = "artifacts/Release/win-x64/GAIP.exe"
+
+          if (-not (Test-Path $exe)) {
+            throw "GAIP.exe introuvable"
+          }
+
+          Get-Item $exe |
+            Select-Object Name, Length, FullName |
+            Format-List
+
+      - name: Publier l'artefact Windows
+        uses: actions/upload-artifact@v7
+        with:
+          name: GAIP-win-x64
+          path: artifacts/Release/win-x64/
+          if-no-files-found: error
+
+
+  publish-linux:
+    name: Publication Linux x64
+    runs-on: ubuntu-24.04
+    needs: tests
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v7
+
+      - name: Installer .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Publier G@IP Linux
+        run: >
+          dotnet publish
+          src/GAIP.Desktop/GAIP.Desktop.csproj
+          -c Release
+          -r linux-x64
+          -p:PublishProfile=Release
+
+      - name: Vérifier l'exécutable
+        run: |
+          test -f artifacts/Release/linux-x64/GAIP
+          ls -lh artifacts/Release/linux-x64/
+
+      - name: Publier l'artefact Linux
+        uses: actions/upload-artifact@v7
+        with:
+          name: GAIP-linux-x64
+          path: artifacts/Release/linux-x64/
+          if-no-files-found: error
