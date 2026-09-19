@@ -8,14 +8,14 @@ GAIP.Tests → ces projets + Avalonia.Headless.XUnit
 - **Core** : modèles, IPv4 uint/ulong, validation globale, requêtes, CSV transactionnel en mémoire et export Excel OOXML en flux. Indépendant de l’OS, du filesystem et d’Avalonia. Des attributs System.Text.Json imposent la présence des IDs/collections.
 - **Storage** : JSON strict, SHA-256, configuration et chemins OS, repository filesystem, verrous, sauvegardes et historique.
 - **Sync** : sessions local/partagé, cache vérifié et associé à sa source, états consultation/édition/hors ligne, publication d’une copie.
-- **Desktop** : contrôles Avalonia en C#, fenêtres/formulaires et contrôleur de présentation. Règles dans Core. Sémaphore de session, I/O hors du thread UI. Heartbeat maintenu pendant les formulaires.
+- **Desktop** : contrôles Avalonia en C#, fenêtres/formulaires et contrôleur de présentation. Règles dans Core. Sémaphore de session, I/O hors du thread UI. En partagé, les formulaires ne gardent pas le verrou : il est acquis automatiquement seulement pendant la publication.
 - **Tests** : xUnit v3, invariants, imports, concurrence/stockage et parcours UI Headless.
 
 ## Concurrence
 
-`edit.lock` représente une session humaine. `.gaip-io.guard` est une garde technique ouverte avec `FileShare.None` lors d’une publication, acquisition, libération forcée ou heartbeat. Le fichier reste présent : sa suppression pourrait créer deux groupes de clients sur des inodes différents. Les handles sont relâchés à la fin de l’opération ou du processus. Attente maximale de garde : 5 s.
+`edit.lock` représente un bail d’écriture. Dans le parcours UI normal, ce bail est très court : actualisation, acquisition juste avant l’enregistrement, publication, puis libération immédiate. `.gaip-io.guard` est une garde technique ouverte avec `FileShare.None` lors d’une publication, acquisition, libération forcée ou heartbeat. Le fichier reste présent : sa suppression pourrait créer deux groupes de clients sur des inodes différents. Les handles sont relâchés à la fin de l’opération ou du processus. Attente maximale de garde : 5 s.
 
-Acquisition : actualisation cache → garde → absence de verrou → hash central attendu → création `CreateNew` → relecture central → autorisation d’édition. Publication et force-unlock partagent la garde : une écriture déjà engagée peut terminer avant la libération forcée ; aucune avec l’ancien ID ne peut réussir après.
+Acquisition UI : actualisation cache → garde → absence de verrou → hash central attendu → création `CreateNew` → relecture central → publication → libération. Le formulaire reste ouvert si l’acquisition ou la validation échoue. Publication et force-unlock partagent la garde : une écriture déjà engagée peut terminer avant la libération forcée ; aucune avec l’ancien ID ne peut réussir après.
 
 La garde protège aussi les écritures de plusieurs instances locales, sans verrou d’édition ni heartbeat. Les lectures ne prennent pas de verrou d’édition. Ces garanties supposent que le filesystem distant respecte les primitives de partage et de renommage.
 
