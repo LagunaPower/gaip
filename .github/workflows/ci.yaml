@@ -19,13 +19,17 @@ env:
 jobs:
 
   tests:
-    name: Tests - ${{ matrix.os }}
+    name: Tests - ${{ matrix.name }}
+
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - windows-2022
-          - ubuntu-24.04
+        include:
+          - name: Windows
+            os: windows-2022
+
+          - name: Linux
+            os: ubuntu-24.04
 
     runs-on: ${{ matrix.os }}
 
