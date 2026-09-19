@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+      Name="G@IP — Gestion d’Adresses IP"
+      Manufacturer="LagunaPower"
+      Version="$(Version)"
+      Language="1036"
+      Scope="perMachine"
+      InstallerVersion="500"
+      UpgradeCode="{A3E3430F-9984-5938-9826-49442439B303}">
+
+    <MajorUpgrade DowngradeErrorMessage="Une version plus récente de G@IP est déjà installée." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="GAIP.ico" SourceFile="$(GaipIcon)" />
+    <Property Id="ARPPRODUCTICON" Value="GAIP.ico" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="ManufacturerFolder" Name="LagunaPower">
+        <Directory Id="INSTALLFOLDER" Name="G@IP">
+          <Component Id="MainExecutable" Guid="*">
+            <File Id="GAIPExe" Source="$(GaipExe)" Name="GAIP.exe" KeyPath="yes">
+              <Shortcut
+                  Id="StartMenuShortcut"
+                  Directory="ProgramMenuFolder"
+                  Name="G@IP"
+                  Description="Gestion d’Adresses IP"
+                  WorkingDirectory="INSTALLFOLDER" />
+            </File>
+          </Component>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="G@IP" Level="1">
+      <ComponentRef Id="MainExecutable" />
+    </Feature>
+  </Package>
+</Wix>
