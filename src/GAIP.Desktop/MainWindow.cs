@@ -33,7 +33,7 @@ public sealed partial class MainWindow : Window
     private Guid? _selectedVlan;
     private bool _showFreeAddresses;
     private string _subnetSearch = "";
-    private WrapPanel? _siteCards;
+    private Grid? _siteCards;
     public DataSession? Session => _session;
 
     public MainWindow() : this(UserPaths.Root, UserPaths.ConfigRoot) { }
@@ -183,14 +183,15 @@ public sealed partial class MainWindow : Window
         _pageHeading.Content = Ui.Text(_selectedSite is null ? "Plans d’adressage" : "Site sélectionné", 22, true);
         var count = Db.Sites.Sum(s => s.Vlans.Count);
         var used = Db.Sites.Sum(s => s.Vlans.Sum(v => v.Subnet is null ? 0 : Queries.UsedCount(v.Subnet)));
-        _siteCards = new WrapPanel { Orientation = Orientation.Horizontal };
+        _siteCards = new Grid { Name = "SiteCards", ColumnSpacing = 8, RowSpacing = 8, HorizontalAlignment = HorizontalAlignment.Stretch };
         foreach (var site in SiteOrdering.Ordered(Db.Sites.Where(s => _selectedSite is null || s.Id == _selectedSite)))
         {
             var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
             header.Children.Add(Ui.Text(site.Name, 18, true));
             var stats = Ui.Text($"{site.Vlans.Count} VLAN / {site.Vlans.Sum(v => v.Subnet is null ? 0 : Queries.UsedCount(v.Subnet))} IP utilisées", 11);
             Grid.SetColumn(stats, 1); header.Children.Add(stats);
-            var content = Ui.Column(header, Ui.Text(site.Code + (site.Description.Length > 0 ? " · " + site.Description : ""), 12));
+
+            var details = Ui.Column(header, Ui.Text(site.Code + (site.Description.Length > 0 ? " · " + site.Description : ""), 12));
             foreach (var vlan in site.Vlans.OrderBy(v => v.Vid))
             {
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("48,*,Auto"), ColumnSpacing = 8 };
@@ -203,12 +204,21 @@ public sealed partial class MainWindow : Window
                 var button = Ui.Button("", () => OpenVlan(site.Id, vlan.Id)); button.Content = row;
                 button.Background = Brushes.Transparent; button.BorderThickness = new Thickness(0, 0, 0, 1);
                 button.HorizontalAlignment = HorizontalAlignment.Stretch; button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
-                content.Children.Add(button);
+                details.Children.Add(button);
             }
-            if (site.Vlans.Count == 0) content.Children.Add(Ui.Text("Aucun VLAN. Créez le premier plan d’adressage.", 12));
-            content.Children.Add(Ui.Row(Ui.Button("Modifier le site", () => Run(() => EditSite(site)), CanEdit),
-                Ui.Button("Ajouter un VLAN", () => Run(() => EditVlan(site, null)), CanEdit)));
-            var card = Ui.Card(content); card.Margin = new Thickness(0, 0, 8, 8);
+            if (site.Vlans.Count == 0) details.Children.Add(Ui.Text("Aucun VLAN. Créez le premier plan d’adressage.", 12));
+
+            var siteActions = Ui.Row(
+                Ui.Button("Modifier le site", () => Run(() => EditSite(site)), CanEdit),
+                Ui.Button("Ajouter un VLAN", () => Run(() => EditVlan(site, null)), CanEdit));
+            var content = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), RowSpacing = 12 };
+            content.Children.Add(details);
+            Grid.SetRow(siteActions, 2); content.Children.Add(siteActions);
+
+            var card = Ui.Card(content);
+            card.Margin = new Thickness(0);
+            card.HorizontalAlignment = HorizontalAlignment.Stretch;
+            card.VerticalAlignment = VerticalAlignment.Stretch;
             _siteCards.Children.Add(card);
         }
         var stack = Ui.Column(Ui.Text($"{Db.Sites.Count} sites  ·  {count} VLAN  ·  {used} IP utilisées", 13), _siteCards);
@@ -221,9 +231,28 @@ public sealed partial class MainWindow : Window
     private void ResizeCards()
     {
         if (_siteCards is null) return;
+
+        const double minCardWidth = 440;
+        const double gap = 8;
         var available = Math.Max(300, Bounds.Width - 32);
-        int columns = available >= 1500 ? 3 : available >= 980 ? 2 : 1;
-        foreach (var child in _siteCards.Children) child.Width = available / columns - 8;
+        var fittingColumns = Math.Max(1, (int)Math.Floor((available + gap) / (minCardWidth + gap)));
+        var columns = Math.Min(_config.MaxHomeColumns, Math.Min(fittingColumns, Math.Max(1, _siteCards.Children.Count)));
+
+        _siteCards.Width = available;
+        _siteCards.ColumnDefinitions.Clear();
+        _siteCards.RowDefinitions.Clear();
+        for (var column = 0; column < columns; column++)
+            _siteCards.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star });
+
+        var rows = (_siteCards.Children.Count + columns - 1) / columns;
+        for (var row = 0; row < rows; row++)
+            _siteCards.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        for (var index = 0; index < _siteCards.Children.Count; index++)
+        {
+            Grid.SetColumn(_siteCards.Children[index], index % columns);
+            Grid.SetRow(_siteCards.Children[index], index / columns);
+        }
     }
     private void RenderSearch()
     {
