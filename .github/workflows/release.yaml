@@ -82,7 +82,7 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Publier G@IP Windows
+      - name: Publier G@IP Windows standard
         run: >
           dotnet publish
           src/GAIP.Desktop/GAIP.Desktop.csproj
@@ -90,22 +90,30 @@ jobs:
           -r win-x64
           -p:PublishProfile=Release
 
-      - name: Créer l'archive Windows et son SHA-256
+      - name: Publier G@IP Windows trimmed
+        run: >
+          dotnet publish
+          src/GAIP.Desktop/GAIP.Desktop.csproj
+          -c Release
+          -r win-x64
+          -p:PublishProfile=ExperimentalTrimmed
+
+      - name: Créer les archives Windows et leurs SHA-256
         shell: pwsh
         env:
           TAG: ${{ github.ref_name }}
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
 
-          $archive = "dist/GAIP-$env:TAG-win-x64.zip"
-          Compress-Archive `
-            -Path "artifacts/Release/win-x64/GAIP.exe" `
-            -DestinationPath $archive `
-            -Force
+          $standard = "dist/GAIP-$env:TAG-win-x64.zip"
+          Compress-Archive -Path "artifacts/Release/win-x64/GAIP.exe" -DestinationPath $standard -Force
+          $standardHash = (Get-FileHash -Algorithm SHA256 $standard).Hash.ToLowerInvariant()
+          "$standardHash  $([System.IO.Path]::GetFileName($standard))" | Set-Content -NoNewline "$standard.sha256"
 
-          $hash = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
-          "$hash  $([System.IO.Path]::GetFileName($archive))" |
-            Set-Content -NoNewline "$archive.sha256"
+          $trimmed = "dist/GAIP-$env:TAG-win-x64-trimmed.zip"
+          Compress-Archive -Path "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe" -DestinationPath $trimmed -Force
+          $trimmedHash = (Get-FileHash -Algorithm SHA256 $trimmed).Hash.ToLowerInvariant()
+          "$trimmedHash  $([System.IO.Path]::GetFileName($trimmed))" | Set-Content -NoNewline "$trimmed.sha256"
 
       - name: Ajouter les fichiers Windows à la Release
         shell: pwsh
@@ -113,10 +121,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release upload $env:TAG `
-            "dist/GAIP-$env:TAG-win-x64.zip" `
-            "dist/GAIP-$env:TAG-win-x64.zip.sha256" `
-            --clobber
+          gh release upload $env:TAG "dist/GAIP-$env:TAG-win-x64.zip" "dist/GAIP-$env:TAG-win-x64.zip.sha256" "dist/GAIP-$env:TAG-win-x64-trimmed.zip" "dist/GAIP-$env:TAG-win-x64-trimmed.zip.sha256" --clobber
 
 
   publish-linux:
@@ -133,7 +138,7 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Publier G@IP Linux
+      - name: Publier G@IP Linux standard
         run: >
           dotnet publish
           src/GAIP.Desktop/GAIP.Desktop.csproj
@@ -141,23 +146,31 @@ jobs:
           -r linux-x64
           -p:PublishProfile=Release
 
-      - name: Créer l'archive Linux et son SHA-256
+      - name: Publier G@IP Linux trimmed
+        run: >
+          dotnet publish
+          src/GAIP.Desktop/GAIP.Desktop.csproj
+          -c Release
+          -r linux-x64
+          -p:PublishProfile=ExperimentalTrimmed
+
+      - name: Créer les archives Linux et leurs SHA-256
         env:
           TAG: ${{ github.ref_name }}
         run: |
           mkdir -p dist
+
           chmod +x artifacts/Release/linux-x64/GAIP
-          tar -C artifacts/Release/linux-x64 \
-            -czf "dist/GAIP-$TAG-linux-x64.tar.gz" .
-          sha256sum "dist/GAIP-$TAG-linux-x64.tar.gz" \
-            > "dist/GAIP-$TAG-linux-x64.tar.gz.sha256"
+          tar -C artifacts/Release/linux-x64 -czf "dist/GAIP-$TAG-linux-x64.tar.gz" .
+          sha256sum "dist/GAIP-$TAG-linux-x64.tar.gz" > "dist/GAIP-$TAG-linux-x64.tar.gz.sha256"
+
+          chmod +x artifacts/ExperimentalTrimmed/linux-x64/GAIP
+          tar -C artifacts/ExperimentalTrimmed/linux-x64 -czf "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" .
+          sha256sum "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" > "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz.sha256"
 
       - name: Ajouter les fichiers Linux à la Release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release upload "$TAG" \
-            "dist/GAIP-$TAG-linux-x64.tar.gz" \
-            "dist/GAIP-$TAG-linux-x64.tar.gz.sha256" \
-            --clobber
+          gh release upload "$TAG" "dist/GAIP-$TAG-linux-x64.tar.gz" "dist/GAIP-$TAG-linux-x64.tar.gz.sha256" "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz.sha256" --clobber
