@@ -43,13 +43,11 @@ public static class Ui
             BorderThickness = new Thickness(0),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 4, 0),
-            IsEnabled = !string.IsNullOrEmpty(input.Text)
+            Margin = new Thickness(0, 0, 4, 0)
         };
         Avalonia.Automation.AutomationProperties.SetName(clear, $"Vider {label}");
         ToolTip.SetTip(clear, "Vider la recherche");
         clear.Click += (_, _) => { input.Text = ""; input.Focus(); };
-        input.TextChanged += (_, _) => clear.IsEnabled = !string.IsNullOrEmpty(input.Text);
         grid.Children.Add(clear);
         return grid;
     }
