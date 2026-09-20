@@ -20,6 +20,10 @@ public static class TestAppBuilder
 
 public sealed partial class DesktopTests
 {
+    private static GAIP.Core.MulticastFlow groupFlow(ListBox list, int port) =>
+        list.Items.Cast<GAIP.Core.MulticastFlow>().Single(flow => flow.Port == port);
+
+
     private static Button Button(Control control, string label) => control.GetLogicalDescendants().OfType<Button>().First(b => b.Content as string == label);
     private static void Click(Button button) => button.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
     private static void Click(MenuItem item) => item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
@@ -288,10 +292,61 @@ public sealed partial class DesktopTests
         Click(row);
         await Until(() => main.GetLogicalDescendants().OfType<Button>().Any(b => b.Content as string == "Modifier le multicast"));
         Assert.Contains(main.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text == "239.10.20.15 — VIDEO");
-        Assert.Contains(main.GetLogicalDescendants().OfType<Button>(), b => b.Name == "MulticastFlow_5004");
+        await Until(() => main.GetVisualDescendants().OfType<Border>().Any(b => b.Name == "MulticastFlow_5004"));
+        var flowList = main.GetLogicalDescendants().OfType<ListBox>().Single(list => list.Name == "MulticastFlowList");
+        var flow = groupFlow(flowList, 5004);
+        flowList.SelectedItem = flow;
+        Assert.Same(flow, flowList.SelectedItem);
+        var flowRow = main.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "MulticastFlow_5004");
+        Assert.NotNull(flowRow.ContextMenu);
+        Assert.Equal(new[] { "Modifier", "Supprimer" },
+            flowRow.ContextMenu!.ItemsSource!.Cast<MenuItem>().Select(item => item.Header as string).ToArray());
         main.Close(); await Until(() => !main.IsVisible);
     }
 
+
+    [AvaloniaFact]
+    public async Task MulticastFlowEditorFiltersSourcesAndVlans()
+    {
+        using var temp = new TempDirectory();
+        var data = temp.Sub("data");
+        var db = TestData.Example();
+        TestData.Subnet(db).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRC-VIDEO" });
+        TestData.Subnet(db).Addresses.Add(new() { Address = "10.20.120.26", Hostname = "SRC-AUDIO" });
+        db.Sites[0].Vlans.Add(new() { Vid = 130, Name = "AUDIO" });
+        db.MulticastGroups.Add(new() { Address = "239.10.20.15", Name = "VIDEO" });
+        new GAIP.Storage.FileRepository(temp.Sub("data/local"), "test", "pc").Initialize(db);
+
+        var main = new MainWindow(data, temp.Sub("config")); main.Show(); await UntilReady(main);
+        var card = main.GetLogicalDescendants().OfType<Border>().Single(b => b.Name == "MulticastCard");
+        Click(card.GetLogicalDescendants().OfType<Button>().Single(b => b.Name == "MulticastGroupRow"));
+        await Until(() => main.GetLogicalDescendants().OfType<Button>().Any(b => b.Content as string == "Ajouter un flux"));
+        Click(Button(main, "Ajouter un flux"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        var form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+
+        var sourceSearch = form.Fields.GetLogicalDescendants().OfType<TextBox>()
+            .Single(box => box.Name == "MulticastSourceSearch");
+        var vlanSearch = form.Fields.GetLogicalDescendants().OfType<TextBox>()
+            .Single(box => box.Name == "MulticastVlanSearch");
+
+        var sourceChecks = form.Fields.GetLogicalDescendants().OfType<CheckBox>()
+            .Where(check => (check.Content as string)?.StartsWith("10.20.120.", StringComparison.Ordinal) == true).ToArray();
+        var vlanChecks = form.Fields.GetLogicalDescendants().OfType<CheckBox>()
+            .Where(check => (check.Content as string)?.StartsWith("LEVANT — VLAN", StringComparison.Ordinal) == true).ToArray();
+        Assert.Equal(2, sourceChecks.Length);
+        Assert.Equal(2, vlanChecks.Length);
+
+        sourceSearch.Text = "SRC-VIDEO";
+        await Until(() => sourceChecks.Count(check => check.IsVisible) == 1);
+        Assert.Contains("10.20.120.25", sourceChecks.Single(check => check.IsVisible).Content as string);
+
+        vlanSearch.Text = "130";
+        await Until(() => vlanChecks.Count(check => check.IsVisible) == 1);
+        Assert.Contains("VLAN 130", vlanChecks.Single(check => check.IsVisible).Content as string);
+
+        form.Close(false); main.Close(); await Until(() => !main.IsVisible);
+    }
 
     [AvaloniaFact]
     public async Task MulticastTilesAreBalancedCappedAndUseSiteDisplayOrder()
@@ -335,7 +390,7 @@ public sealed partial class DesktopTests
 
         var firstGroup = cards[0].GetLogicalDescendants().OfType<Button>().First(button => button.Name == "MulticastGroupRow");
         Click(firstGroup);
-        await Until(() => main.GetLogicalDescendants().OfType<Button>().Any(button => button.Name == "MulticastFlow_5004"));
+        await Until(() => main.GetVisualDescendants().OfType<Border>().Any(border => border.Name == "MulticastFlow_5004"));
 
         var siteHeaders = main.GetLogicalDescendants().OfType<TextBlock>()
             .Where(text => text.Name?.StartsWith("MulticastSiteHeader_", StringComparison.Ordinal) == true)
