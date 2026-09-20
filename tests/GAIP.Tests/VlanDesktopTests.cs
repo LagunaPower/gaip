@@ -404,6 +404,45 @@ public sealed partial class DesktopTests
         await Until(() => !main.IsVisible);
     }
     [AvaloniaFact]
+    public async Task FullSubnetDisablesAddressCreationAndNextFree()
+    {
+        using var temp = new TempDirectory();
+        var data = temp.Sub("data");
+        var repo = new FileRepository(temp.Sub("data/local"), "test", "pc");
+        var db = TestData.Example("10.20.120.0/30");
+        var subnet = TestData.Subnet(db);
+        subnet.Gateway = new() { Address = "10.20.120.1", Comment = "Firewall" };
+        subnet.Addresses.Add(new() { Address = "10.20.120.2", Hostname = "FULL" });
+        repo.Initialize(db);
+
+        var main = new MainWindow(data, temp.Sub("config"));
+        main.Show();
+        await UntilReady(main);
+
+        var vlanButton = main.GetLogicalDescendants().OfType<Button>().First(b =>
+            b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.0/30"));
+        Click(vlanButton);
+
+        var add = Button(main, "Ajouter une IP");
+        Assert.False(add.IsEnabled);
+
+        await Until(() => main.GetLogicalDescendants().OfType<Button>().Any(b =>
+            b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.2")));
+        var addressButton = main.GetLogicalDescendants().OfType<Button>().First(b =>
+            b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.2"));
+        Click(addressButton);
+
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        var form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Assert.False(Button(form, "Prochaine libre").IsEnabled);
+
+        form.Close(false);
+        await Until(() => !form.IsVisible);
+        main.Close();
+        await Until(() => !main.IsVisible);
+    }
+
+    [AvaloniaFact]
     public async Task SharedAddressSaveUsesShortLockAndRejectsConcurrentDuplicate()
     {
         using var temp = new TempDirectory();

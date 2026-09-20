@@ -146,16 +146,27 @@ public sealed partial class MainWindow
     private async Task EditAddress(Guid siteId, Guid vlanId, AddressRow? row)
     {
         Subnet Subnet(Database db) => db.Sites.Single(s => s.Id == siteId).Vlans.Single(v => v.Id == vlanId).Subnet ?? throw new InvalidOperationException("Sous-réseau supprimé.");
+        var nextFree = Queries.NextFree(Subnet(Db));
+        if (row?.IsUsed != true && nextFree is null) throw new InvalidOperationException("Aucune adresse IP libre dans ce sous-réseau.");
         var form = new FormWindow(row?.IsUsed == true ? "Modifier l’adresse IP" : "Ajouter une adresse IP");
-        var address = Ui.Input(row?.Address ?? Queries.NextFree(Subnet(Db)) ?? "", "10.20.120.25", 15);
+        var address = Ui.Input(row?.Address ?? nextFree ?? "", "10.20.120.25", 15);
         var hostname = Ui.Input(row?.IsUsed == true ? row.Hostname : "", "Facultatif si une description est renseignée", 255);
         var description = Ui.Input(row?.Description ?? "");
         form.Add("Adresse IPv4", address); form.Add("Nom / Hostname", hostname); form.Add("Description", description);
-        form.Fields.Children.Add(Ui.Button("Prochaine libre", () =>
+        Button? nextFreeButton = null;
+        nextFreeButton = Ui.Button("Prochaine libre", () =>
         {
-            address.Text = Queries.NextFree(Subnet(Db)) ?? "";
-            if (address.Text.Length == 0) form.Error.Text = "Aucune adresse libre.";
-        }));
+            var free = Queries.NextFree(Subnet(Db));
+            if (free is null)
+            {
+                form.Error.Text = "Aucune adresse IP libre dans ce sous-réseau.";
+                nextFreeButton!.IsEnabled = false;
+                return;
+            }
+            address.Text = free;
+        }, nextFree is not null);
+        if (nextFree is null) ToolTip.SetTip(nextFreeButton, "Aucune adresse IP libre dans ce sous-réseau.");
+        form.Fields.Children.Add(nextFreeButton);
         Action<Database> Mutation()
         {
             var a = address.Text?.Trim() ?? ""; var h = hostname.Text ?? ""; var d = description.Text ?? "";

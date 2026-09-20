@@ -385,7 +385,9 @@ public sealed partial class MainWindow : Window
         var filters = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 12 };
         filters.Children.Add(Ui.SearchField(search, "Filtrer les adresses IP, hostnames ou descriptions"));
         Grid.SetColumn(showFree, 1); filters.Children.Add(showFree);
-        var add = Ui.Button("Ajouter une IP", () => Run(() => EditAddress(site.Id, vlan.Id, null)), CanWrite);
+        var hasFreeAddress = Queries.FreeCount(subnet) > 0;
+        var add = Ui.Button("Ajouter une IP", () => Run(() => EditAddress(site.Id, vlan.Id, null)), CanWrite && hasFreeAddress);
+        if (!hasFreeAddress) ToolTip.SetTip(add, "Aucune adresse IP libre dans ce sous-réseau.");
         Grid.SetColumn(add, 2); filters.Children.Add(add); stack.Children.Add(filters);
         stack.Children.Add(AddressGrid("Adresse IP", "Nom / Hostname", "Description", true));
         // Finite viewport is essential: never put the virtualized list in an outer ScrollViewer.
