@@ -417,6 +417,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
@@ -426,16 +427,22 @@ jobs:
             exit 1
           fi
 
-          if existing="$(gh release view "$TAG" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
+          if existing="$(gh release view "$TAG" --repo "$GH_REPO" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
             if [[ "$existing" == "true" ]]; then
               echo "Suppression du brouillon résiduel $TAG avant recréation."
-              gh release delete "$TAG" --yes
+              gh release delete "$TAG" --repo "$GH_REPO" --yes
             else
               echo "La Release $TAG existe déjà et est publiée ; arrêt par sécurité." >&2
               exit 1
             fi
           fi
 
-          gh release create "$TAG" "${files[@]}"             --verify-tag             --draft             --title "G@IP $TAG"             --notes "Code signing policy: https://github.com/LagunaPower/gaip/blob/$TAG/SIGNING.md"             --generate-notes
+          gh release create "$TAG" "${files[@]}" \
+            --repo "$GH_REPO" \
+            --verify-tag \
+            --draft \
+            --title "G@IP $TAG" \
+            --notes "Code signing policy: https://github.com/LagunaPower/gaip/blob/$TAG/SIGNING.md" \
+            --generate-notes
 
-          gh release edit "$TAG" --draft=false
+          gh release edit "$TAG" --repo "$GH_REPO" --draft=false
