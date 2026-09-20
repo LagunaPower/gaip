@@ -106,8 +106,10 @@ public sealed class VlanViewTests
         Assert.Equal(3, scoped.Count); Assert.Equal(4, repo.History().Count);
         Assert.DoesNotContain(scoped, line => line.Contains("OTHER-SECRET") || line.Contains("Unrelated"));
         var release = JsonSerializer.Deserialize<AuditEntry>(scoped[1], JsonData.Options)!;
-        Assert.Equal("Libération", release.Action); Assert.Contains("SRV", ((JsonElement)release.OldValue!).GetRawText());
-        Assert.DoesNotContain("SRV", ((JsonElement)release.NewValue!).GetRawText());
+        Assert.Equal("Libération", release.Action);
+        Assert.Contains(release.Changes, change => change.ObjectType == "IP" && change.Target == "10.20.120.25" &&
+            change.Field == "exists" && change.OldValue == "true" && change.NewValue == "false");
+        Assert.DoesNotContain(release.Changes, change => change.Target.Contains("OTHER", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -115,8 +117,8 @@ public sealed class VlanViewTests
     {
         using var temp = new TempDirectory(); var repo = temp.Repository(); var before = TestData.Example();
         var after = JsonData.Clone(before); after.Sites[0].Vlans[0].Name = "Changed";
-        var relevant = new AuditEntry(DateTimeOffset.UtcNow, "test", "pc", 1, "Change", "VLAN", "120", before, after);
-        var unrelated = new AuditEntry(DateTimeOffset.UtcNow, "test", "pc", 2, "Other", "Site", "none", after, after);
+        var relevant = new AuditEntry(DateTimeOffset.UtcNow, "test", "pc", 1, "Change", "VLAN", "120", AuditDiff.Create(before, after));
+        var unrelated = new AuditEntry(DateTimeOffset.UtcNow, "test", "pc", 2, "Other", "Site", "none", []);
         var options = new JsonSerializerOptions(JsonData.Options) { WriteIndented = false };
         File.WriteAllLines(repo.HistoryPath, new[] { JsonSerializer.Serialize(relevant, options) }.Concat(Enumerable.Repeat(JsonSerializer.Serialize(unrelated, options), 1001)));
         Assert.Equal(1000, repo.History().Count);

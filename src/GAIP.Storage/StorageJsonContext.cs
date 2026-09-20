@@ -11,7 +11,6 @@ namespace GAIP.Storage;
 [JsonSerializable(typeof(AppConfig))]
 [JsonSerializable(typeof(EditLease))]
 [JsonSerializable(typeof(AuditEntry))]
+[JsonSerializable(typeof(AuditChange))]
 [JsonSerializable(typeof(Vlan))]
-[JsonSerializable(typeof(JsonElement))]
-// Audit object values can be Database, Vlan, EditLease or deserialized JsonElement.
 public partial class StorageJsonContext : JsonSerializerContext { }

@@ -33,7 +33,9 @@ Base JSON versionnée autoritaire, cache utilisateur validé SHA-256 associé au
 
 Un rédacteur à la fois. L’interface n’expose plus de mode modification manuel : pour chaque écriture, elle actualise d’abord la base, acquiert automatiquement le verrou atomique, publie puis le libère immédiatement. Le verrou conserve identité, hash/révision de départ et heartbeat pour les cas de session technique ou de récupération ; il n’expire jamais automatiquement. Force-unlock dans la gestion avec saisie explicite et audit. Publication recontrôlant le verrou sous la même garde filesystem que force-unlock. Si une IP a été attribuée par un autre poste depuis l’ouverture du formulaire, la revalidation sur la base actualisée rejette la seconde attribution sans écrasement.
 
-Avant publication : validation, hash attendu, sauvegarde vérifiée. Temporaire complet, remplacement dans le même dossier, relecture/hash. Révision +1. Cache/historique, avertissement si leur mise à jour échoue après publication. Rétention des sauvegardes 30 par défaut.
+Avant publication : validation, hash attendu, sauvegarde vérifiée. Temporaire complet, remplacement dans le même dossier, relecture/hash. Révision +1. Cache/historique, avertissement si leur mise à jour échoue après publication. L’historique est un journal JSONL compact de différences champ par champ ; il ne contient plus de snapshots complets de la base. Le filtrage par VLAN repose directement sur les IDs portés par les changements. Rétention des sauvegardes 30 par défaut.
+
+La configuration peut être exportée en JSON depuis la fenêtre Configuration. En mode partagé, le diagnostic propose une restauration de secours depuis le cache local validé lorsque `gaip-data.json` a été supprimé accidentellement ; cette restauration conserve les octets et la révision du cache et refuse systématiquement d’écraser une base partagée déjà présente ou d’agir si un verrou existe.
 
 ## CSV
 

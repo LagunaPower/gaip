@@ -25,7 +25,7 @@ Le candidat est une copie. Sous garde : validation, contrôle hash/verrou, sauve
 
 Si la vérification finale échoue, le résultat est annoncé incertain et l’édition partagée est interrompue. Actualiser avant de retenter. Historique/cache sont distincts du JSON : leurs erreurs post-publication sont signalées sans rollback aveugle. Une sauvegarde impossible bloque la publication ; une purge impossible laisse les sauvegardes et produit un avertissement.
 
-Historique : lignes JSON avec états avant/après, aucune rétention automatique. Sauvegardes : horodatage UTC, révision précédente et suffixe unique. Aucun changement utilisateur en attente entre formulaires.
+Historique : lignes JSON compactes contenant uniquement les différences métier champ par champ. Les IDs de site/VLAN sont portés par chaque changement afin de filtrer l’historique contextuel sans désérialiser deux copies de la base. Aucune rétention automatique. Sauvegardes : horodatage UTC, révision précédente et suffixe unique. Aucun changement utilisateur en attente entre formulaires.
 
 ## Cache
 
@@ -41,7 +41,7 @@ Les publications x64 sélectionnent les packages Avalonia par RID : Win32 pour W
 
 `AddressRows` est une collection indexée en lecture seule : les lignes libres sont créées à la demande, sans allocation d’une ligne par IP. La liste Avalonia utilise `VirtualizingStackPanel` dans une zone de hauteur finie, sans ScrollViewer parent. Pas de pagination. Affichage intégral jusqu’au /12 ; au-delà, consultation des IP utilisées et recherche d’une adresse exacte, sans modification des calculs réseau.
 
-Le CSV accepte un identifiant stable de VLAN pour filtrer les deux exports. `VlanHistory` compare les snapshots avant/après des événements existants, sélectionne ceux qui modifient le VLAN ou ses IP et limite les détails à ce VLAN. Le filtrage précède la limite de 1 000 événements ; aucune migration du JSON métier ou de l’historique n’est nécessaire.
+Le CSV accepte un identifiant stable de VLAN pour filtrer les deux exports. `VlanHistory` sélectionne directement, dans le journal de différences, les changements portant l’ID stable du VLAN demandé. Le filtrage précède la limite de 1 000 événements. Le nouveau format d’historique remplace le format à snapshots complets ; aucune migration de l’ancien `history.jsonl` n’est prévue avant diffusion du logiciel.
 
 Le PNG officiel reste intact dans Assets. Des formats d’icônes dérivés sont produits par un script reproductible. Windows embarque l’ICO dans le PE ; Linux utilise les icônes PNG et un lanceur de bureau installé dans le profil utilisateur. Le nom technique de l’application est `GAIP`.
 

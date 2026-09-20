@@ -93,6 +93,26 @@ public sealed class DataSession(AppConfig config, string localRoot, string user,
             Status = "Mode hors ligne — cache local · lecture seule";
         }
     }
+    public void RestoreSharedFromCache()
+    {
+        if (Config.Mode != StorageMode.Shared) throw new InvalidOperationException("La restauration du cache n’est disponible qu’en mode partagé.");
+        if (Lease is not null) throw new IOException("Terminez la modification en cours avant de restaurer le cache.");
+        var cached = LoadCache();
+        var result = Repository.RestoreMissingData(cached.Bytes);
+        Accept(result.Snapshot);
+        Warning = result.Warning;
+        try { Cache(result.Snapshot); }
+        catch (Exception ex)
+        {
+            Warning = string.IsNullOrWhiteSpace(Warning)
+                ? $"Base restaurée ; mise à jour du cache impossible : {ex.Message}"
+                : Warning + "\nMise à jour du cache impossible : " + ex.Message;
+        }
+        RemoteLease = Repository.ReadLease();
+        IsOffline = false;
+        Status = "À jour";
+    }
+
     public void BeginEdit()
     {
         if (Config.Mode == StorageMode.Local) return;

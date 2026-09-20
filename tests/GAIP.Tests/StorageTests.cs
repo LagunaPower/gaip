@@ -42,8 +42,69 @@ public sealed class StorageTests
         var backup = Assert.Single(Directory.GetFiles(System.IO.Path.Combine(temp.Path, "backup")));
         Assert.Equal(start.Hash, JsonData.HashFile(backup)); Assert.Single(repo.History()); Assert.Null(result.Warning);
         var entry = JsonSerializer.Deserialize<AuditEntry>(repo.History()[0], JsonData.Options)!;
-        Assert.Equal(1, entry.Revision); Assert.NotNull(entry.OldValue); Assert.NotNull(entry.NewValue);
+        Assert.Equal(1, entry.Revision);
+        var changeEntry = Assert.Single(entry.Changes);
+        Assert.Equal("Site", changeEntry.ObjectType); Assert.Equal("description", changeEntry.Field);
+        Assert.Equal("", changeEntry.OldValue); Assert.Equal("Modifiée", changeEntry.NewValue);
     }
+    [Fact]
+    public void DiffHistoryStaysSmallWithAboutOneMegabyteDatabase()
+    {
+        using var temp = new TempDirectory();
+        var db = Example("10.20.0.0/16");
+        var subnet = Subnet(db);
+        var network = Ipv4Network.Parse(subnet.Cidr);
+        for (uint i = 0; i < 9000; i++)
+            subnet.Addresses.Add(new()
+            {
+                Address = Ipv4Network.Format(network.First + i),
+                Hostname = $"HOST-{i:D5}",
+                Description = "Équipement de démonstration"
+            });
+
+        var dataSize = JsonData.Serialize(db).Length;
+        Assert.InRange(dataSize, 800_000, 1_600_000);
+
+        var repo = temp.Repository();
+        var start = repo.Initialize(db);
+        var changed = JsonData.Clone(start.Data);
+        changed.Sites[0].Description = "Modification légère";
+        repo.Commit(changed, start.Hash, null, "Modification", "Site", "LEVANT");
+
+        var historySize = new FileInfo(repo.HistoryPath).Length;
+        Assert.InRange(historySize, 1, 4096);
+        var line = Assert.Single(repo.History());
+        Assert.DoesNotContain("HOST-08999", line);
+        var entry = JsonSerializer.Deserialize<AuditEntry>(line, JsonData.Options)!;
+        Assert.Single(entry.Changes);
+    }
+
+    [Fact]
+    public void ValidatedCacheRestoresMissingSharedDatabaseWithoutOverwrite()
+    {
+        using var temp = new TempDirectory();
+        var central = temp.Sub("central");
+        var local = temp.Sub("local");
+        var repository = new FileRepository(central, "seed", "pc");
+        repository.Initialize(Example());
+        var session = new DataSession(new() { Mode = StorageMode.Shared, SharedPath = central }, local, "user", "pc");
+        session.Open();
+        var cachedHash = session.Hash;
+
+        File.Delete(repository.DataPath);
+        session.Refresh();
+        Assert.True(session.IsOffline);
+
+        session.RestoreSharedFromCache();
+        Assert.False(session.IsOffline);
+        Assert.Equal(cachedHash, JsonData.HashFile(repository.DataPath));
+        Assert.Contains(repository.History(), line => line.Contains("Restauration"));
+
+        var restoredBytes = File.ReadAllBytes(repository.DataPath);
+        Assert.Throws<IOException>(session.RestoreSharedFromCache);
+        Assert.Equal(restoredBytes, File.ReadAllBytes(repository.DataPath));
+    }
+
     [Fact]
     public void InvalidModelAndStaleHashDoNotTouchBase()
     {

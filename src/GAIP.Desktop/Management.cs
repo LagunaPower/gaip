@@ -22,6 +22,13 @@ public sealed partial class MainWindow
         var homeColumns = new NumericUpDown { Minimum = 1, Maximum = 6, Value = _config.MaxHomeColumns, FormatString = "0" };
         var migration = new ComboBox { ItemsSource = new[] { "Utiliser uniquement une base réseau existante", "Initialiser depuis la base actuelle si aucune base réseau n’existe" }, SelectedIndex = 0 };
         var localChoice = new ComboBox { ItemsSource = new[] { "Copier la base réseau / cache actuel", "Créer une base locale vide" }, SelectedIndex = 0 };
+        AppConfig ReadConfig() => new()
+        {
+            Mode = (StorageMode)mode.SelectedIndex, SharedPath = path.Text?.Trim() ?? "",
+            SyncSeconds = (int)(interval.Value ?? 60), BackupCount = (int)(backups.Value ?? 30),
+            CsvSeparator = separator.Text ?? ";", Theme = (AppTheme)theme.SelectedIndex,
+            MaxHomeColumns = (int)(homeColumns.Value ?? 3)
+        };
         form.Add("Mode", mode); form.Add("Dossier partagé", path);
         form.Fields.Children.Add(Ui.Button("Tester l’accès", async () =>
         {
@@ -38,6 +45,27 @@ public sealed partial class MainWindow
         form.Add("Séparateur CSV", separator); form.Add("Thème", theme);
         form.Add("Colonnes maximum sur l’accueil", homeColumns);
         form.Fields.Children.Add(Ui.Text($"Données locales : {_localRoot}\nConfiguration : {_configRoot}", 11));
+        form.Fields.Children.Add(Ui.Button("Exporter la configuration…", async () =>
+        {
+            try
+            {
+                var exported = ReadConfig(); exported.Validate();
+                var file = await form.StorageProvider.SaveFilePickerAsync(new()
+                {
+                    Title = "Exporter la configuration",
+                    SuggestedFileName = "GAIP-config.json",
+                    DefaultExtension = "json",
+                    FileTypeChoices = [JsonType],
+                    ShowOverwritePrompt = true
+                });
+                if (file is null) return;
+                await using var stream = await file.OpenWriteAsync(); stream.SetLength(0);
+                await JsonSerializer.SerializeAsync(stream, exported, StorageJsonContext.Default.AppConfig);
+                await stream.FlushAsync();
+                form.Error.Text = "Configuration exportée.";
+            }
+            catch (Exception ex) { form.Error.Text = ex.Message; }
+        }));
         form.Fields.Children.Add(Ui.Button("Diagnostic / gestion du verrou", () => Run(Diagnostics)));
         var general = new StackPanel { Spacing = 14 };
         var generalFields = form.Fields.Children.ToArray(); form.Fields.Children.Clear();
@@ -65,13 +93,7 @@ public sealed partial class MainWindow
                     await Save(db => SiteOrdering.Apply(db, siteOrder.OrderedIds), "Ordre d’affichage", "Sites", "Accueil");
                 return;
             }
-            var next = new AppConfig
-            {
-                Mode = (StorageMode)mode.SelectedIndex, SharedPath = path.Text?.Trim() ?? "",
-                SyncSeconds = (int)(interval.Value ?? 60), BackupCount = (int)(backups.Value ?? 30),
-                CsvSeparator = separator.Text ?? ";", Theme = (AppTheme)theme.SelectedIndex,
-                MaxHomeColumns = (int)(homeColumns.Value ?? 3)
-            };
+            var next = ReadConfig();
             next.Validate();
             var allowInitialize = migration.SelectedIndex == 1;
             var emptyLocal = localChoice.SelectedIndex == 1;
@@ -118,6 +140,25 @@ public sealed partial class MainWindow
         if (_session is null) { await Message("Diagnostic", "Aucune session chargée."); return; }
         var form = new FormWindow("Synchronisation et verrou", "Fermer", 740);
         form.Fields.Children.Add(Ui.Text($"État : {_session.Status}\nRévision : {Db.Revision}\nSHA-256 : {_session.Hash}\nStockage : {_session.Repository.Root}\nDernière modification : {Db.LastModified.LocalDateTime:g}\nPar : {Db.LastModifiedBy} / {Db.LastModifiedFrom}"));
+        if (_session.Config.Mode == StorageMode.Shared)
+        {
+            form.Fields.Children.Add(Ui.Text("Récupération : copie le cache local validé vers le partage uniquement si gaip-data.json a disparu. Une base existante n’est jamais écrasée.", 12));
+            form.Fields.Children.Add(Ui.Button("Restaurer la base partagée depuis le cache…", async () =>
+            {
+                try
+                {
+                    if (!await Confirm("Restaurer depuis le cache", $"Copier le cache local validé vers {_session.Repository.DataPath} ?\n\nLa restauration est refusée si une base existe déjà sur le partage.")) return;
+                    await Io(_session.RestoreSharedFromCache);
+                    Render();
+                    var warning = _session.Warning;
+                    form.Close(true);
+                    await Message("Restauration terminée", warning is null
+                        ? "La base partagée a été restaurée depuis le cache local validé."
+                        : "La base partagée a été restaurée.\n" + warning);
+                }
+                catch (Exception ex) { form.Error.Text = ex.Message; }
+            }));
+        }
         EditLease? lease = null;
         try { lease = await Io(_session.Repository.ReadLease); }
         catch (Exception ex) { form.Fields.Children.Add(Ui.Text(ex.Message)); }
@@ -153,13 +194,53 @@ public sealed partial class MainWindow
                 var detail = new Expander
                 {
                     Header = $"{entry.Date.LocalDateTime:g} · r{entry.Revision} · {entry.Action} {entry.ObjectType} {entry.Target} · {entry.User} / {entry.Machine}",
-                    Content = new TextBox { Text = JsonSerializer.Serialize(entry, StorageJsonContext.Default.AuditEntry), IsReadOnly = true, AcceptsReturn = true, MaxHeight = 300 }
+                    Content = new TextBox { Text = HistoryDetails(entry), IsReadOnly = true, AcceptsReturn = true, MaxHeight = 300 }
                 };
                 form.Fields.Children.Add(detail);
             }
             catch (JsonException) { form.Fields.Children.Add(Ui.Text("Ligne d’historique incomplète ou illisible : " + line)); }
         }
         await form.ShowDialog<bool>(this);
+    }
+
+    private static string HistoryDetails(AuditEntry entry)
+    {
+        if (entry.Changes.Count == 0) return "Aucun changement métier détaillé.";
+        var text = new StringBuilder();
+        foreach (var change in entry.Changes)
+        {
+            if (text.Length > 0) text.AppendLine();
+            text.Append(change.ObjectType).Append(' ').Append(change.Target).Append(" · ").Append(HistoryFieldLabel(change.Field)).AppendLine();
+            text.Append("  ").Append(HistoryValue(change.Field, change.OldValue))
+                .Append("  →  ").Append(HistoryValue(change.Field, change.NewValue));
+        }
+        return text.ToString();
+    }
+
+    private static string HistoryFieldLabel(string field) => field switch
+    {
+        "exists" => "Existence",
+        "code" => "Code",
+        "name" => "Nom",
+        "description" => "Description",
+        "displayOrder" => "Ordre d’affichage",
+        "vid" => "VID",
+        "cidr" => "CIDR",
+        "address" => "Adresse",
+        "comment" => "Commentaire",
+        "hostname" => "Hostname",
+        "holder" => "Détenteur",
+        "startRevision" => "Révision de départ",
+        "startHash" => "Hash de départ",
+        "hash" => "SHA-256",
+        _ => field
+    };
+
+    private static string HistoryValue(string field, string? value)
+    {
+        if (value is null) return "∅";
+        if (field == "exists") return value == "true" ? "présent" : "absent";
+        return value.Length == 0 ? "« vide »" : value;
     }
 
     private string VlanLabel(Guid vlanId)
@@ -188,6 +269,7 @@ public sealed partial class MainWindow
     }
     private static FilePickerFileType CsvType => new("CSV UTF-8") { Patterns = ["*.csv"] };
     private static FilePickerFileType ExcelType => new("Classeur Excel") { Patterns = ["*.xlsx"] };
+    private static FilePickerFileType JsonType => new("Configuration JSON") { Patterns = ["*.json"] };
     private async Task ImportCsv(CsvKind kind)
     {
         var files = await StorageProvider.OpenFilePickerAsync(new() { Title = "Importer CSV", AllowMultiple = false, FileTypeFilter = [CsvType] });

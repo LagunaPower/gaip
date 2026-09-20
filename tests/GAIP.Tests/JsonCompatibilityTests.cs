@@ -48,18 +48,21 @@ public sealed class JsonCompatibilityTests
     }
 
     [Fact]
-    public void GeneratedHistoryPreservesAllExistingSnapshotKinds()
+    public void GeneratedHistoryUsesCompactFieldDiffFormat()
     {
         var db = TestData.Example();
-        using var document = JsonDocument.Parse(JsonData.Serialize(db));
-        foreach (object value in new object[] { db, db.Sites[0].Vlans[0], new EditLease { User = "test", StartHash = "ABC" }, document.RootElement.Clone() })
-        {
-            var entry = new AuditEntry(DateTimeOffset.UtcNow, "test", "pc", 1, "Modification", "Base", "test", value, value);
-            var generated = JsonSerializer.Serialize(entry, JsonData.CompactContext.AuditEntry);
-            Assert.Equal(JsonSerializer.Serialize(entry, Legacy(false)), generated);
-            var restored = JsonSerializer.Deserialize(generated, StorageJsonContext.Default.AuditEntry)!;
-            Assert.Equal(JsonSerializer.Serialize(restored, Legacy(false)), JsonSerializer.Serialize(restored, JsonData.CompactContext.AuditEntry));
-            Assert.DoesNotContain('\n', generated);
-        }
+        var changed = JsonData.Clone(db);
+        changed.Sites[0].Name = "Nouveau nom";
+        var entry = new AuditEntry(DateTimeOffset.UtcNow, "test", "pc", 1, "Modification", "Site", "LEVANT",
+            AuditDiff.Create(db, changed));
+        var generated = JsonSerializer.Serialize(entry, JsonData.CompactContext.AuditEntry);
+        Assert.Equal(JsonSerializer.Serialize(entry, Legacy(false)), generated);
+        Assert.DoesNotContain("oldValue", generated);
+        Assert.DoesNotContain("newValue", generated);
+        Assert.Contains("\"changes\"", generated);
+        Assert.Contains("\"field\":\"name\"", generated);
+        var restored = JsonSerializer.Deserialize(generated, StorageJsonContext.Default.AuditEntry)!;
+        Assert.Single(restored.Changes);
+        Assert.DoesNotContain('\n', generated);
     }
 }

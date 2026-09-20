@@ -6,7 +6,7 @@ namespace GAIP.Storage;
 
 public sealed record Snapshot(Database Data, string Hash, byte[] Bytes);
 public sealed record AuditEntry(DateTimeOffset Date, string User, string Machine, long Revision, string Action,
-    string ObjectType, string Target, object? OldValue = null, object? NewValue = null);
+    string ObjectType, string Target, List<AuditChange> Changes);
 public sealed class EditLease
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -104,7 +104,12 @@ public sealed class FileRepository(string root, string user, string machine, int
         var lease = RequireLease(expectedId);
         var db = Read().Data;
         // Audit failure blocks force-unlock, so the action cannot silently escape history.
-        AppendHistory(new(DateTimeOffset.UtcNow, user, machine, db.Revision, "Libération forcée", "Verrou", lease.Id.ToString(), lease, null));
+        AppendHistory(new(DateTimeOffset.UtcNow, user, machine, db.Revision, "Libération forcée", "Verrou", lease.Id.ToString(),
+        [
+            new(null, null, "Verrou", lease.Id.ToString(), "holder", $"{lease.User} / {lease.Machine}", null),
+            new(null, null, "Verrou", lease.Id.ToString(), "startRevision", lease.StartRevision.ToString(), null),
+            new(null, null, "Verrou", lease.Id.ToString(), "startHash", lease.StartHash, null)
+        ]));
         File.Delete(LockPath);
     }
     public CommitResult Commit(Database candidate, string expectedHash, Guid? leaseId, string action, string objectType, string target)
@@ -142,7 +147,7 @@ public sealed class FileRepository(string root, string user, string machine, int
             throw new IOException("Publication potentiellement effectuée, mais vérification impossible. Actualisez avant toute nouvelle modification. " + ex.Message, ex);
         }
         var warnings = new List<string>();
-        try { AppendHistory(new(db.LastModified, user, machine, db.Revision, action, objectType, target, old.Data, db)); }
+        try { AppendHistory(new(db.LastModified, user, machine, db.Revision, action, objectType, target, AuditDiff.Create(old.Data, db))); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { warnings.Add("Données publiées, historique non écrit : " + ex.Message); }
         try
         {
@@ -150,6 +155,31 @@ public sealed class FileRepository(string root, string user, string machine, int
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { warnings.Add("Nettoyage des sauvegardes impossible : " + ex.Message); }
         return new(published, warnings.Count == 0 ? null : string.Join("\n", warnings));
+    }
+    public CommitResult RestoreMissingData(byte[] cachedBytes)
+    {
+        using var guard = Guard();
+        if (File.Exists(DataPath)) throw new IOException("La base partagée existe déjà : aucune restauration n’a été effectuée.");
+        if (ReadLease() is not null) throw new IOException("Un verrou est présent sur le partage : restauration refusée.");
+        var db = JsonData.Read(cachedBytes);
+        var expectedHash = JsonData.Hash(cachedBytes);
+        JsonData.AtomicWrite(DataPath, cachedBytes);
+        var published = Read();
+        if (published.Hash != expectedHash) throw new IOException("La copie restaurée ne correspond pas au cache validé.");
+
+        string? warning = null;
+        try
+        {
+            AppendHistory(new(DateTimeOffset.UtcNow, user, machine, db.Revision, "Restauration", "Base", "Cache local",
+            [
+                new(null, null, "Base", "Cache local", "hash", null, expectedHash)
+            ]));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            warning = "Base restaurée, historique non écrit : " + ex.Message;
+        }
+        return new(published, warning);
     }
     private void AppendHistory(AuditEntry entry)
     {
