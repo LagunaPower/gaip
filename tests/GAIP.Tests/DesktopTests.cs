@@ -22,6 +22,7 @@ public sealed partial class DesktopTests
 {
     private static Button Button(Control control, string label) => control.GetLogicalDescendants().OfType<Button>().First(b => b.Content as string == label);
     private static void Click(Button button) => button.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+    private static void Click(MenuItem item) => item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
     private static Task UntilReady(MainWindow main) => Until(() => main.Session?.HasData == true &&
         main.GetLogicalDescendants().OfType<Button>().Any(b => b.Content as string == "Ajouter un site"));
     private static async Task Until(Func<bool> predicate)
@@ -37,13 +38,17 @@ public sealed partial class DesktopTests
         Click(Button(main, "Ajouter un site")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any());
         var form = main.OwnedWindows.OfType<FormWindow>().Last(); var fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
         fields[0].Text = "LEVANT"; fields[1].Text = "Île du Levant"; fields[2].Text = "Site test";
-        await Until(() => form.Save.IsEnabled); Click(form.Save); await Until(() => main.Session!.Data.Sites.Count == 1 && !form.IsVisible);
+        await Until(() => form.Save.IsEnabled); Click(form.Save);
+        await Until(() => main.Session!.Data.Sites.Count == 1 && !form.IsVisible &&
+            main.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "Plans d’adressage"));
         Click(Button(main, "Ajouter un VLAN")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible); fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
         fields[0].Text = "120"; fields[1].Text = "SERVEURS";
         form.Fields.GetLogicalDescendants().OfType<CheckBox>().Single().IsChecked = true;
         fields[3].Text = "10.20.120.0/24"; fields[4].Text = "10.20.120.1"; fields[5].Text = "Pare-feu";
-        await Until(() => form.Save.IsEnabled); Click(form.Save); await Until(() => main.Session!.Data.Sites[0].Vlans.Count == 1 && !form.IsVisible);
+        await Until(() => form.Save.IsEnabled); Click(form.Save);
+        await Until(() => main.Session!.Data.Sites[0].Vlans.Count == 1 && !form.IsVisible &&
+            main.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "Plans d’adressage"));
         var vlanButton = main.GetLogicalDescendants().OfType<Button>().First(b => b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.0/24"));
         Click(vlanButton); Click(Button(main, "Ajouter une IP")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible); fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
@@ -59,6 +64,53 @@ public sealed partial class DesktopTests
         Assert.True(cidr.IsReadOnly);
         Assert.False(cidr.IsEnabled);
         form.Close(false); await Until(() => !form.IsVisible);
+
+        var list = main.GetLogicalDescendants().OfType<ListBox>().Single(l => l.Name == "AddressList");
+        await Until(() => main.GetVisualDescendants().OfType<Border>().Any(b =>
+            b.Tag is GAIP.Core.AddressRow row && row.Address == "10.20.120.25"));
+        var assigned = main.GetVisualDescendants().OfType<Border>().Single(b =>
+            b.Tag is GAIP.Core.AddressRow row && row.Address == "10.20.120.25");
+        var gateway = main.GetVisualDescendants().OfType<Border>().Single(b =>
+            b.Tag is GAIP.Core.AddressRow row && row.IsGateway);
+        Assert.Null(gateway.ContextMenu);
+        Assert.NotNull(assigned.ContextMenu);
+        var menuItems = assigned.ContextMenu!.ItemsSource!.Cast<MenuItem>().ToArray();
+        Assert.Equal(new[] { "Modifier", "Libérer" }, menuItems.Select(i => i.Header as string).ToArray());
+        list.SelectedItem = list.Items.Cast<GAIP.Core.AddressRow>().Single(row => row.Address == "10.20.120.25");
+        Assert.Equal("10.20.120.25", ((GAIP.Core.AddressRow)list.SelectedItem!).Address);
+
+        Click(menuItems.Single(i => i.Header as string == "Modifier"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Assert.Contains("Modifier l’adresse IP", form.Title);
+        form.Close(false); await Until(() => !form.IsVisible);
+
+        Click(menuItems.Single(i => i.Header as string == "Libérer"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        var confirm = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Assert.Contains("Libérer l’adresse", confirm.Title);
+        Click(confirm.Save);
+        await Until(() => main.Session!.Data.Sites[0].Vlans[0].Subnet!.Addresses.Count == 0 && !confirm.IsVisible);
+
+        Click(Button(main, "Modifier le VLAN"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Click(Button(form, "Supprimer le VLAN"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Count(w => w.IsVisible) == 2);
+        confirm = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Click(confirm.Save);
+        await Until(() => main.Session!.Data.Sites[0].Vlans.Count == 0 && !form.IsVisible &&
+            main.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "Plans d’adressage"));
+
+        Click(Button(main, "Modifier le site"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Click(Button(form, "Supprimer le site"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Count(w => w.IsVisible) == 2);
+        confirm = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Click(confirm.Save);
+        await Until(() => main.Session!.Data.Sites.Count == 0 && !form.IsVisible &&
+            main.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "Plans d’adressage"));
 
         main.Close(); await Until(() => !main.IsVisible);
     }

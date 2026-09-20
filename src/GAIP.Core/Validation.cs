@@ -129,8 +129,8 @@ public static class ModelValidator
     public static void DeleteVlan(Site site, Guid vlanId)
     {
         var vlan = site.Vlans.Single(v => v.Id == vlanId);
-        if (vlan.Subnet is { } subnet && (subnet.Addresses.Count > 0 || subnet.Gateway is not null))
-            throw new ValidationException(["Libérez les IP et retirez la passerelle avant de supprimer le VLAN."]);
+        if (vlan.Subnet is { Addresses.Count: > 0 })
+            throw new ValidationException(["Libérez les IP avant de supprimer le VLAN."]);
         site.Vlans.Remove(vlan);
     }
 }

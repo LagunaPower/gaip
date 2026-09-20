@@ -4,7 +4,7 @@
 - Application desktop simple, IPv4 uniquement en V1. Aucun inventaire, Equipment, rack, DHCP, DNS, SNMP, cloud, API ou authentification applicative.
 - Aucun SQL. `gaip-data.json` est l'unique fichier métier courant. Ne jamais stocker de champs calculables ou de statut libre/occupée.
 - Core indépendant du stockage, de la synchronisation, de l'OS et d'Avalonia. Séparer Core, Storage, Sync, Desktop et Tests.
-- Aucune suppression en cascade. Adressage unique et sans chevauchement dans toute la base.
+- Aucune suppression en cascade des sites vers VLAN ni des VLAN vers IP. Une passerelle seule ne bloque pas la suppression d’un VLAN et disparaît avec lui. Adressage unique et sans chevauchement dans toute la base.
 - Chaque publication valide tout le modèle, vérifie hash et propriété du verrou, sauvegarde et remplace le JSON atomiquement.
 - Maintenir les tests ; toute règle réseau importante doit être couverte. Tester compilation et parcours touchés.
 - Ne jamais versionner de données utilisateur, caches, sauvegardes, secrets, bin/ ou obj/.

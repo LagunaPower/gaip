@@ -86,13 +86,18 @@ public sealed class CoreTests
         Assert.Empty(ModelValidator.Validate(db)); Assert.Equal("Srv-APP", Subnet(JsonData.Clone(db)).Addresses[0].Hostname);
     }
     [Fact]
-    public void NoCascadeAndCidrShrinkReportsInvalidAddresses()
+    public void NoCascadeGatewayDoesNotBlockVlanDeletionAndCidrShrinkReportsInvalidAddresses()
     {
         var db = Example(); var site = db.Sites[0];
         Assert.Throws<ValidationException>(() => ModelValidator.DeleteSite(db, site.Id));
         Subnet(db).Addresses.Add(new() { Address = "10.20.120.200", Hostname = "host" });
         Assert.Throws<ValidationException>(() => ModelValidator.DeleteVlan(site, site.Vlans[0].Id));
         Subnet(db).Cidr = "10.20.120.0/25"; Assert.Contains(ModelValidator.Validate(db), e => e.Contains("10.20.120.200"));
+
+        var gatewayOnly = Example(); var gatewaySite = gatewayOnly.Sites[0];
+        Subnet(gatewayOnly).Gateway = new() { Address = "10.20.120.1", Comment = "Firewall" };
+        ModelValidator.DeleteVlan(gatewaySite, gatewaySite.Vlans[0].Id);
+        Assert.Empty(gatewaySite.Vlans);
     }
     [Fact]
     public void AssignedAddressesFreezeCidrButGatewayAloneDoesNot()

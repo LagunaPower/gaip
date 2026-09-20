@@ -351,15 +351,32 @@ public sealed partial class MainWindow : Window
             {
                 // Avalonia clears a container's content when it leaves the viewport.
                 if (row is null) return null;
-                var button = Ui.Button("", () => Run(() => row.IsGateway ? EditVlan(site, vlan) : EditAddress(site.Id, vlan.Id, row)));
-                button.Content = AddressGrid(row.Address, row.Hostname, row.Description, row.IsGateway);
-                button.Background = Brushes.Transparent; button.BorderThickness = new Thickness(0, 0, 0, 1);
-                button.Padding = new Thickness(8, 2); button.Height = 34;
-                button.HorizontalAlignment = HorizontalAlignment.Stretch; button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
-                if (!row.IsUsed) button.Opacity = .7;
-                button.IsEnabled = CanWrite; ToolTip.SetTip(button, $"{row.Address} · {row.Hostname} · {row.Description}");
-                return button;
+                var item = new Border
+                {
+                    Child = AddressGrid(row.Address, row.Hostname, row.Description, row.IsGateway),
+                    Background = Brushes.Transparent,
+                    Padding = new Thickness(8, 2),
+                    Height = 34,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    Tag = row
+                };
+                if (!row.IsUsed) item.Opacity = .7;
+                ToolTip.SetTip(item, $"{row.Address} · {row.Hostname} · {row.Description}");
+                if (row.IsUsed && !row.IsGateway)
+                {
+                    var edit = new MenuItem { Header = "Modifier", IsEnabled = CanWrite };
+                    edit.Click += (_, _) => Run(() => EditAddress(site.Id, vlan.Id, row));
+                    var release = new MenuItem { Header = "Libérer", IsEnabled = CanWrite };
+                    release.Click += (_, _) => Run(async () => { await ReleaseAddress(site.Id, vlan.Id, row); });
+                    item.ContextMenu = new ContextMenu { ItemsSource = new Control[] { edit, release } };
+                }
+                return item;
             })
+        };
+        table.DoubleTapped += (_, _) =>
+        {
+            if (!CanWrite || table.SelectedItem is not AddressRow row || row.IsGateway) return;
+            Run(() => EditAddress(site.Id, vlan.Id, row));
         };
         table.Styles.Add(new Style(x => x.OfType<ListBoxItem>()) { Setters =
         {

@@ -38,14 +38,22 @@ public sealed partial class MainWindow
                 if (existing is null) db.Sites.Add(site);
             };
         }
-        form.Submit = () => Save(Mutation(), existing is null ? "Création" : "Modification", "Site", code.Text ?? "");
+        form.Submit = async () =>
+        {
+            await Save(Mutation(), existing is null ? "Création" : "Modification", "Site", code.Text ?? "");
+            if (existing is null)
+            {
+                _selectedSite = null; _selectedVlan = null; Render();
+            }
+        };
         LiveValidation(form, Mutation, code, name, description);
         if (existing is not null) form.Fields.Children.Add(Ui.Button("Supprimer le site", async () =>
         {
             try
             {
                 if (!await Confirm("Supprimer le site", $"Supprimer {existing.Code} ? Le site doit être vide.")) return;
-                await Save(db => ModelValidator.DeleteSite(db, existing.Id), "Suppression", "Site", existing.Code); form.Close(true);
+                await Save(db => ModelValidator.DeleteSite(db, existing.Id), "Suppression", "Site", existing.Code);
+                _selectedSite = null; _selectedVlan = null; Render(); form.Close(true);
             }
             catch (Exception ex) { form.Error.Text = ex.Message; }
         }, CanWrite));
@@ -129,14 +137,21 @@ public sealed partial class MainWindow
             try { var copy = JsonData.Clone(Db); Mutation()(copy); ModelValidator.EnsureValid(copy); form.Error.Text = ""; form.Save.IsEnabled = CanWrite; }
             catch (Exception ex) { form.Error.Text = ex.Message; form.Save.IsEnabled = false; }
         };
-        form.Submit = () => Save(Mutation(), existing is null ? "Création multi-sites" : "Modification", "VLAN", vid.Text ?? "");
+        form.Submit = async () =>
+        {
+            await Save(Mutation(), existing is null ? "Création multi-sites" : "Modification", "VLAN", vid.Text ?? "");
+            if (existing is null)
+            {
+                _selectedSite = null; _selectedVlan = null; Render();
+            }
+        };
         if (existing is not null && owner is not null) form.Fields.Children.Add(Ui.Button("Supprimer le VLAN", async () =>
         {
             try
             {
-                if (!await Confirm("Supprimer le VLAN", $"Supprimer {owner.Code} / VLAN {existing.Vid} ? Aucune IP ni passerelle ne doit subsister.")) return;
+                if (!await Confirm("Supprimer le VLAN", $"Supprimer {owner.Code} / VLAN {existing.Vid} ? Aucune IP ne doit subsister. La passerelle sera supprimée avec le VLAN.")) return;
                 await Save(db => ModelValidator.DeleteVlan(db.Sites.Single(s => s.Id == owner.Id), existing.Id), "Suppression", "VLAN", $"{owner.Code}/{existing.Vid}");
-                _selectedVlan = null; form.Close(true);
+                _selectedSite = null; _selectedVlan = null; Render(); form.Close(true);
             }
             catch (Exception ex) { form.Error.Text = ex.Message; }
         }, CanWrite));
@@ -183,11 +198,22 @@ public sealed partial class MainWindow
         {
             try
             {
-                if (!await Confirm("Libérer l’adresse", $"Libérer {row.Address} ? Son hostname et sa description seront supprimés.")) return;
-                await Save(db => Subnet(db).Addresses.RemoveAll(a => a.Address == row.Address), "Libération", "IP", row.Address); form.Close(true);
+                if (await ReleaseAddress(siteId, vlanId, row)) form.Close(true);
             }
             catch (Exception ex) { form.Error.Text = ex.Message; }
         }, CanWrite));
         await form.ShowDialog<bool>(this);
+    }
+
+    private async Task<bool> ReleaseAddress(Guid siteId, Guid vlanId, AddressRow row)
+    {
+        if (!await Confirm("Libérer l’adresse", $"Libérer {row.Address} ? Son hostname et sa description seront supprimés.")) return false;
+        await Save(db =>
+        {
+            var subnet = db.Sites.Single(s => s.Id == siteId).Vlans.Single(v => v.Id == vlanId).Subnet
+                ?? throw new InvalidOperationException("Sous-réseau supprimé.");
+            subnet.Addresses.RemoveAll(a => a.Address == row.Address);
+        }, "Libération", "IP", row.Address);
+        return true;
     }
 }
