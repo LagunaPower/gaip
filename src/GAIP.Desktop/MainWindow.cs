@@ -218,7 +218,7 @@ public sealed partial class MainWindow : Window
             var stats = Ui.Text($"{site.Vlans.Count} VLAN / {site.Vlans.Sum(v => v.Subnet is null ? 0 : Queries.UsedCount(v.Subnet))} IP utilisées", 11);
             Grid.SetColumn(stats, 1); header.Children.Add(stats);
 
-            var details = Ui.Column(header, Ui.Text(site.Code + (site.Description.Length > 0 ? " · " + site.Description : ""), 12));
+            var vlanRows = new StackPanel { Name = "HomeVlanRows", Spacing = 2 };
             foreach (var vlan in site.Vlans.OrderBy(v => v.Vid))
             {
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("48,*,Auto"), ColumnSpacing = 8 };
@@ -226,12 +226,20 @@ public sealed partial class MainWindow : Window
                 var name = Ui.Text(vlan.Name, 13); Grid.SetColumn(name, 1); row.Children.Add(name);
                 var cidr = Ui.Text(vlan.Subnet?.Cidr ?? "—", 12);
                 Grid.SetColumn(cidr, 2); row.Children.Add(cidr);
-                var button = Ui.Button("", () => OpenVlan(site.Id, vlan.Id)); button.Content = row;
+                var button = Ui.Button("", () => OpenVlan(site.Id, vlan.Id));
+                button.Name = "HomeVlanRow";
+                button.Content = row;
+                button.Padding = new Thickness(8, 4);
                 button.Background = Brushes.Transparent; button.BorderThickness = new Thickness(0, 0, 0, 1);
                 button.HorizontalAlignment = HorizontalAlignment.Stretch; button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
-                details.Children.Add(button);
+                vlanRows.Children.Add(button);
             }
-            if (site.Vlans.Count == 0) details.Children.Add(Ui.Text("Aucun VLAN. Créez le premier plan d’adressage.", 12));
+            if (site.Vlans.Count == 0) vlanRows.Children.Add(Ui.Text("Aucun VLAN. Créez le premier plan d’adressage.", 12));
+
+            var details = Ui.Column(
+                header,
+                Ui.Text(site.Code + (site.Description.Length > 0 ? " · " + site.Description : ""), 12),
+                vlanRows);
 
             var siteActions = Ui.Row(
                 Ui.Button("Modifier le site", () => Run(() => EditSite(site)), CanWrite),

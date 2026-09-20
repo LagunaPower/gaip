@@ -174,6 +174,10 @@ public sealed partial class DesktopTests
         main.Show();
         await UntilReady(main);
         var cards = main.GetLogicalDescendants().OfType<Grid>().Single(g => g.Name == "SiteCards");
+        Assert.All(main.GetLogicalDescendants().OfType<StackPanel>().Where(panel => panel.Name == "HomeVlanRows"),
+            panel => Assert.Equal(2, panel.Spacing));
+        Assert.All(main.GetLogicalDescendants().OfType<Button>().Where(button => button.Name == "HomeVlanRow"),
+            button => Assert.Equal(new Thickness(8, 4), button.Padding));
         await Until(() => cards.ColumnDefinitions.Count == 6);
         Assert.Equal(6, cards.ColumnDefinitions.Count);
         Assert.Equal(8, main.Session!.Config.MaxHomeColumns);
@@ -420,8 +424,16 @@ public sealed partial class DesktopTests
         Assert.Equal(new[] { 6, 6, 5 }, cards.Select(card =>
             card.GetLogicalDescendants().OfType<Button>().Count(button => button.Name == "MulticastGroupRow")).ToArray());
         Assert.All(cards, card =>
+        {
             Assert.Contains(card.GetLogicalDescendants().OfType<Button>(),
-                button => button.Content as string == "Ajouter un multicast"));
+                button => button.Content as string == "Ajouter un multicast");
+            Assert.All(card.GetLogicalDescendants().OfType<StackPanel>()
+                    .Where(panel => panel.Name == "MulticastGroupRows"),
+                panel => Assert.Equal(2, panel.Spacing));
+            Assert.All(card.GetLogicalDescendants().OfType<Button>()
+                    .Where(button => button.Name == "MulticastGroupRow"),
+                button => Assert.Equal(new Thickness(8, 4), button.Padding));
+        });
 
         var firstGroup = cards[0].GetLogicalDescendants().OfType<Button>().First(button => button.Name == "MulticastGroupRow");
         Click(firstGroup);

@@ -33,7 +33,7 @@ public sealed partial class MainWindow
             var stats = Ui.Text($"{size} groupe(s)", 11);
             Grid.SetColumn(stats, 1); header.Children.Add(stats);
 
-            var details = Ui.Column(header);
+            var groupRows = new StackPanel { Name = "MulticastGroupRows", Spacing = 2 };
             foreach (var group in groups.Skip(offset).Take(size))
             {
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("130,*,Auto"), ColumnSpacing = 8 };
@@ -43,12 +43,14 @@ public sealed partial class MainWindow
                 var button = Ui.Button("", () => OpenMulticast(group.Address));
                 button.Name = "MulticastGroupRow";
                 button.Content = row;
+                button.Padding = new Thickness(8, 4);
                 button.Background = Brushes.Transparent;
                 button.BorderThickness = new Thickness(0, 0, 0, 1);
                 button.HorizontalAlignment = HorizontalAlignment.Stretch;
                 button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
-                details.Children.Add(button);
+                groupRows.Children.Add(button);
             }
+            var details = Ui.Column(header, groupRows);
             offset += size;
 
             var actions = Ui.Row(Ui.Button("Ajouter un multicast", () => Run(() => EditMulticastGroup(null)), CanWrite));
