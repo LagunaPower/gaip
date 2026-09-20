@@ -69,8 +69,9 @@ public sealed class CsvTests
         Assert.Empty(addressImport.Errors); var db = Assert.IsType<Database>(addressImport.Data);
 
         Assert.Equal(6, db.Sites.Count);
-        Assert.Equal(48, db.Sites.Sum(s => s.Vlans.Count));
-        Assert.Equal(2775, db.Sites.Sum(s => s.Vlans.Sum(v => v.Subnet?.Addresses.Count ?? 0)));
+        Assert.Equal(new[] { 5, 7, 9, 11, 13, 15 }, db.Sites.OrderBy(s => s.Code).Select(s => s.Vlans.Count).ToArray());
+        Assert.Equal(60, db.Sites.Sum(s => s.Vlans.Count));
+        Assert.Equal(3470, db.Sites.Sum(s => s.Vlans.Sum(v => v.Subnet?.Addresses.Count ?? 0)));
         Assert.All(db.Sites, site => Assert.InRange(site.Vlans.Count, 5, 15));
         Assert.All(db.Sites.SelectMany(s => s.Vlans), vlan => Assert.InRange(vlan.Subnet!.Addresses.Count, 5, 200));
         Assert.Equal(6, db.Sites.SelectMany(s => s.Vlans).Select(v => Ipv4Network.Parse(v.Subnet!.Cidr).Prefix).Distinct().Count());

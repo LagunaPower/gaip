@@ -4,9 +4,6 @@ DEMO-ALPHA;Site de démonstration Alpha;20;SERVEURS;Serveurs et services applica
 DEMO-ALPHA;Site de démonstration Alpha;30;POSTES;Postes utilisateurs filaires;10.10.1.0/24;10.10.1.1;Passerelle POSTES
 DEMO-ALPHA;Site de démonstration Alpha;40;WIFI;Terminaux du réseau Wi-Fi;10.10.2.0/23;10.10.2.1;Passerelle WIFI
 DEMO-ALPHA;Site de démonstration Alpha;50;VOIP;Téléphonie sur IP;10.10.4.0/25;10.10.4.1;Passerelle VOIP
-DEMO-ALPHA;Site de démonstration Alpha;60;VIDEO;Vidéoprotection et flux vidéo;10.10.4.128/26;10.10.4.129;Passerelle VIDEO
-DEMO-ALPHA;Site de démonstration Alpha;70;IOT;Capteurs et équipements connectés;10.10.5.0/24;10.10.5.1;Passerelle IOT
-DEMO-ALPHA;Site de démonstration Alpha;80;SUPERVISION;Supervision et sondes techniques;10.10.6.0/28;10.10.6.1;Passerelle SUPERVISION
 DEMO-BRAVO;Site de démonstration Bravo;10;ADMIN;Administration et équipements de gestion;10.20.0.0/27;10.20.0.1;Passerelle ADMIN
 DEMO-BRAVO;Site de démonstration Bravo;20;SERVEURS;Serveurs et services applicatifs;10.20.0.64/26;10.20.0.65;Passerelle SERVEURS
 DEMO-BRAVO;Site de démonstration Bravo;30;POSTES;Postes utilisateurs filaires;10.20.1.0/24;10.20.1.1;Passerelle POSTES
@@ -14,7 +11,6 @@ DEMO-BRAVO;Site de démonstration Bravo;40;WIFI;Terminaux du réseau Wi-Fi;10.20
 DEMO-BRAVO;Site de démonstration Bravo;50;VOIP;Téléphonie sur IP;10.20.4.0/25;10.20.4.1;Passerelle VOIP
 DEMO-BRAVO;Site de démonstration Bravo;60;VIDEO;Vidéoprotection et flux vidéo;10.20.4.128/26;10.20.4.129;Passerelle VIDEO
 DEMO-BRAVO;Site de démonstration Bravo;70;IOT;Capteurs et équipements connectés;10.20.5.0/24;10.20.5.1;Passerelle IOT
-DEMO-BRAVO;Site de démonstration Bravo;80;SUPERVISION;Supervision et sondes techniques;10.20.6.0/28;10.20.6.1;Passerelle SUPERVISION
 DEMO-CHARLIE;Site de démonstration Charlie;10;ADMIN;Administration et équipements de gestion;10.30.0.0/27;10.30.0.1;Passerelle ADMIN
 DEMO-CHARLIE;Site de démonstration Charlie;20;SERVEURS;Serveurs et services applicatifs;10.30.0.64/26;10.30.0.65;Passerelle SERVEURS
 DEMO-CHARLIE;Site de démonstration Charlie;30;POSTES;Postes utilisateurs filaires;10.30.1.0/24;10.30.1.1;Passerelle POSTES
@@ -23,6 +19,7 @@ DEMO-CHARLIE;Site de démonstration Charlie;50;VOIP;Téléphonie sur IP;10.30.4.
 DEMO-CHARLIE;Site de démonstration Charlie;60;VIDEO;Vidéoprotection et flux vidéo;10.30.4.128/26;10.30.4.129;Passerelle VIDEO
 DEMO-CHARLIE;Site de démonstration Charlie;70;IOT;Capteurs et équipements connectés;10.30.5.0/24;10.30.5.1;Passerelle IOT
 DEMO-CHARLIE;Site de démonstration Charlie;80;SUPERVISION;Supervision et sondes techniques;10.30.6.0/28;10.30.6.1;Passerelle SUPERVISION
+DEMO-CHARLIE;Site de démonstration Charlie;90;IMPRIMANTES;Imprimantes et périphériques partagés;10.30.6.32/27;10.30.6.33;Passerelle IMPRIMANTES
 DEMO-DELTA;Site de démonstration Delta;10;ADMIN;Administration et équipements de gestion;10.40.0.0/27;10.40.0.1;Passerelle ADMIN
 DEMO-DELTA;Site de démonstration Delta;20;SERVEURS;Serveurs et services applicatifs;10.40.0.64/26;10.40.0.65;Passerelle SERVEURS
 DEMO-DELTA;Site de démonstration Delta;30;POSTES;Postes utilisateurs filaires;10.40.1.0/24;10.40.1.1;Passerelle POSTES
@@ -31,6 +28,9 @@ DEMO-DELTA;Site de démonstration Delta;50;VOIP;Téléphonie sur IP;10.40.4.0/25
 DEMO-DELTA;Site de démonstration Delta;60;VIDEO;Vidéoprotection et flux vidéo;10.40.4.128/26;10.40.4.129;Passerelle VIDEO
 DEMO-DELTA;Site de démonstration Delta;70;IOT;Capteurs et équipements connectés;10.40.5.0/24;10.40.5.1;Passerelle IOT
 DEMO-DELTA;Site de démonstration Delta;80;SUPERVISION;Supervision et sondes techniques;10.40.6.0/28;10.40.6.1;Passerelle SUPERVISION
+DEMO-DELTA;Site de démonstration Delta;90;IMPRIMANTES;Imprimantes et périphériques partagés;10.40.6.32/27;10.40.6.33;Passerelle IMPRIMANTES
+DEMO-DELTA;Site de démonstration Delta;100;GTB;Gestion technique du bâtiment;10.40.6.64/28;10.40.6.65;Passerelle GTB
+DEMO-DELTA;Site de démonstration Delta;110;SAUVEGARDE;Réseau dédié aux sauvegardes;10.40.6.128/25;10.40.6.129;Passerelle SAUVEGARDE
 DEMO-ECHO;Site de démonstration Echo;10;ADMIN;Administration et équipements de gestion;10.50.0.0/27;10.50.0.1;Passerelle ADMIN
 DEMO-ECHO;Site de démonstration Echo;20;SERVEURS;Serveurs et services applicatifs;10.50.0.64/26;10.50.0.65;Passerelle SERVEURS
 DEMO-ECHO;Site de démonstration Echo;30;POSTES;Postes utilisateurs filaires;10.50.1.0/24;10.50.1.1;Passerelle POSTES
@@ -39,6 +39,11 @@ DEMO-ECHO;Site de démonstration Echo;50;VOIP;Téléphonie sur IP;10.50.4.0/25;1
 DEMO-ECHO;Site de démonstration Echo;60;VIDEO;Vidéoprotection et flux vidéo;10.50.4.128/26;10.50.4.129;Passerelle VIDEO
 DEMO-ECHO;Site de démonstration Echo;70;IOT;Capteurs et équipements connectés;10.50.5.0/24;10.50.5.1;Passerelle IOT
 DEMO-ECHO;Site de démonstration Echo;80;SUPERVISION;Supervision et sondes techniques;10.50.6.0/28;10.50.6.1;Passerelle SUPERVISION
+DEMO-ECHO;Site de démonstration Echo;90;IMPRIMANTES;Imprimantes et périphériques partagés;10.50.6.32/27;10.50.6.33;Passerelle IMPRIMANTES
+DEMO-ECHO;Site de démonstration Echo;100;GTB;Gestion technique du bâtiment;10.50.6.64/28;10.50.6.65;Passerelle GTB
+DEMO-ECHO;Site de démonstration Echo;110;SAUVEGARDE;Réseau dédié aux sauvegardes;10.50.6.128/25;10.50.6.129;Passerelle SAUVEGARDE
+DEMO-ECHO;Site de démonstration Echo;120;DMZ;Services exposés en zone démilitarisée;10.50.7.0/27;10.50.7.1;Passerelle DMZ
+DEMO-ECHO;Site de démonstration Echo;130;LABO;Laboratoire et bancs de test;10.50.8.0/24;10.50.8.1;Passerelle LABO
 DEMO-FOXTROT;Site de démonstration Foxtrot;10;ADMIN;Administration et équipements de gestion;10.60.0.0/27;10.60.0.1;Passerelle ADMIN
 DEMO-FOXTROT;Site de démonstration Foxtrot;20;SERVEURS;Serveurs et services applicatifs;10.60.0.64/26;10.60.0.65;Passerelle SERVEURS
 DEMO-FOXTROT;Site de démonstration Foxtrot;30;POSTES;Postes utilisateurs filaires;10.60.1.0/24;10.60.1.1;Passerelle POSTES
@@ -47,3 +52,10 @@ DEMO-FOXTROT;Site de démonstration Foxtrot;50;VOIP;Téléphonie sur IP;10.60.4.
 DEMO-FOXTROT;Site de démonstration Foxtrot;60;VIDEO;Vidéoprotection et flux vidéo;10.60.4.128/26;10.60.4.129;Passerelle VIDEO
 DEMO-FOXTROT;Site de démonstration Foxtrot;70;IOT;Capteurs et équipements connectés;10.60.5.0/24;10.60.5.1;Passerelle IOT
 DEMO-FOXTROT;Site de démonstration Foxtrot;80;SUPERVISION;Supervision et sondes techniques;10.60.6.0/28;10.60.6.1;Passerelle SUPERVISION
+DEMO-FOXTROT;Site de démonstration Foxtrot;90;IMPRIMANTES;Imprimantes et périphériques partagés;10.60.6.32/27;10.60.6.33;Passerelle IMPRIMANTES
+DEMO-FOXTROT;Site de démonstration Foxtrot;100;GTB;Gestion technique du bâtiment;10.60.6.64/28;10.60.6.65;Passerelle GTB
+DEMO-FOXTROT;Site de démonstration Foxtrot;110;SAUVEGARDE;Réseau dédié aux sauvegardes;10.60.6.128/25;10.60.6.129;Passerelle SAUVEGARDE
+DEMO-FOXTROT;Site de démonstration Foxtrot;120;DMZ;Services exposés en zone démilitarisée;10.60.7.0/27;10.60.7.1;Passerelle DMZ
+DEMO-FOXTROT;Site de démonstration Foxtrot;130;LABO;Laboratoire et bancs de test;10.60.8.0/24;10.60.8.1;Passerelle LABO
+DEMO-FOXTROT;Site de démonstration Foxtrot;140;INVITES;Accès réseau pour visiteurs;10.60.10.0/23;10.60.10.1;Passerelle INVITES
+DEMO-FOXTROT;Site de démonstration Foxtrot;150;INTERCO;Interconnexions et équipements réseau;10.60.12.0/28;10.60.12.1;Passerelle INTERCO

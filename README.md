@@ -35,7 +35,7 @@ $env:NUGET_PACKAGES="$PWD/.nuget/packages"
 - **Configuration** : mode, chemin partagé, fréquence, rétention, séparateur, thème et diagnostic/verrou.
 - **Configuration → Ordre d’affichage** : déplacer les sites par glisser-déposer, puis **Enregistrer l’ordre**. Monter/Descendre permet aussi un classement au clavier. Annuler conserve l’ordre précédent. L’ordre est commun aux postes ; en mode partagé, le verrou est pris automatiquement uniquement pendant l’enregistrement. Sans ordre enregistré, tri par code ; les nouveaux sites suivent les sites déjà classés. Les cartes de l’accueil sont espacées de 8 px.
 
-La base initiale est vide. Pour une démonstration volontaire, importer `samples/vlans.csv`, puis `samples/addresses.csv`. Le jeu de démonstration contient 6 sites, 48 VLAN, 6 tailles de sous-réseaux différentes (/23 à /28) et 2 775 attributions IP, avec entre 5 et 200 adresses par VLAN.
+La base initiale est vide. Pour une démonstration volontaire, importer `samples/vlans.csv`, puis `samples/addresses.csv`. Le jeu de démonstration contient 6 sites avec respectivement 5, 7, 9, 11, 13 et 15 VLAN, soit 60 VLAN au total, 6 tailles de sous-réseaux différentes (/23 à /28) et 3 470 attributions IP, avec entre 5 et 200 adresses par VLAN.
 
 ## Local et partagé
 
