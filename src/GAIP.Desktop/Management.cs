@@ -333,14 +333,17 @@ public sealed partial class MainWindow
         var form = new FormWindow(vlanId is null ? "Import / export CSV et Excel" : $"Export · {VlanLabel(vlanId.Value)}", "Fermer", 720);
         if (vlanId is null)
         {
-            form.Fields.Children.Add(Ui.Text($"UTF-8 · séparateur « {_config.CsvSeparator} ». Importez les VLAN avant les adresses. Les lignes existantes sont mises à jour ; aucune ligne absente du fichier n’est supprimée."));
+            form.Fields.Children.Add(Ui.Text($"UTF-8 · séparateur « {_config.CsvSeparator} ». Importez les VLAN, puis les adresses, puis les multicast. Les lignes existantes sont mises à jour ; aucune ligne absente du fichier n’est supprimée."));
             form.Fields.Children.Add(Ui.Button("Importer vlans.csv…", () => Run(() => ImportCsv(CsvKind.Vlans)), CanWrite));
             form.Fields.Children.Add(Ui.Button("Importer addresses.csv…", () => Run(() => ImportCsv(CsvKind.Addresses)), CanWrite));
+            form.Fields.Children.Add(Ui.Button("Importer multicast.csv…", () => Run(() => ImportCsv(CsvKind.Multicast)), CanWrite));
         }
         else form.Fields.Children.Add(Ui.Text("Les exports CSV contiennent uniquement ce VLAN. L’export Excel produit toujours le classeur complet."));
         form.Fields.Children.Add(Ui.Button(vlanId is null ? "Exporter les VLAN / réseaux…" : "Exporter ce VLAN / réseau…", () => Run(() => ExportCsv(CsvKind.Vlans, vlanId))));
         form.Fields.Children.Add(Ui.Button("Exporter les adresses IP…", () => Run(() => ExportCsv(CsvKind.Addresses, vlanId))));
-        form.Fields.Children.Add(Ui.Button("Exporter les deux fichiers CSV…", () => Run(() => ExportAll(vlanId))));
+        if (vlanId is null)
+            form.Fields.Children.Add(Ui.Button("Exporter les multicast…", () => Run(() => ExportCsv(CsvKind.Multicast))));
+        form.Fields.Children.Add(Ui.Button(vlanId is null ? "Exporter les trois fichiers CSV…" : "Exporter les deux fichiers CSV…", () => Run(() => ExportAll(vlanId))));
         form.Fields.Children.Add(Ui.Button("Exporter le classeur Excel complet…", () => Run(ExportExcel)));
         form.Fields.Children.Add(Ui.Text("Excel : le premier onglet liste les sites et VLAN avec des liens vers un onglet par réseau. Chaque onglet réseau contient ses informations et toutes les adresses IP utilisables.", 12));
         form.Fields.Children.Add(Ui.Text("Les passerelles figurent dans vlans.csv uniquement.", 12));
@@ -373,8 +376,15 @@ public sealed partial class MainWindow
                 // Revalidate against the latest session, not a stale preview.
                 var current = CsvExchange.Import(db, text, kind, separator);
                 if (current.Data is null) throw new ValidationException(current.Errors);
-                db.Sites = current.Data.Sites;
-            }, "Import CSV", kind == CsvKind.Vlans ? "VLAN" : "IP", files[0].Name);
+                if (kind == CsvKind.Multicast) db.MulticastGroups = current.Data.MulticastGroups;
+                else db.Sites = current.Data.Sites;
+            }, "Import CSV", kind switch
+            {
+                CsvKind.Vlans => "VLAN",
+                CsvKind.Addresses => "IP",
+                CsvKind.Multicast => "Multicast",
+                _ => "CSV"
+            }, files[0].Name);
         }
         await preview.ShowDialog<bool>(this);
     }
@@ -382,7 +392,7 @@ public sealed partial class MainWindow
     {
         var text = CsvExchange.Export(Db, kind, _config.CsvSeparator[0], vlanId);
         var file = await StorageProvider.SaveFilePickerAsync(new()
-        { Title = "Exporter CSV", SuggestedFileName = kind == CsvKind.Vlans ? "vlans.csv" : "addresses.csv", DefaultExtension = "csv", FileTypeChoices = [CsvType], ShowOverwritePrompt = true });
+        { Title = "Exporter CSV", SuggestedFileName = kind switch { CsvKind.Vlans => "vlans.csv", CsvKind.Addresses => "addresses.csv", CsvKind.Multicast => "multicast.csv", _ => "export.csv" }, DefaultExtension = "csv", FileTypeChoices = [CsvType], ShowOverwritePrompt = true });
         if (file is null) return;
         await using var stream = await file.OpenWriteAsync(); stream.SetLength(0);
         await using var writer = new StreamWriter(stream, new UTF8Encoding(true)); await writer.WriteAsync(text);
@@ -409,20 +419,32 @@ public sealed partial class MainWindow
 
     private async Task ExportAll(Guid? vlanId = null)
     {
-        var exports = new[] { CsvKind.Vlans, CsvKind.Addresses }.ToDictionary(kind => kind, kind => CsvExchange.Export(Db, kind, _config.CsvSeparator[0], vlanId));
+        var kinds = vlanId is null
+            ? new[] { CsvKind.Vlans, CsvKind.Addresses, CsvKind.Multicast }
+            : new[] { CsvKind.Vlans, CsvKind.Addresses };
+        var exports = kinds.ToDictionary(kind => kind, kind => CsvExchange.Export(Db, kind, _config.CsvSeparator[0], vlanId));
         var folders = await StorageProvider.OpenFolderPickerAsync(new() { Title = vlanId is null ? "Dossier d’export complet" : "Dossier d’export du VLAN", AllowMultiple = false });
         if (folders.Count == 0) return;
         var folder = folders[0];
         var names = new List<string>();
         await foreach (var item in folder.GetItemsAsync()) names.Add(item.Name);
-        if (names.Any(n => n is "vlans.csv" or "addresses.csv") && !await Confirm("Remplacer les CSV", "Les fichiers vlans.csv et addresses.csv existants seront remplacés. Continuer ?")) return;
-        foreach (var kind in new[] { CsvKind.Vlans, CsvKind.Addresses })
+        var expectedNames = kinds.Select(CsvFileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (names.Any(expectedNames.Contains) && !await Confirm("Remplacer les CSV", $"Les fichiers {string.Join(", ", expectedNames)} existants seront remplacés. Continuer ?")) return;
+        foreach (var kind in kinds)
         {
-            var file = await folder.CreateFileAsync(kind == CsvKind.Vlans ? "vlans.csv" : "addresses.csv") ?? throw new IOException("Impossible de créer le fichier CSV.");
+            var file = await folder.CreateFileAsync(CsvFileName(kind)) ?? throw new IOException("Impossible de créer le fichier CSV.");
             await using var stream = await file.OpenWriteAsync(); stream.SetLength(0);
             await using var writer = new StreamWriter(stream, new UTF8Encoding(true));
             await writer.WriteAsync(exports[kind]);
         }
-        await Message("Export terminé", "vlans.csv et addresses.csv ont été exportés.");
+        await Message("Export terminé", $"{string.Join(", ", expectedNames)} ont été exportés.");
+
+        static string CsvFileName(CsvKind kind) => kind switch
+        {
+            CsvKind.Vlans => "vlans.csv",
+            CsvKind.Addresses => "addresses.csv",
+            CsvKind.Multicast => "multicast.csv",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind))
+        };
     }
 }

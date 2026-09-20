@@ -1,0 +1,259 @@
+multicast_address;group_name;group_description;port;content;flow_description;sources;vlans
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5100;Audio programme 1;Flux de démonstration 1/12;10.10.1.16;DEMO-CHARLIE/20|DEMO-DELTA/50
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5101;Télémétrie 2;Flux de démonstration 2/12;10.10.1.27;DEMO-DELTA/30|DEMO-ECHO/60|DEMO-FOXTROT/90
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5102;Données techniques 3;Flux de démonstration 3/12;10.10.1.38|10.10.1.55;DEMO-ECHO/40|DEMO-FOXTROT/70|DEMO-ALPHA/50|DEMO-BRAVO/60
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5103;Métadonnées 4;Flux de démonstration 4/12;10.10.1.49;DEMO-FOXTROT/50
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5104;Synchronisation 5;Flux de démonstration 5/12;10.10.1.60;DEMO-ALPHA/10|DEMO-BRAVO/20
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5105;Supervision 6;Flux de démonstration 6/12;10.10.2.11|10.10.2.28;DEMO-BRAVO/70|DEMO-CHARLIE/10|DEMO-DELTA/20
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5106;Contrôle 7;Flux de démonstration 7/12;10.10.2.22;DEMO-CHARLIE/80|DEMO-DELTA/110|DEMO-ECHO/10|DEMO-FOXTROT/20
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5107;Mesures 8;Flux de démonstration 8/12;10.10.2.33;DEMO-DELTA/90
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5108;État système 9;Flux de démonstration 9/12;10.10.2.44|10.10.2.61;DEMO-ECHO/100|DEMO-FOXTROT/130
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5109;Interphonie 10;Flux de démonstration 10/12;10.10.2.55;DEMO-FOXTROT/110|DEMO-ALPHA/40|DEMO-BRAVO/30
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5110;Horloge 11;Flux de démonstration 11/12;10.10.2.66;DEMO-ALPHA/20|DEMO-BRAVO/10|DEMO-CHARLIE/90|DEMO-DELTA/100
+239.100.0.1;VIDEO-PRINCIPAL;Groupe multicast de démonstration 01;5111;Signalisation 12;Flux de démonstration 12/12;10.10.2.77|10.10.2.94;DEMO-BRAVO/60
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5200;Télémétrie 1;Flux de démonstration 1/19;10.10.1.53;DEMO-ECHO/30|DEMO-FOXTROT/60|DEMO-ALPHA/40
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5201;Données techniques 2;Flux de démonstration 2/19;10.10.2.4|10.10.2.21;DEMO-FOXTROT/40|DEMO-ALPHA/20|DEMO-BRAVO/30|DEMO-CHARLIE/40
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5202;Métadonnées 3;Flux de démonstration 3/19;10.10.2.15;DEMO-ALPHA/50
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5203;Synchronisation 4;Flux de démonstration 4/19;10.10.2.26;DEMO-BRAVO/60|DEMO-CHARLIE/90
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5204;Supervision 5;Flux de démonstration 5/19;10.10.2.37|10.10.2.54;DEMO-CHARLIE/70|DEMO-DELTA/100|DEMO-ECHO/130
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5205;Contrôle 6;Flux de démonstration 6/19;10.10.2.48;DEMO-DELTA/80|DEMO-ECHO/110|DEMO-FOXTROT/140|DEMO-ALPHA/20
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5206;Mesures 7;Flux de démonstration 7/19;10.10.2.59;DEMO-ECHO/90
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5207;État système 8;Flux de démonstration 8/19;10.10.2.70|10.10.2.87;DEMO-FOXTROT/100|DEMO-ALPHA/30
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5208;Interphonie 9;Flux de démonstration 9/19;10.10.2.81;DEMO-ALPHA/10|DEMO-BRAVO/70|DEMO-CHARLIE/80
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5209;Horloge 10;Flux de démonstration 10/19;10.10.2.92;DEMO-BRAVO/50|DEMO-CHARLIE/60|DEMO-DELTA/70|DEMO-ECHO/80
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5210;Signalisation 11;Flux de démonstration 11/19;10.10.4.3|10.10.4.20;DEMO-CHARLIE/40
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5211;Diagnostic 12;Flux de démonstration 12/19;10.10.4.14;DEMO-DELTA/30|DEMO-ECHO/40
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5212;Enregistrement 13;Flux de démonstration 13/19;10.10.4.25;DEMO-ECHO/20|DEMO-FOXTROT/30|DEMO-ALPHA/10
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5213;Distribution 14;Flux de démonstration 14/19;10.20.0.6|10.20.0.77;DEMO-FOXTROT/10|DEMO-ALPHA/40|DEMO-BRAVO/10|DEMO-CHARLIE/70
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5214;Retour vidéo 15;Flux de démonstration 15/19;10.20.0.71;DEMO-ALPHA/20
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5215;Données d’essais 16;Flux de démonstration 16/19;10.20.0.82;DEMO-BRAVO/40|DEMO-CHARLIE/30
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5216;Temps réel 17;Flux de démonstration 17/19;10.20.1.9|10.20.1.26;DEMO-CHARLIE/10|DEMO-DELTA/110|DEMO-ECHO/120
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5217;Maintenance 18;Flux de démonstration 18/19;10.20.1.20;DEMO-DELTA/90|DEMO-ECHO/100|DEMO-FOXTROT/110|DEMO-ALPHA/40
+239.100.0.2;VIDEO-SECOURS;Groupe multicast de démonstration 02;5218;Vidéo principale 19;Flux de démonstration 19/19;10.20.1.31;DEMO-ECHO/80
+239.100.0.3;AUDIO;Groupe multicast de démonstration 03;5300;Données techniques 1;Flux de démonstration 1/10;10.10.2.30|10.10.2.47;DEMO-ALPHA/40|DEMO-BRAVO/70|DEMO-CHARLIE/10|DEMO-DELTA/20
+239.100.0.3;AUDIO;Groupe multicast de démonstration 03;5301;Métadonnées 2;Flux de démonstration 2/10;10.10.2.41;DEMO-BRAVO/50
+239.100.0.3;AUDIO;Groupe multicast de démonstration 03;5302;Synchronisation 3;Flux de démonstration 3/10;10.10.2.52;DEMO-CHARLIE/60|DEMO-DELTA/90
+239.100.0.3;AUDIO;Groupe multicast de démonstration 03;5303;Supervision 4;Flux de démonstration 4/10;10.10.2.63|10.10.2.80;DEMO-DELTA/70|DEMO-ECHO/100|DEMO-FOXTROT/130
+239.100.0.3;AUDIO;Groupe multicast de démonstration 03;5304;Contrôle 5;Flux de démonstration 5/10;10.10.2.74;DEMO-ECHO/80|DEMO-FOXTROT/110|DEMO-ALPHA/40|DEMO-BRAVO/30
+239.100.0.3;AUDIO;Groupe multicast de démonstration 03;5305;Mesures 6;Flux de démonstration 6/10;10.10.2.85;DEMO-FOXTROT/90
+239.100.0.3;AUDIO;Groupe multicast de démonstration 03;5306;État système 7;Flux de démonstration 7/10;10.10.2.96|10.10.4.13;DEMO-ALPHA/50|DEMO-BRAVO/60
+239.100.0.3;AUDIO;Groupe multicast de démonstration 03;5307;Interphonie 8;Flux de démonstration 8/10;10.10.4.7;DEMO-BRAVO/40|DEMO-CHARLIE/50|DEMO-DELTA/60
+239.100.0.3;AUDIO;Groupe multicast de démonstration 03;5308;Horloge 9;Flux de démonstration 9/10;10.10.4.18;DEMO-CHARLIE/30|DEMO-DELTA/40|DEMO-ECHO/50|DEMO-FOXTROT/60
+239.100.0.3;AUDIO;Groupe multicast de démonstration 03;5309;Signalisation 10;Flux de démonstration 10/10;10.10.4.29|10.20.0.70;DEMO-DELTA/20
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5400;Métadonnées 1;Flux de démonstration 1/17;10.10.2.67;DEMO-CHARLIE/50
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5401;Synchronisation 2;Flux de démonstration 2/17;10.10.2.78;DEMO-DELTA/60|DEMO-ECHO/90
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5402;Supervision 3;Flux de démonstration 3/17;10.10.2.89|10.10.4.6;DEMO-ECHO/70|DEMO-FOXTROT/100|DEMO-ALPHA/30
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5403;Contrôle 4;Flux de démonstration 4/17;10.10.2.100;DEMO-FOXTROT/80|DEMO-ALPHA/10|DEMO-BRAVO/70|DEMO-CHARLIE/80
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5404;Mesures 5;Flux de démonstration 5/17;10.10.4.11;DEMO-ALPHA/40
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5405;État système 6;Flux de démonstration 6/17;10.10.4.22|10.20.0.9;DEMO-BRAVO/30|DEMO-CHARLIE/40
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5406;Interphonie 7;Flux de démonstration 7/17;10.20.0.3;DEMO-CHARLIE/20|DEMO-DELTA/30|DEMO-ECHO/40
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5407;Horloge 8;Flux de démonstration 8/17;10.20.0.68;DEMO-DELTA/10|DEMO-ECHO/20|DEMO-FOXTROT/30|DEMO-ALPHA/10
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5408;Signalisation 9;Flux de démonstration 9/17;10.20.0.79|10.20.1.12;DEMO-ECHO/130
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5409;Diagnostic 10;Flux de démonstration 10/17;10.20.1.6;DEMO-FOXTROT/140|DEMO-ALPHA/20
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5410;Enregistrement 11;Flux de démonstration 11/17;10.20.1.17;DEMO-ALPHA/50|DEMO-BRAVO/40|DEMO-CHARLIE/30
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5411;Distribution 12;Flux de démonstration 12/17;10.20.1.28|10.20.1.45;DEMO-BRAVO/20|DEMO-CHARLIE/10|DEMO-DELTA/110|DEMO-ECHO/120
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5412;Retour vidéo 13;Flux de démonstration 13/17;10.20.1.39;DEMO-CHARLIE/80
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5413;Données d’essais 14;Flux de démonstration 14/17;10.20.1.50;DEMO-DELTA/70|DEMO-ECHO/80
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5414;Temps réel 15;Flux de démonstration 15/17;10.20.1.61|10.20.1.78;DEMO-ECHO/60|DEMO-FOXTROT/70|DEMO-ALPHA/50
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5415;Maintenance 16;Flux de démonstration 16/17;10.20.1.72;DEMO-FOXTROT/50|DEMO-ALPHA/30|DEMO-BRAVO/50|DEMO-CHARLIE/20
+239.100.0.4;TELEMETRIE;Groupe multicast de démonstration 04;5416;Vidéo principale 17;Flux de démonstration 17/17;10.20.2.3;DEMO-ALPHA/10
+239.100.0.5;SYNCHRONISATION;Groupe multicast de démonstration 05;5500;Synchronisation 1;Flux de démonstration 1/8;10.10.4.4;DEMO-ECHO/60|DEMO-FOXTROT/90
+239.100.0.5;SYNCHRONISATION;Groupe multicast de démonstration 05;5501;Supervision 2;Flux de démonstration 2/8;10.10.4.15|10.20.0.2;DEMO-FOXTROT/70|DEMO-ALPHA/50|DEMO-BRAVO/60
+239.100.0.5;SYNCHRONISATION;Groupe multicast de démonstration 05;5502;Contrôle 3;Flux de démonstration 3/8;10.10.4.26;DEMO-ALPHA/30|DEMO-BRAVO/40|DEMO-CHARLIE/50|DEMO-DELTA/60
+239.100.0.5;SYNCHRONISATION;Groupe multicast de démonstration 05;5503;Mesures 4;Flux de démonstration 4/8;10.20.0.7;DEMO-BRAVO/20
+239.100.0.5;SYNCHRONISATION;Groupe multicast de démonstration 05;5504;État système 5;Flux de démonstration 5/8;10.20.0.72|10.20.1.5;DEMO-CHARLIE/10|DEMO-DELTA/20
+239.100.0.5;SYNCHRONISATION;Groupe multicast de démonstration 05;5505;Interphonie 6;Flux de démonstration 6/8;10.20.0.83;DEMO-DELTA/110|DEMO-ECHO/10|DEMO-FOXTROT/20
+239.100.0.5;SYNCHRONISATION;Groupe multicast de démonstration 05;5506;Horloge 7;Flux de démonstration 7/8;10.20.1.10;DEMO-ECHO/120|DEMO-FOXTROT/150|DEMO-ALPHA/30|DEMO-BRAVO/70
+239.100.0.5;SYNCHRONISATION;Groupe multicast de démonstration 05;5507;Signalisation 8;Flux de démonstration 8/8;10.20.1.21|10.20.1.38;DEMO-FOXTROT/130
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5600;Supervision 1;Flux de démonstration 1/15;10.20.0.11|10.20.0.82;DEMO-ALPHA/20|DEMO-BRAVO/30|DEMO-CHARLIE/40
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5601;Contrôle 2;Flux de démonstration 2/15;10.20.0.76;DEMO-BRAVO/10|DEMO-CHARLIE/20|DEMO-DELTA/30|DEMO-ECHO/40
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5602;Mesures 3;Flux de démonstration 3/15;10.20.1.3;DEMO-CHARLIE/90
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5603;État système 4;Flux de démonstration 4/15;10.20.1.14|10.20.1.31;DEMO-DELTA/100|DEMO-ECHO/130
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5604;Interphonie 5;Flux de démonstration 5/15;10.20.1.25;DEMO-ECHO/110|DEMO-FOXTROT/140|DEMO-ALPHA/20
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5605;Horloge 6;Flux de démonstration 6/15;10.20.1.36;DEMO-FOXTROT/120|DEMO-ALPHA/50|DEMO-BRAVO/40|DEMO-CHARLIE/30
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5606;Signalisation 7;Flux de démonstration 7/15;10.20.1.47|10.20.1.64;DEMO-ALPHA/30
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5607;Diagnostic 8;Flux de démonstration 8/15;10.20.1.58;DEMO-BRAVO/70|DEMO-CHARLIE/80
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5608;Enregistrement 9;Flux de démonstration 9/15;10.20.1.69;DEMO-CHARLIE/60|DEMO-DELTA/70|DEMO-ECHO/80
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5609;Distribution 10;Flux de démonstration 10/15;10.20.1.80|10.20.2.17;DEMO-DELTA/50|DEMO-ECHO/60|DEMO-FOXTROT/70|DEMO-ALPHA/50
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5610;Retour vidéo 11;Flux de démonstration 11/15;10.20.2.11;DEMO-ECHO/40
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5611;Données d’essais 12;Flux de démonstration 12/15;10.20.2.22;DEMO-FOXTROT/30|DEMO-ALPHA/10
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5612;Temps réel 13;Flux de démonstration 13/15;10.20.2.33|10.20.2.50;DEMO-ALPHA/40|DEMO-BRAVO/10|DEMO-CHARLIE/70
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5613;Maintenance 14;Flux de démonstration 14/15;10.20.2.44;DEMO-BRAVO/60|DEMO-CHARLIE/50|DEMO-DELTA/40|DEMO-ECHO/30
+239.100.0.6;METADONNEES;Groupe multicast de démonstration 06;5614;Vidéo principale 15;Flux de démonstration 15/15;10.20.2.55;DEMO-CHARLIE/30
+239.100.0.7;SUPERVISION;Groupe multicast de démonstration 07;5700;Contrôle 1;Flux de démonstration 1/6;10.20.1.18;DEMO-CHARLIE/80|DEMO-DELTA/110|DEMO-ECHO/10|DEMO-FOXTROT/20
+239.100.0.7;SUPERVISION;Groupe multicast de démonstration 07;5701;Mesures 2;Flux de démonstration 2/6;10.20.1.29;DEMO-DELTA/90
+239.100.0.7;SUPERVISION;Groupe multicast de démonstration 07;5702;État système 3;Flux de démonstration 3/6;10.20.1.40|10.20.1.57;DEMO-ECHO/100|DEMO-FOXTROT/130
+239.100.0.7;SUPERVISION;Groupe multicast de démonstration 07;5703;Interphonie 4;Flux de démonstration 4/6;10.20.1.51;DEMO-FOXTROT/110|DEMO-ALPHA/40|DEMO-BRAVO/30
+239.100.0.7;SUPERVISION;Groupe multicast de démonstration 07;5704;Horloge 5;Flux de démonstration 5/6;10.20.1.62;DEMO-ALPHA/20|DEMO-BRAVO/10|DEMO-CHARLIE/90|DEMO-DELTA/100
+239.100.0.7;SUPERVISION;Groupe multicast de démonstration 07;5705;Signalisation 6;Flux de démonstration 6/6;10.20.1.73|10.20.2.10;DEMO-BRAVO/60
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5800;Mesures 1;Flux de démonstration 1/13;10.20.1.55;DEMO-ECHO/90
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5801;État système 2;Flux de démonstration 2/13;10.20.1.66|10.20.2.3;DEMO-FOXTROT/100|DEMO-ALPHA/30
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5802;Interphonie 3;Flux de démonstration 3/13;10.20.1.77;DEMO-ALPHA/10|DEMO-BRAVO/70|DEMO-CHARLIE/80
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5803;Horloge 4;Flux de démonstration 4/13;10.20.2.8;DEMO-BRAVO/50|DEMO-CHARLIE/60|DEMO-DELTA/70|DEMO-ECHO/80
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5804;Signalisation 5;Flux de démonstration 5/13;10.20.2.19|10.20.2.36;DEMO-CHARLIE/40
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5805;Diagnostic 6;Flux de démonstration 6/13;10.20.2.30;DEMO-DELTA/30|DEMO-ECHO/40
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5806;Enregistrement 7;Flux de démonstration 7/13;10.20.2.41;DEMO-ECHO/20|DEMO-FOXTROT/30|DEMO-ALPHA/10
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5807;Distribution 8;Flux de démonstration 8/13;10.20.2.52|10.20.2.69;DEMO-FOXTROT/10|DEMO-ALPHA/40|DEMO-BRAVO/10|DEMO-CHARLIE/70
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5808;Retour vidéo 9;Flux de démonstration 9/13;10.20.2.63;DEMO-ALPHA/20
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5809;Données d’essais 10;Flux de démonstration 10/13;10.20.2.74;DEMO-BRAVO/40|DEMO-CHARLIE/30
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5810;Temps réel 11;Flux de démonstration 11/13;10.20.2.85|10.20.2.102;DEMO-CHARLIE/10|DEMO-DELTA/110|DEMO-ECHO/120
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5811;Maintenance 12;Flux de démonstration 12/13;10.20.2.96;DEMO-DELTA/90|DEMO-ECHO/100|DEMO-FOXTROT/110|DEMO-ALPHA/40
+239.100.0.8;CONTROLE;Groupe multicast de démonstration 08;5812;Vidéo principale 13;Flux de démonstration 13/13;10.20.2.107;DEMO-ECHO/80
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5900;État système 1;Flux de démonstration 1/20;10.20.2.12|10.20.2.29;DEMO-ALPHA/50|DEMO-BRAVO/60
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5901;Interphonie 2;Flux de démonstration 2/20;10.20.2.23;DEMO-BRAVO/40|DEMO-CHARLIE/50|DEMO-DELTA/60
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5902;Horloge 3;Flux de démonstration 3/20;10.20.2.34;DEMO-CHARLIE/30|DEMO-DELTA/40|DEMO-ECHO/50|DEMO-FOXTROT/60
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5903;Signalisation 4;Flux de démonstration 4/20;10.20.2.45|10.20.2.62;DEMO-DELTA/20
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5904;Diagnostic 5;Flux de démonstration 5/20;10.20.2.56;DEMO-ECHO/10|DEMO-FOXTROT/20
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5905;Enregistrement 6;Flux de démonstration 6/20;10.20.2.67;DEMO-FOXTROT/150|DEMO-ALPHA/30|DEMO-BRAVO/70
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5906;Distribution 7;Flux de démonstration 7/20;10.20.2.78|10.20.2.95;DEMO-ALPHA/10|DEMO-BRAVO/50|DEMO-CHARLIE/40|DEMO-DELTA/30
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5907;Retour vidéo 8;Flux de démonstration 8/20;10.20.2.89;DEMO-BRAVO/30
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5908;Données d’essais 9;Flux de démonstration 9/20;10.20.2.100;DEMO-CHARLIE/90|DEMO-DELTA/100
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5909;Temps réel 10;Flux de démonstration 10/20;10.20.2.111|10.20.4.8;DEMO-DELTA/80|DEMO-ECHO/90|DEMO-FOXTROT/100
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5910;Maintenance 11;Flux de démonstration 11/20;10.20.4.2;DEMO-ECHO/70|DEMO-FOXTROT/80|DEMO-ALPHA/10|DEMO-BRAVO/10
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5911;Vidéo principale 12;Flux de démonstration 12/20;10.20.4.13;DEMO-FOXTROT/60
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5912;Audio programme 13;Flux de démonstration 13/20;10.20.4.24|10.20.4.41;DEMO-ALPHA/20|DEMO-BRAVO/40
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5913;Télémétrie 14;Flux de démonstration 14/20;10.20.4.35;DEMO-BRAVO/20|DEMO-CHARLIE/80|DEMO-DELTA/70
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5914;Données techniques 15;Flux de démonstration 15/20;10.20.4.134;DEMO-CHARLIE/60|DEMO-DELTA/50|DEMO-ECHO/40|DEMO-FOXTROT/30
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5915;Métadonnées 16;Flux de démonstration 16/20;10.20.4.145|10.20.5.9;DEMO-DELTA/30
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5916;Synchronisation 17;Flux de démonstration 17/20;10.20.5.3;DEMO-ECHO/130|DEMO-FOXTROT/140
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5917;Supervision 18;Flux de démonstration 18/20;10.20.5.14;DEMO-FOXTROT/120|DEMO-ALPHA/50|DEMO-BRAVO/50
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5918;Contrôle 19;Flux de démonstration 19/20;10.20.5.25|10.20.5.42;DEMO-ALPHA/30|DEMO-BRAVO/30|DEMO-CHARLIE/70|DEMO-DELTA/40
+239.100.0.9;MESURES;Groupe multicast de démonstration 09;5919;Mesures 20;Flux de démonstration 20/20;10.20.5.36;DEMO-BRAVO/10
+239.100.0.10;CAPTEURS;Groupe multicast de démonstration 10;6000;Interphonie 1;Flux de démonstration 1/11;10.20.2.49;DEMO-CHARLIE/20|DEMO-DELTA/30|DEMO-ECHO/40
+239.100.0.10;CAPTEURS;Groupe multicast de démonstration 10;6001;Horloge 2;Flux de démonstration 2/11;10.20.2.60;DEMO-DELTA/10|DEMO-ECHO/20|DEMO-FOXTROT/30|DEMO-ALPHA/10
+239.100.0.10;CAPTEURS;Groupe multicast de démonstration 10;6002;Signalisation 3;Flux de démonstration 3/11;10.20.2.71|10.20.2.88;DEMO-ECHO/130
+239.100.0.10;CAPTEURS;Groupe multicast de démonstration 10;6003;Diagnostic 4;Flux de démonstration 4/11;10.20.2.82;DEMO-FOXTROT/140|DEMO-ALPHA/20
+239.100.0.10;CAPTEURS;Groupe multicast de démonstration 10;6004;Enregistrement 5;Flux de démonstration 5/11;10.20.2.93;DEMO-ALPHA/50|DEMO-BRAVO/40|DEMO-CHARLIE/30
+239.100.0.10;CAPTEURS;Groupe multicast de démonstration 10;6005;Distribution 6;Flux de démonstration 6/11;10.20.2.104|10.20.2.121;DEMO-BRAVO/20|DEMO-CHARLIE/10|DEMO-DELTA/110|DEMO-ECHO/120
+239.100.0.10;CAPTEURS;Groupe multicast de démonstration 10;6006;Retour vidéo 7;Flux de démonstration 7/11;10.20.2.115;DEMO-CHARLIE/80
+239.100.0.10;CAPTEURS;Groupe multicast de démonstration 10;6007;Données d’essais 8;Flux de démonstration 8/11;10.20.4.6;DEMO-DELTA/70|DEMO-ECHO/80
+239.100.0.10;CAPTEURS;Groupe multicast de démonstration 10;6008;Temps réel 9;Flux de démonstration 9/11;10.20.4.17|10.20.4.34;DEMO-ECHO/60|DEMO-FOXTROT/70|DEMO-ALPHA/50
+239.100.0.10;CAPTEURS;Groupe multicast de démonstration 10;6009;Maintenance 10;Flux de démonstration 10/11;10.20.4.28;DEMO-FOXTROT/50|DEMO-ALPHA/30|DEMO-BRAVO/50|DEMO-CHARLIE/20
+239.100.0.10;CAPTEURS;Groupe multicast de démonstration 10;6010;Vidéo principale 11;Flux de démonstration 11/11;10.20.4.39;DEMO-ALPHA/10
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6100;Horloge 1;Flux de démonstration 1/18;10.20.2.86;DEMO-ECHO/120|DEMO-FOXTROT/150|DEMO-ALPHA/30|DEMO-BRAVO/70
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6101;Signalisation 2;Flux de démonstration 2/18;10.20.2.97|10.20.2.114;DEMO-FOXTROT/130
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6102;Diagnostic 3;Flux de démonstration 3/18;10.20.2.108;DEMO-ALPHA/40|DEMO-BRAVO/30
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6103;Enregistrement 4;Flux de démonstration 4/18;10.20.2.119;DEMO-BRAVO/10|DEMO-CHARLIE/90|DEMO-DELTA/100
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6104;Distribution 5;Flux de démonstration 5/18;10.20.4.10|10.20.4.27;DEMO-CHARLIE/70|DEMO-DELTA/80|DEMO-ECHO/90|DEMO-FOXTROT/100
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6105;Retour vidéo 6;Flux de démonstration 6/18;10.20.4.21;DEMO-DELTA/60
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6106;Données d’essais 7;Flux de démonstration 7/18;10.20.4.32;DEMO-ECHO/50|DEMO-FOXTROT/60
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6107;Temps réel 8;Flux de démonstration 8/18;10.20.4.131|10.20.4.148;DEMO-FOXTROT/40|DEMO-ALPHA/20|DEMO-BRAVO/40
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6108;Maintenance 9;Flux de démonstration 9/18;10.20.4.142;DEMO-ALPHA/50|DEMO-BRAVO/20|DEMO-CHARLIE/80|DEMO-DELTA/70
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6109;Vidéo principale 10;Flux de démonstration 10/18;10.20.4.153;DEMO-BRAVO/70
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6110;Audio programme 11;Flux de démonstration 11/18;10.20.5.11|10.20.5.28;DEMO-CHARLIE/40|DEMO-DELTA/30
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6111;Télémétrie 12;Flux de démonstration 12/18;10.20.5.22;DEMO-DELTA/10|DEMO-ECHO/130|DEMO-FOXTROT/140
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6112;Données techniques 13;Flux de démonstration 13/18;10.20.5.33;DEMO-ECHO/110|DEMO-FOXTROT/120|DEMO-ALPHA/50|DEMO-BRAVO/50
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6113;Métadonnées 14;Flux de démonstration 14/18;10.20.5.44|10.30.0.6;DEMO-FOXTROT/100
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6114;Synchronisation 15;Flux de démonstration 15/18;10.20.5.55;DEMO-ALPHA/10|DEMO-BRAVO/10
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6115;Supervision 16;Flux de démonstration 16/18;10.30.0.11;DEMO-BRAVO/60|DEMO-CHARLIE/30|DEMO-DELTA/110
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6116;Contrôle 17;Flux de démonstration 17/18;10.30.0.74|10.30.1.2;DEMO-CHARLIE/10|DEMO-DELTA/90|DEMO-ECHO/80|DEMO-FOXTROT/70
+239.100.0.11;INTERPHONIE;Groupe multicast de démonstration 11;6117;Mesures 18;Flux de démonstration 18/18;10.30.0.85;DEMO-DELTA/70
+239.100.0.12;HORLOGE;Groupe multicast de démonstration 12;6200;Signalisation 1;Flux de démonstration 1/9;10.20.4.3|10.20.4.20;DEMO-ALPHA/30
+239.100.0.12;HORLOGE;Groupe multicast de démonstration 12;6201;Diagnostic 2;Flux de démonstration 2/9;10.20.4.14;DEMO-BRAVO/70|DEMO-CHARLIE/80
+239.100.0.12;HORLOGE;Groupe multicast de démonstration 12;6202;Enregistrement 3;Flux de démonstration 3/9;10.20.4.25;DEMO-CHARLIE/60|DEMO-DELTA/70|DEMO-ECHO/80
+239.100.0.12;HORLOGE;Groupe multicast de démonstration 12;6203;Distribution 4;Flux de démonstration 4/9;10.20.4.36|10.20.4.141;DEMO-DELTA/50|DEMO-ECHO/60|DEMO-FOXTROT/70|DEMO-ALPHA/50
+239.100.0.12;HORLOGE;Groupe multicast de démonstration 12;6204;Retour vidéo 5;Flux de démonstration 5/9;10.20.4.135;DEMO-ECHO/40
+239.100.0.12;HORLOGE;Groupe multicast de démonstration 12;6205;Données d’essais 6;Flux de démonstration 6/9;10.20.4.146;DEMO-FOXTROT/30|DEMO-ALPHA/10
+239.100.0.12;HORLOGE;Groupe multicast de démonstration 12;6206;Temps réel 7;Flux de démonstration 7/9;10.20.5.4|10.20.5.21;DEMO-ALPHA/40|DEMO-BRAVO/10|DEMO-CHARLIE/70
+239.100.0.12;HORLOGE;Groupe multicast de démonstration 12;6207;Maintenance 8;Flux de démonstration 8/9;10.20.5.15;DEMO-BRAVO/60|DEMO-CHARLIE/50|DEMO-DELTA/40|DEMO-ECHO/30
+239.100.0.12;HORLOGE;Groupe multicast de démonstration 12;6208;Vidéo principale 9;Flux de démonstration 9/9;10.20.5.26;DEMO-CHARLIE/30
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6300;Diagnostic 1;Flux de démonstration 1/16;10.20.4.40;DEMO-CHARLIE/50|DEMO-DELTA/60
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6301;Enregistrement 2;Flux de démonstration 2/16;10.20.4.139;DEMO-DELTA/40|DEMO-ECHO/50|DEMO-FOXTROT/60
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6302;Distribution 3;Flux de démonstration 3/16;10.20.4.150|10.20.5.14;DEMO-ECHO/30|DEMO-FOXTROT/40|DEMO-ALPHA/20|DEMO-BRAVO/40
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6303;Retour vidéo 4;Flux de démonstration 4/16;10.20.5.8;DEMO-FOXTROT/20
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6304;Données d’essais 5;Flux de démonstration 5/16;10.20.5.19;DEMO-ALPHA/30|DEMO-BRAVO/70
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6305;Temps réel 6;Flux de démonstration 6/16;10.20.5.30|10.20.5.47;DEMO-BRAVO/50|DEMO-CHARLIE/40|DEMO-DELTA/30
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6306;Maintenance 7;Flux de démonstration 7/16;10.20.5.41;DEMO-CHARLIE/20|DEMO-DELTA/10|DEMO-ECHO/130|DEMO-FOXTROT/140
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6307;Vidéo principale 8;Flux de démonstration 8/16;10.20.5.52;DEMO-DELTA/100
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6308;Audio programme 9;Flux de démonstration 9/16;10.30.0.8|10.30.0.77;DEMO-ECHO/90|DEMO-FOXTROT/100
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6309;Télémétrie 10;Flux de démonstration 10/16;10.30.0.71;DEMO-FOXTROT/80|DEMO-ALPHA/10|DEMO-BRAVO/10
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6310;Données techniques 11;Flux de démonstration 11/16;10.30.0.82;DEMO-ALPHA/40|DEMO-BRAVO/60|DEMO-CHARLIE/30|DEMO-DELTA/110
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6311;Métadonnées 12;Flux de démonstration 12/16;10.30.1.4|10.30.1.21;DEMO-BRAVO/40
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6312;Synchronisation 13;Flux de démonstration 13/16;10.30.1.15;DEMO-CHARLIE/80|DEMO-DELTA/70
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6313;Supervision 14;Flux de démonstration 14/16;10.30.1.26;DEMO-DELTA/50|DEMO-ECHO/40|DEMO-FOXTROT/30
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6314;Contrôle 15;Flux de démonstration 15/16;10.30.1.37|10.30.1.54;DEMO-ECHO/20|DEMO-FOXTROT/10|DEMO-ALPHA/40|DEMO-BRAVO/20
+239.100.0.13;SIGNALISATION;Groupe multicast de démonstration 13;6315;Mesures 16;Flux de démonstration 16/16;10.30.1.48;DEMO-FOXTROT/140
+239.100.0.14;DIAGNOSTIC;Groupe multicast de démonstration 14;6400;Enregistrement 1;Flux de démonstration 1/7;10.20.5.12;DEMO-ECHO/20|DEMO-FOXTROT/30|DEMO-ALPHA/10
+239.100.0.14;DIAGNOSTIC;Groupe multicast de démonstration 14;6401;Distribution 2;Flux de démonstration 2/7;10.20.5.23|10.20.5.40;DEMO-FOXTROT/10|DEMO-ALPHA/40|DEMO-BRAVO/10|DEMO-CHARLIE/70
+239.100.0.14;DIAGNOSTIC;Groupe multicast de démonstration 14;6402;Retour vidéo 3;Flux de démonstration 3/7;10.20.5.34;DEMO-ALPHA/20
+239.100.0.14;DIAGNOSTIC;Groupe multicast de démonstration 14;6403;Données d’essais 4;Flux de démonstration 4/7;10.20.5.45;DEMO-BRAVO/40|DEMO-CHARLIE/30
+239.100.0.14;DIAGNOSTIC;Groupe multicast de démonstration 14;6404;Temps réel 5;Flux de démonstration 5/7;10.20.5.56|10.30.0.70;DEMO-CHARLIE/10|DEMO-DELTA/110|DEMO-ECHO/120
+239.100.0.14;DIAGNOSTIC;Groupe multicast de démonstration 14;6405;Maintenance 6;Flux de démonstration 6/7;10.30.0.12;DEMO-DELTA/90|DEMO-ECHO/100|DEMO-FOXTROT/110|DEMO-ALPHA/40
+239.100.0.14;DIAGNOSTIC;Groupe multicast de démonstration 14;6406;Vidéo principale 7;Flux de démonstration 7/7;10.30.0.75;DEMO-ECHO/80
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6500;Distribution 1;Flux de démonstration 1/14;10.20.5.49|10.30.0.11;DEMO-ALPHA/10|DEMO-BRAVO/50|DEMO-CHARLIE/40|DEMO-DELTA/30
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6501;Retour vidéo 2;Flux de démonstration 2/14;10.30.0.5;DEMO-BRAVO/30
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6502;Données d’essais 3;Flux de démonstration 3/14;10.30.0.68;DEMO-CHARLIE/90|DEMO-DELTA/100
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6503;Temps réel 4;Flux de démonstration 4/14;10.30.0.79|10.30.1.7;DEMO-DELTA/80|DEMO-ECHO/90|DEMO-FOXTROT/100
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6504;Maintenance 5;Flux de démonstration 5/14;10.30.0.90;DEMO-ECHO/70|DEMO-FOXTROT/80|DEMO-ALPHA/10|DEMO-BRAVO/10
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6505;Vidéo principale 6;Flux de démonstration 6/14;10.30.1.12;DEMO-FOXTROT/60
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6506;Audio programme 7;Flux de démonstration 7/14;10.30.1.23|10.30.1.40;DEMO-ALPHA/20|DEMO-BRAVO/40
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6507;Télémétrie 8;Flux de démonstration 8/14;10.30.1.34;DEMO-BRAVO/20|DEMO-CHARLIE/80|DEMO-DELTA/70
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6508;Données techniques 9;Flux de démonstration 9/14;10.30.1.45;DEMO-CHARLIE/60|DEMO-DELTA/50|DEMO-ECHO/40|DEMO-FOXTROT/30
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6509;Métadonnées 10;Flux de démonstration 10/14;10.30.1.56|10.30.1.73;DEMO-DELTA/30
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6510;Synchronisation 11;Flux de démonstration 11/14;10.30.1.67;DEMO-ECHO/130|DEMO-FOXTROT/140
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6511;Supervision 12;Flux de démonstration 12/14;10.30.1.78;DEMO-FOXTROT/120|DEMO-ALPHA/50|DEMO-BRAVO/50
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6512;Contrôle 13;Flux de démonstration 13/14;10.30.1.89|10.30.2.6;DEMO-ALPHA/30|DEMO-BRAVO/30|DEMO-CHARLIE/70|DEMO-DELTA/40
+239.100.0.15;ENREGISTREMENT;Groupe multicast de démonstration 15;6513;Mesures 14;Flux de démonstration 14/14;10.30.1.100;DEMO-BRAVO/10
+239.100.0.16;DISTRIBUTION;Groupe multicast de démonstration 16;6600;Retour vidéo 1;Flux de démonstration 1/5;10.30.0.83;DEMO-CHARLIE/80
+239.100.0.16;DISTRIBUTION;Groupe multicast de démonstration 16;6601;Données d’essais 2;Flux de démonstration 2/5;10.30.1.5;DEMO-DELTA/70|DEMO-ECHO/80
+239.100.0.16;DISTRIBUTION;Groupe multicast de démonstration 16;6602;Temps réel 3;Flux de démonstration 3/5;10.30.1.16|10.30.1.33;DEMO-ECHO/60|DEMO-FOXTROT/70|DEMO-ALPHA/50
+239.100.0.16;DISTRIBUTION;Groupe multicast de démonstration 16;6603;Maintenance 4;Flux de démonstration 4/5;10.30.1.27;DEMO-FOXTROT/50|DEMO-ALPHA/30|DEMO-BRAVO/50|DEMO-CHARLIE/20
+239.100.0.16;DISTRIBUTION;Groupe multicast de démonstration 16;6604;Vidéo principale 5;Flux de démonstration 5/5;10.30.1.38;DEMO-ALPHA/10
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6700;Données d’essais 1;Flux de démonstration 1/12;10.30.1.31;DEMO-ECHO/50|DEMO-FOXTROT/60
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6701;Temps réel 2;Flux de démonstration 2/12;10.30.1.42|10.30.1.59;DEMO-FOXTROT/40|DEMO-ALPHA/20|DEMO-BRAVO/40
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6702;Maintenance 3;Flux de démonstration 3/12;10.30.1.53;DEMO-ALPHA/50|DEMO-BRAVO/20|DEMO-CHARLIE/80|DEMO-DELTA/70
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6703;Vidéo principale 4;Flux de démonstration 4/12;10.30.1.64;DEMO-BRAVO/70
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6704;Audio programme 5;Flux de démonstration 5/12;10.30.1.75|10.30.1.92;DEMO-CHARLIE/40|DEMO-DELTA/30
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6705;Télémétrie 6;Flux de démonstration 6/12;10.30.1.86;DEMO-DELTA/10|DEMO-ECHO/130|DEMO-FOXTROT/140
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6706;Données techniques 7;Flux de démonstration 7/12;10.30.1.97;DEMO-ECHO/110|DEMO-FOXTROT/120|DEMO-ALPHA/50|DEMO-BRAVO/50
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6707;Métadonnées 8;Flux de démonstration 8/12;10.30.2.8|10.30.2.25;DEMO-FOXTROT/100
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6708;Synchronisation 9;Flux de démonstration 9/12;10.30.2.19;DEMO-ALPHA/10|DEMO-BRAVO/10
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6709;Supervision 10;Flux de démonstration 10/12;10.30.2.30;DEMO-BRAVO/60|DEMO-CHARLIE/30|DEMO-DELTA/110
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6710;Contrôle 11;Flux de démonstration 11/12;10.30.2.41|10.30.2.58;DEMO-CHARLIE/10|DEMO-DELTA/90|DEMO-ECHO/80|DEMO-FOXTROT/70
+239.100.0.17;RETOUR-VIDEO;Groupe multicast de démonstration 17;6711;Mesures 12;Flux de démonstration 12/12;10.30.2.52;DEMO-DELTA/70
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6800;Temps réel 1;Flux de démonstration 1/19;10.30.1.68|10.30.1.85;DEMO-ALPHA/40|DEMO-BRAVO/10|DEMO-CHARLIE/70
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6801;Maintenance 2;Flux de démonstration 2/19;10.30.1.79;DEMO-BRAVO/60|DEMO-CHARLIE/50|DEMO-DELTA/40|DEMO-ECHO/30
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6802;Vidéo principale 3;Flux de démonstration 3/19;10.30.1.90;DEMO-CHARLIE/30
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6803;Audio programme 4;Flux de démonstration 4/19;10.30.1.101|10.30.2.18;DEMO-DELTA/110|DEMO-ECHO/120
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6804;Télémétrie 5;Flux de démonstration 5/19;10.30.2.12;DEMO-ECHO/100|DEMO-FOXTROT/110|DEMO-ALPHA/40
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6805;Données techniques 6;Flux de démonstration 6/19;10.30.2.23;DEMO-FOXTROT/90|DEMO-ALPHA/20|DEMO-BRAVO/20|DEMO-CHARLIE/60
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6806;Métadonnées 7;Flux de démonstration 7/19;10.30.2.34|10.30.2.51;DEMO-ALPHA/50
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6807;Synchronisation 8;Flux de démonstration 8/19;10.30.2.45;DEMO-BRAVO/50|DEMO-CHARLIE/20
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6808;Supervision 9;Flux de démonstration 9/19;10.30.2.56;DEMO-CHARLIE/90|DEMO-DELTA/80|DEMO-ECHO/70
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6809;Contrôle 10;Flux de démonstration 10/19;10.30.2.67|10.30.2.84;DEMO-DELTA/60|DEMO-ECHO/50|DEMO-FOXTROT/40|DEMO-ALPHA/20
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6810;Mesures 11;Flux de démonstration 11/19;10.30.2.78;DEMO-ECHO/30
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6811;État système 12;Flux de démonstration 12/19;10.30.2.89;DEMO-FOXTROT/150|DEMO-ALPHA/30
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6812;Interphonie 13;Flux de démonstration 13/19;10.30.2.100|10.30.2.117;DEMO-ALPHA/10|DEMO-BRAVO/60|DEMO-CHARLIE/10
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6813;Horloge 14;Flux de démonstration 14/19;10.30.2.111;DEMO-BRAVO/40|DEMO-CHARLIE/80|DEMO-DELTA/50|DEMO-ECHO/20
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6814;Signalisation 15;Flux de démonstration 15/19;10.30.2.122;DEMO-CHARLIE/60
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6815;Diagnostic 16;Flux de démonstration 16/19;10.30.2.133|10.30.4.10;DEMO-DELTA/10|DEMO-ECHO/110
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6816;Enregistrement 17;Flux de démonstration 17/19;10.30.4.4;DEMO-ECHO/90|DEMO-FOXTROT/80|DEMO-ALPHA/10
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6817;Distribution 18;Flux de démonstration 18/19;10.30.4.15;DEMO-FOXTROT/60|DEMO-ALPHA/40|DEMO-BRAVO/70|DEMO-CHARLIE/90
+239.100.0.18;DONNEES-ESSAIS;Groupe multicast de démonstration 18;6818;Retour vidéo 19;Flux de démonstration 19/19;10.30.4.26|10.30.4.43;DEMO-ALPHA/20
+239.100.0.19;TEMPS-REEL;Groupe multicast de démonstration 19;6900;Maintenance 1;Flux de démonstration 1/10;10.30.2.5;DEMO-CHARLIE/20|DEMO-DELTA/10|DEMO-ECHO/130|DEMO-FOXTROT/140
+239.100.0.19;TEMPS-REEL;Groupe multicast de démonstration 19;6901;Vidéo principale 2;Flux de démonstration 2/10;10.30.2.16;DEMO-DELTA/100
+239.100.0.19;TEMPS-REEL;Groupe multicast de démonstration 19;6902;Audio programme 3;Flux de démonstration 3/10;10.30.2.27|10.30.2.44;DEMO-ECHO/90|DEMO-FOXTROT/100
+239.100.0.19;TEMPS-REEL;Groupe multicast de démonstration 19;6903;Télémétrie 4;Flux de démonstration 4/10;10.30.2.38;DEMO-FOXTROT/80|DEMO-ALPHA/10|DEMO-BRAVO/10
+239.100.0.19;TEMPS-REEL;Groupe multicast de démonstration 19;6904;Données techniques 5;Flux de démonstration 5/10;10.30.2.49;DEMO-ALPHA/40|DEMO-BRAVO/60|DEMO-CHARLIE/30|DEMO-DELTA/110
+239.100.0.19;TEMPS-REEL;Groupe multicast de démonstration 19;6905;Métadonnées 6;Flux de démonstration 6/10;10.30.2.60|10.30.2.77;DEMO-BRAVO/40
+239.100.0.19;TEMPS-REEL;Groupe multicast de démonstration 19;6906;Synchronisation 7;Flux de démonstration 7/10;10.30.2.71;DEMO-CHARLIE/80|DEMO-DELTA/70
+239.100.0.19;TEMPS-REEL;Groupe multicast de démonstration 19;6907;Supervision 8;Flux de démonstration 8/10;10.30.2.82;DEMO-DELTA/50|DEMO-ECHO/40|DEMO-FOXTROT/30
+239.100.0.19;TEMPS-REEL;Groupe multicast de démonstration 19;6908;Contrôle 9;Flux de démonstration 9/10;10.30.2.93|10.30.2.110;DEMO-ECHO/20|DEMO-FOXTROT/10|DEMO-ALPHA/40|DEMO-BRAVO/20
+239.100.0.19;TEMPS-REEL;Groupe multicast de démonstration 19;6909;Mesures 10;Flux de démonstration 10/10;10.30.2.104;DEMO-FOXTROT/140
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7000;Vidéo principale 1;Flux de démonstration 1/17;10.30.2.42;DEMO-ECHO/80
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7001;Audio programme 2;Flux de démonstration 2/17;10.30.2.53|10.30.2.70;DEMO-FOXTROT/70|DEMO-ALPHA/50
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7002;Télémétrie 3;Flux de démonstration 3/17;10.30.2.64;DEMO-ALPHA/30|DEMO-BRAVO/50|DEMO-CHARLIE/20
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7003;Données techniques 4;Flux de démonstration 4/17;10.30.2.75;DEMO-BRAVO/30|DEMO-CHARLIE/90|DEMO-DELTA/80|DEMO-ECHO/70
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7004;Métadonnées 5;Flux de démonstration 5/17;10.30.2.86|10.30.2.103;DEMO-CHARLIE/70
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7005;Synchronisation 6;Flux de démonstration 6/17;10.30.2.97;DEMO-DELTA/40|DEMO-ECHO/30
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7006;Supervision 7;Flux de démonstration 7/17;10.30.2.108;DEMO-ECHO/10|DEMO-FOXTROT/150|DEMO-ALPHA/30
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7007;Contrôle 8;Flux de démonstration 8/17;10.30.2.119|10.30.2.136;DEMO-FOXTROT/130|DEMO-ALPHA/10|DEMO-BRAVO/60|DEMO-CHARLIE/10
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7008;Mesures 9;Flux de démonstration 9/17;10.30.2.130;DEMO-ALPHA/40
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7009;État système 10;Flux de démonstration 10/17;10.30.2.141;DEMO-BRAVO/20|DEMO-CHARLIE/60
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7010;Interphonie 11;Flux de démonstration 11/17;10.30.4.12|10.30.4.29;DEMO-CHARLIE/40|DEMO-DELTA/10|DEMO-ECHO/110
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7011;Horloge 12;Flux de démonstration 12/17;10.30.4.23;DEMO-DELTA/100|DEMO-ECHO/90|DEMO-FOXTROT/80|DEMO-ALPHA/10
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7012;Signalisation 13;Flux de démonstration 13/17;10.30.4.34;DEMO-ECHO/70
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7013;Diagnostic 14;Flux de démonstration 14/17;10.30.4.45|10.30.4.140;DEMO-FOXTROT/40|DEMO-ALPHA/20
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7014;Enregistrement 15;Flux de démonstration 15/17;10.30.4.134;DEMO-ALPHA/50|DEMO-BRAVO/30|DEMO-CHARLIE/50
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7015;Distribution 16;Flux de démonstration 16/17;10.30.4.145;DEMO-BRAVO/10|DEMO-CHARLIE/30|DEMO-DELTA/90|DEMO-ECHO/60
+239.100.0.20;MAINTENANCE;Groupe multicast de démonstration 20;7016;Retour vidéo 17;Flux de démonstration 17/17;10.30.4.156|10.30.5.15;DEMO-CHARLIE/10

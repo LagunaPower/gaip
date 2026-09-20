@@ -254,20 +254,55 @@ public sealed partial class MainWindow
     {
         var search = Ui.Input("", searchLabel);
         search.Name = searchName;
-        var rows = new StackPanel { Spacing = 3 };
-        var count = Ui.Text("", 12);
+        var selectedRows = new StackPanel { Name = searchName + "Selected", Spacing = 3 };
+        var availableRows = new StackPanel { Name = searchName + "Available", Spacing = 3 };
+        var selectedTitle = Ui.Text("", 12, true);
+        var selectedEmpty = Ui.Text("Aucune sélection.", 12);
+        var availableTitle = Ui.Text("Disponibles", 12, true);
+        var availableEmpty = Ui.Text(emptyMessage, 12);
 
-        if (choices.Count == 0) rows.Children.Add(Ui.Text(emptyMessage, 12));
-        else foreach (var choice in choices) rows.Children.Add(choice.Check);
+        Border Box(Control child, double maxHeight) => new()
+        {
+            BorderBrush = new SolidColorBrush(Color.Parse("#65758B"), .35),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(5),
+            Padding = new Thickness(6),
+            MaxHeight = maxHeight,
+            Child = new ScrollViewer
+            {
+                Content = child,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+            }
+        };
 
         void Refresh()
         {
             var query = search.Text?.Trim() ?? "";
+            selectedRows.Children.Clear();
+            availableRows.Children.Clear();
+
             foreach (var choice in choices)
-                choice.Check.IsVisible = choice.Check.IsChecked == true ||
-                    query.Length == 0 ||
+            {
+                if (choice.Check.IsChecked == true)
+                {
+                    choice.Check.IsVisible = true;
+                    selectedRows.Children.Add(choice.Check);
+                    continue;
+                }
+
+                var visible = query.Length == 0 ||
                     choice.SearchText.Contains(query, StringComparison.OrdinalIgnoreCase);
-            count.Text = $"{choices.Count(choice => choice.Check.IsChecked == true)} sélectionné(s)";
+                choice.Check.IsVisible = visible;
+                if (visible) availableRows.Children.Add(choice.Check);
+            }
+
+            var selectedCount = choices.Count(choice => choice.Check.IsChecked == true);
+            selectedTitle.Text = $"Sélectionnés ({selectedCount})";
+            selectedEmpty.IsVisible = selectedCount == 0;
+            availableEmpty.IsVisible = choices.Count == 0 || availableRows.Children.Count == 0;
+            availableEmpty.Text = choices.Count == 0 ? emptyMessage :
+                query.Length == 0 ? "Aucun élément disponible." : "Aucun résultat dans les éléments disponibles.";
         }
 
         search.TextChanged += (_, _) => Refresh();
@@ -275,21 +310,20 @@ public sealed partial class MainWindow
             choice.Check.IsCheckedChanged += (_, _) => { Refresh(); selectionChanged(); };
         Refresh();
 
-        var list = new Border
-        {
-            BorderBrush = new SolidColorBrush(Color.Parse("#65758B"), .35),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(5),
-            Padding = new Thickness(6),
-            MaxHeight = 220,
-            Child = new ScrollViewer
+        var selectedContent = Ui.Column(selectedEmpty, selectedRows);
+        var availableContent = Ui.Column(availableEmpty, availableRows);
+        return Ui.Column(
+            selectedTitle,
+            Box(selectedContent, 160),
+            new Border
             {
-                Content = rows,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
-            }
-        };
-        return Ui.Column(Ui.SearchField(search, searchLabel), count, list);
+                Height = 1,
+                Margin = new Thickness(0, 6),
+                Background = new SolidColorBrush(Color.Parse("#65758B"), .35)
+            },
+            availableTitle,
+            Ui.SearchField(search, searchLabel),
+            Box(availableContent, 220));
     }
 
     private async Task EditMulticastFlow(MulticastGroup group, MulticastFlow? existing)

@@ -66,7 +66,10 @@ public sealed class CsvTests
         Assert.Empty(vlanImport.Errors); Assert.NotNull(vlanImport.Data);
 
         var addressImport = CsvExchange.Import(vlanImport.Data!, File.ReadAllText(Path.Combine(root, "addresses.csv")), CsvKind.Addresses);
-        Assert.Empty(addressImport.Errors); var db = Assert.IsType<Database>(addressImport.Data);
+        Assert.Empty(addressImport.Errors); Assert.NotNull(addressImport.Data);
+
+        var multicastImport = CsvExchange.Import(addressImport.Data!, File.ReadAllText(Path.Combine(root, "multicast.csv")), CsvKind.Multicast);
+        Assert.Empty(multicastImport.Errors); var db = Assert.IsType<Database>(multicastImport.Data);
 
         Assert.Equal(6, db.Sites.Count);
         Assert.Equal(new[] { 5, 7, 9, 11, 13, 15 }, db.Sites.OrderBy(s => s.Code).Select(s => s.Vlans.Count).ToArray());
@@ -75,6 +78,24 @@ public sealed class CsvTests
         Assert.All(db.Sites, site => Assert.InRange(site.Vlans.Count, 5, 15));
         Assert.All(db.Sites.SelectMany(s => s.Vlans), vlan => Assert.InRange(vlan.Subnet!.Addresses.Count, 5, 200));
         Assert.Equal(6, db.Sites.SelectMany(s => s.Vlans).Select(v => Ipv4Network.Parse(v.Subnet!.Cidr).Prefix).Distinct().Count());
+
+        Assert.Equal(20, db.MulticastGroups.Count);
+        Assert.Equal(258, db.MulticastGroups.Sum(group => group.Flows.Count));
+        Assert.Equal(5, db.MulticastGroups.Min(group => group.Flows.Count));
+        Assert.Equal(20, db.MulticastGroups.Max(group => group.Flows.Count));
+        Assert.All(db.MulticastGroups.SelectMany(group => group.Flows), flow =>
+        {
+            var usedSites = db.Sites.Count(site => site.Vlans.Any(vlan => flow.VlanIds.Contains(vlan.Id)));
+            Assert.InRange(usedSites, 1, 4);
+            Assert.NotEmpty(flow.Sources);
+        });
+        Assert.Empty(ModelValidator.Validate(db));
+
+        var exported = CsvExchange.Export(db, CsvKind.Multicast);
+        var withoutMulticast = JsonData.Clone(db); withoutMulticast.MulticastGroups.Clear();
+        var roundTrip = CsvExchange.Import(withoutMulticast, exported, CsvKind.Multicast);
+        Assert.Empty(roundTrip.Errors);
+        Assert.Equal(258, roundTrip.Data!.MulticastGroups.Sum(group => group.Flows.Count));
     }
 
     [Theory]

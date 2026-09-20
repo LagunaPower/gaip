@@ -14,7 +14,7 @@ G@IP gère sites → VLAN indépendants → zéro ou un sous-réseau IPv4 → at
 - Suppression site sans VLAN seulement ; suppression VLAN autorisée dès qu’il ne contient plus d’IP attribuée. Une passerelle seule n’est pas bloquante et est supprimée avec le VLAN. Libération d’une IP avec confirmation. Pas de cascade site → VLAN ni VLAN → IP.
 - Dès qu’un sous-réseau contient au moins une IP attribuée, son CIDR ne peut plus être modifié ni retiré tant que toutes les IP n’ont pas été libérées ; le champ CIDR est alors désactivé dans la fiche VLAN. Une passerelle seule ne fige pas le CIDR ; elle doit rester utilisable dans le nouveau réseau ou être ajustée/supprimée.
 - /31 et /32 admis sans IP utilisable. /0 calculé sans débordement ni énumération intégrale.
-- Multicast IPv4 : adresse de groupe unique dans `224.0.0.0/4`, nom requis et description facultative. Chaque groupe contient zéro ou plusieurs flux ; le port UDP 1–65535 est unique dans le groupe, avec contenu requis, description, sources choisies parmi les IP attribuées et VLAN associés. La liste des flux reprend les interactions des adresses : clic = sélection, double-clic = édition, clic droit = Modifier/Supprimer, y compris depuis une cellule ✔/✖. Les sélecteurs multi-sources et multi-VLAN sont filtrables par recherche. Un groupe ne peut être supprimé qu’après suppression de ses flux. Une IP source ne peut pas être libérée/renumérotée et un VLAN référencé ne peut pas être supprimé tant que le flux conserve cette référence.
+- Multicast IPv4 : adresse de groupe unique dans `224.0.0.0/4`, nom requis et description facultative. Chaque groupe contient zéro ou plusieurs flux ; le port UDP 1–65535 est unique dans le groupe, avec contenu requis, description, sources choisies parmi les IP attribuées et VLAN associés. La liste des flux reprend les interactions des adresses : clic = sélection, double-clic = édition, clic droit = Modifier/Supprimer, y compris depuis une cellule ✔/✖. Les sélecteurs multi-sources et multi-VLAN présentent d’abord les éléments sélectionnés, toujours visibles, puis les éléments disponibles. La recherche s’applique uniquement aux disponibles ; cocher/décocher déplace immédiatement l’élément entre les deux parties. Un groupe ne peut être supprimé qu’après suppression de ses flux. Une IP source ne peut pas être libérée/renumérotée et un VLAN référencé ne peut pas être supprimé tant que le flux conserve cette référence.
 
 ## Interface
 
@@ -46,9 +46,11 @@ UTF-8, BOM en export, séparateur configurable (`;` par défaut). Guillemets et 
 
 `addresses.csv` : `site_code;vid;ip;hostname;description`.
 
-L’import VLAN crée les sites manquants ; pour un site existant son nom est conservé. Les VLAN sont créés/mis à jour par clé site/VID en conservant les IP. Un import VLAN ne peut pas modifier ou retirer le CIDR d’un VLAN qui possède déjà des IP attribuées. L’import IP crée/met à jour l’attribution du VLAN. Doublons dans un fichier refusés, aucune suppression des lignes absentes. L’aperçu affiche toutes les erreurs détectées ; revalidation sur la base courante à la publication. Une erreur empêche tout le fichier.
+`multicast.csv` : `multicast_address;group_name;group_description;port;content;flow_description;sources;vlans`. Plusieurs sources ou VLAN sont séparés par `|` dans leur champ ; les VLAN sont référencés sous la forme `SITE/VID`.
 
-L’export complet écrit les deux CSV ; les passerelles restent dans le fichier VLAN. Ce format n’est pas une sauvegarde intégrale du modèle.
+L’import VLAN crée les sites manquants ; pour un site existant son nom est conservé. Les VLAN sont créés/mis à jour par clé site/VID en conservant les IP. Un import VLAN ne peut pas modifier ou retirer le CIDR d’un VLAN qui possède déjà des IP attribuées. L’import IP crée/met à jour l’attribution du VLAN. L’import multicast crée/met à jour les groupes par adresse et les flux par couple adresse/port ; les IP sources et références `SITE/VID` doivent déjà exister. Doublons dans un fichier refusés, aucune suppression des lignes absentes. L’aperçu affiche toutes les erreurs détectées ; revalidation sur la base courante à la publication. Une erreur empêche tout le fichier.
+
+L’export complet écrit les trois CSV ; les passerelles restent dans le fichier VLAN. L’export contextuel d’un VLAN reste limité à `vlans.csv` et `addresses.csv`. Ce format n’est pas une sauvegarde intégrale du modèle.
 
 ## Excel
 
