@@ -1,0 +1,267 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
+using GAIP.Core;
+using GAIP.Storage;
+
+namespace GAIP.Desktop;
+
+public sealed partial class MainWindow
+{
+    private void AddMulticastHomeCard(Grid cards)
+    {
+        if (Db.MulticastGroups.Count == 0) return;
+
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
+        header.Children.Add(Ui.Text("Multicast", 18, true));
+        var stats = Ui.Text($"{Db.MulticastGroups.Count} groupe(s)", 11);
+        Grid.SetColumn(stats, 1); header.Children.Add(stats);
+
+        var details = Ui.Column(header);
+        foreach (var group in Db.MulticastGroups.OrderBy(g => Ipv4Network.ParseAddress(g.Address)))
+        {
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("130,*,Auto"), ColumnSpacing = 8 };
+            row.Children.Add(Ui.Text(group.Address, 13, true));
+            var name = Ui.Text(group.Name, 13); Grid.SetColumn(name, 1); row.Children.Add(name);
+            var flows = Ui.Text($"{group.Flows.Count} flux", 12); Grid.SetColumn(flows, 2); row.Children.Add(flows);
+            var button = Ui.Button("", () => OpenMulticast(group.Address));
+            button.Name = "MulticastGroupRow";
+            button.Content = row;
+            button.Background = Brushes.Transparent;
+            button.BorderThickness = new Thickness(0, 0, 0, 1);
+            button.HorizontalAlignment = HorizontalAlignment.Stretch;
+            button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+            details.Children.Add(button);
+        }
+
+        var actions = Ui.Row(Ui.Button("Ajouter un multicast", () => Run(() => EditMulticastGroup(null)), CanWrite));
+        actions.HorizontalAlignment = HorizontalAlignment.Center;
+        var content = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), RowSpacing = 12 };
+        content.Children.Add(details); Grid.SetRow(actions, 2); content.Children.Add(actions);
+        var card = Ui.Card(content);
+        card.Name = "MulticastCard";
+        card.Margin = new Thickness(0);
+        card.HorizontalAlignment = HorizontalAlignment.Stretch;
+        card.VerticalAlignment = VerticalAlignment.Stretch;
+        cards.Children.Add(card);
+    }
+
+    private void OpenMulticast(string address)
+    {
+        _selectedSite = null;
+        _selectedVlan = null;
+        _selectedMulticast = address;
+        _showFreeAddresses = false;
+        _subnetSearch = "";
+        _search.Text = "";
+        Render();
+    }
+
+    private void RenderMulticast(MulticastGroup group)
+    {
+        _pageHeading.Content = Ui.Text($"{group.Address} — {group.Name}", 22, true);
+        var stack = new StackPanel { Spacing = 8 };
+        if (!string.IsNullOrWhiteSpace(group.Description)) stack.Children.Add(Ui.Text(group.Description));
+
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("70,180,*,220"), ColumnSpacing = 10 };
+        header.Children.Add(Ui.Text("Port", 12, true));
+        var hContent = Ui.Text("Contenu", 12, true); Grid.SetColumn(hContent, 1); header.Children.Add(hContent);
+        var hSources = Ui.Text("Sources", 12, true); Grid.SetColumn(hSources, 2); header.Children.Add(hSources);
+        var hVlans = Ui.Text("VLAN", 12, true); Grid.SetColumn(hVlans, 3); header.Children.Add(hVlans);
+        stack.Children.Add(header);
+
+        foreach (var flow in group.Flows.OrderBy(f => f.Port))
+        {
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("70,180,*,220"), ColumnSpacing = 10 };
+            row.Children.Add(Ui.Text(flow.Port.ToString(), 13, true));
+            var content = Ui.Text(flow.Content, 13); Grid.SetColumn(content, 1); row.Children.Add(content);
+            var sources = Ui.Text(flow.Sources.Count == 0 ? "—" : string.Join(", ", flow.Sources.Select(MulticastSourceLabel)), 12);
+            Grid.SetColumn(sources, 2); row.Children.Add(sources);
+            var vlans = Ui.Text(flow.VlanIds.Count == 0 ? "—" : string.Join(", ", flow.VlanIds.Select(MulticastVlanLabel)), 12);
+            Grid.SetColumn(vlans, 3); row.Children.Add(vlans);
+            var button = Ui.Button("", () => Run(() => EditMulticastFlow(group, flow)));
+            button.Name = $"MulticastFlow_{flow.Port}";
+            button.Content = row;
+            button.Background = Brushes.Transparent;
+            button.BorderThickness = new Thickness(0, 0, 0, 1);
+            button.HorizontalAlignment = HorizontalAlignment.Stretch;
+            button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+            stack.Children.Add(button);
+        }
+
+        if (group.Flows.Count == 0)
+            stack.Children.Add(Ui.Card(Ui.Text("Aucun flux. Ajoutez un port pour décrire le contenu diffusé.")));
+        _body.Content = Ui.Scroll(stack);
+    }
+
+    private string MulticastSourceLabel(string address)
+    {
+        var found = Db.Sites
+            .SelectMany(site => site.Vlans.SelectMany(vlan => (vlan.Subnet?.Addresses ?? []).Select(ip => (site, vlan, ip))))
+            .FirstOrDefault(x => x.ip.Address == address);
+        return found.ip is null || string.IsNullOrWhiteSpace(found.ip.Hostname) ? address : $"{address} — {found.ip.Hostname}";
+    }
+
+    private string MulticastVlanLabel(Guid id)
+    {
+        foreach (var site in Db.Sites)
+        {
+            var vlan = site.Vlans.FirstOrDefault(v => v.Id == id);
+            if (vlan is not null) return $"{site.Code}/{vlan.Vid}";
+        }
+        return id.ToString();
+    }
+
+    private async Task EditMulticastGroup(MulticastGroup? existing)
+    {
+        var form = new FormWindow(existing is null ? "Ajouter un multicast" : "Modifier le multicast");
+        var address = Ui.Input(existing?.Address ?? "", "239.10.20.15", 15);
+        var name = Ui.Input(existing?.Name ?? "", "VIDEO", 150);
+        var description = Ui.Input(existing?.Description ?? "");
+        form.Add("Adresse multicast (identifiant)", address);
+        form.Add("Nom", name);
+        form.Add("Description", description);
+
+        Action<Database> Mutation()
+        {
+            var parsed = Ipv4Network.ParseAddress(address.Text?.Trim() ?? "");
+            var a = Ipv4Network.Format(parsed);
+            var n = name.Text ?? "";
+            var d = description.Text ?? "";
+            return db =>
+            {
+                var target = existing is null
+                    ? new MulticastGroup()
+                    : db.MulticastGroups.Single(g => g.Address == existing.Address);
+                target.Address = a;
+                target.Name = n;
+                target.Description = d;
+                if (existing is null) db.MulticastGroups.Add(target);
+            };
+        }
+
+        LiveValidation(form, Mutation, address, name, description);
+        form.Submit = async () =>
+        {
+            var normalized = Ipv4Network.Format(Ipv4Network.ParseAddress(address.Text?.Trim() ?? ""));
+            await Save(Mutation(), existing is null ? "Création" : "Modification", "Multicast", normalized);
+            _selectedMulticast = normalized;
+            Render();
+        };
+
+        if (existing is not null)
+            form.Fields.Children.Add(Ui.Button("Supprimer le multicast", async () =>
+            {
+                try
+                {
+                    if (!await Confirm("Supprimer le multicast", $"Supprimer {existing.Address} ? Le groupe doit être vide.")) return;
+                    await Save(db => ModelValidator.DeleteMulticastGroup(db, existing.Address), "Suppression", "Multicast", existing.Address);
+                    _selectedMulticast = null;
+                    Render();
+                    form.Close(true);
+                }
+                catch (Exception ex) { form.Error.Text = ex.Message; }
+            }, CanWrite));
+
+        await form.ShowDialog<bool>(this);
+    }
+
+    private async Task EditMulticastFlow(MulticastGroup group, MulticastFlow? existing)
+    {
+        var form = new FormWindow(existing is null ? $"Ajouter un flux · {group.Address}" : $"Modifier le flux · {group.Address}", width: 760);
+        var port = Ui.Input(existing?.Port.ToString() ?? "", "1 à 65535", 5);
+        var content = Ui.Input(existing?.Content ?? "", "Vidéo principale", 150);
+        var description = Ui.Input(existing?.Description ?? "");
+        form.Add("Port UDP", port);
+        form.Add("Contenu", content);
+        form.Add("Description", description);
+
+        var sourceChecks = new List<(string Address, CheckBox Check)>();
+        var sourcePanel = new StackPanel { Spacing = 4 };
+        foreach (var item in Db.Sites
+                     .SelectMany(site => site.Vlans.SelectMany(vlan => (vlan.Subnet?.Addresses ?? []).Select(ip => (site, vlan, ip))))
+                     .OrderBy(x => Ipv4Network.ParseAddress(x.ip.Address)))
+        {
+            var label = $"{item.ip.Address} — {(string.IsNullOrWhiteSpace(item.ip.Hostname) ? item.ip.Description : item.ip.Hostname)} — {item.site.Code}/VLAN {item.vlan.Vid}";
+            var check = new CheckBox { Content = label, IsChecked = existing?.Sources.Contains(item.ip.Address) == true };
+            sourceChecks.Add((item.ip.Address, check));
+            sourcePanel.Children.Add(check);
+        }
+        if (sourceChecks.Count == 0) sourcePanel.Children.Add(Ui.Text("Aucune IP attribuée n’est disponible comme source.", 12));
+        form.Fields.Children.Add(new Expander { Header = "Source(s) du flux", Content = sourcePanel, IsExpanded = existing is not null });
+
+        var vlanChecks = new List<(Guid Id, CheckBox Check)>();
+        var vlanPanel = new StackPanel { Spacing = 4 };
+        foreach (var site in SiteOrdering.Ordered(Db.Sites))
+            foreach (var vlan in site.Vlans.OrderBy(v => v.Vid))
+            {
+                var check = new CheckBox { Content = $"{site.Code} — VLAN {vlan.Vid} — {vlan.Name}", IsChecked = existing?.VlanIds.Contains(vlan.Id) == true };
+                vlanChecks.Add((vlan.Id, check));
+                vlanPanel.Children.Add(check);
+            }
+        if (vlanChecks.Count == 0) vlanPanel.Children.Add(Ui.Text("Aucun VLAN disponible.", 12));
+        form.Fields.Children.Add(new Expander { Header = "VLAN utilisé(s)", Content = vlanPanel, IsExpanded = existing is not null });
+
+        Action<Database> Mutation()
+        {
+            if (!int.TryParse(port.Text, out var p)) throw new FormatException("Port entier attendu entre 1 et 65535.");
+            var c = content.Text ?? "";
+            var d = description.Text ?? "";
+            var sources = sourceChecks.Where(x => x.Check.IsChecked == true).Select(x => x.Address).ToList();
+            var vlans = vlanChecks.Where(x => x.Check.IsChecked == true).Select(x => x.Id).ToList();
+            return db =>
+            {
+                var targetGroup = db.MulticastGroups.Single(g => g.Address == group.Address);
+                var flow = existing is null ? new MulticastFlow() : targetGroup.Flows.Single(f => f.Port == existing.Port);
+                flow.Port = p;
+                flow.Content = c;
+                flow.Description = d;
+                flow.Sources = sources;
+                flow.VlanIds = vlans;
+                if (existing is null) targetGroup.Flows.Add(flow);
+            };
+        }
+
+        void Validate()
+        {
+            try
+            {
+                var copy = JsonData.Clone(Db);
+                Mutation()(copy);
+                ModelValidator.EnsureValid(copy);
+                form.Error.Text = "";
+                form.Save.IsEnabled = CanWrite;
+            }
+            catch (Exception ex)
+            {
+                form.Error.Text = ex.Message;
+                form.Save.IsEnabled = false;
+            }
+        }
+        port.TextChanged += (_, _) => Validate();
+        content.TextChanged += (_, _) => Validate();
+        description.TextChanged += (_, _) => Validate();
+        foreach (var (_, check) in sourceChecks) check.IsCheckedChanged += (_, _) => Validate();
+        foreach (var (_, check) in vlanChecks) check.IsCheckedChanged += (_, _) => Validate();
+        form.Opened += (_, _) => Validate();
+
+        form.Submit = () => Save(Mutation(), existing is null ? "Création" : "Modification", "Flux multicast",
+            $"{group.Address}:{port.Text?.Trim()}");
+
+        if (existing is not null)
+            form.Fields.Children.Add(Ui.Button("Supprimer le flux", async () =>
+            {
+                try
+                {
+                    if (!await Confirm("Supprimer le flux", $"Supprimer {group.Address}:{existing.Port} ?")) return;
+                    await Save(db => ModelValidator.DeleteMulticastFlow(db, group.Address, existing.Port), "Suppression", "Flux multicast",
+                        $"{group.Address}:{existing.Port}");
+                    form.Close(true);
+                }
+                catch (Exception ex) { form.Error.Text = ex.Message; }
+            }, CanWrite));
+
+        await form.ShowDialog<bool>(this);
+    }
+}

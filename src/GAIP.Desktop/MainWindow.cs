@@ -32,6 +32,7 @@ public sealed partial class MainWindow : Window
     private bool _closing;
     private Guid? _selectedSite;
     private Guid? _selectedVlan;
+    private string? _selectedMulticast;
     private bool _showFreeAddresses;
     private string _subnetSearch = "";
     private Grid? _siteCards;
@@ -155,13 +156,21 @@ public sealed partial class MainWindow : Window
         // Keep the search control attached so typing does not lose keyboard focus.
         for (var i = _actions.Children.Count - 1; i >= 0; i--)
             if (_actions.Children[i] != _globalSearch) _actions.Children.RemoveAt(i);
-        _actions.Children.Insert(0, Ui.Button("Accueil", () => { _selectedSite = null; _selectedVlan = null; _search.Text = ""; Render(); }));
+        _actions.Children.Insert(0, Ui.Button("Accueil", () => { _selectedSite = null; _selectedVlan = null; _selectedMulticast = null; _search.Text = ""; Render(); }));
         _actions.Children.Insert(1, Ui.Button("Actualiser", () => Run(Refresh)));
+        var selectedMulticast = string.IsNullOrWhiteSpace(_search.Text) && _selectedMulticast is { } multicastAddress
+            ? Db.MulticastGroups.FirstOrDefault(g => g.Address == multicastAddress) : null;
         Guid? context = string.IsNullOrWhiteSpace(_search.Text) && Db.Sites.Any(s => s.Vlans.Any(v => v.Id == _selectedVlan)) ? _selectedVlan : null;
-        if (context is null)
+        if (selectedMulticast is not null)
+        {
+            _actions.Children.Add(Ui.Button("Modifier le multicast", () => Run(() => EditMulticastGroup(selectedMulticast)), CanWrite));
+            _actions.Children.Add(Ui.Button("Ajouter un flux", () => Run(() => EditMulticastFlow(selectedMulticast, null)), CanWrite));
+        }
+        else if (context is null)
         {
             _actions.Children.Add(Ui.Button("Ajouter un site", () => Run(() => EditSite(null)), CanWrite));
             _actions.Children.Add(Ui.Button("Ajouter un VLAN", () => Run(() => EditVlan(null, null)), CanWrite && Db.Sites.Count > 0));
+            _actions.Children.Add(Ui.Button("Ajouter un multicast", () => Run(() => EditMulticastGroup(null)), CanWrite));
         }
         else
         {
@@ -181,6 +190,12 @@ public sealed partial class MainWindow : Window
         _siteCards = null;
         _siteCardsScroll = null;
         if (!string.IsNullOrWhiteSpace(_search.Text)) { RenderSearch(); return; }
+        if (_selectedMulticast is { } selectedAddress)
+        {
+            var group = Db.MulticastGroups.FirstOrDefault(g => g.Address == selectedAddress);
+            if (group is not null) { RenderMulticast(group); return; }
+            _selectedMulticast = null;
+        }
         if (_selectedVlan is { } vlanId)
         {
             var site = Db.Sites.FirstOrDefault(s => s.Vlans.Any(v => v.Id == vlanId));
@@ -234,8 +249,10 @@ public sealed partial class MainWindow : Window
             _siteCards.Children.Add(card);
         }
 
-        var summary = Ui.Text($"{Db.Sites.Count} sites  ·  {count} VLAN  ·  {used} IP utilisées", 13);
-        if (Db.Sites.Count == 0)
+        if (_selectedSite is null) AddMulticastHomeCard(_siteCards);
+
+        var summary = Ui.Text($"{Db.Sites.Count} sites  ·  {count} VLAN  ·  {used} IP utilisées  ·  {Db.MulticastGroups.Count} multicast", 13);
+        if (Db.Sites.Count == 0 && Db.MulticastGroups.Count == 0)
         {
             _body.Content = Ui.Scroll(Ui.Column(summary, Ui.Card(Ui.Column(Ui.Text("Bienvenue dans G@IP", 22, true),
                 Ui.Text("Créez un site, ajoutez ses VLAN et définissez vos sous-réseaux. Votre base est actuellement vide."),
@@ -309,7 +326,7 @@ public sealed partial class MainWindow : Window
         _body.Content = Ui.Scroll(stack);
     }
     private void OpenVlan(Guid site, Guid vlan)
-    { _selectedSite = site; _selectedVlan = vlan; _showFreeAddresses = false; _subnetSearch = ""; _search.Text = ""; Render(); }
+    { _selectedSite = site; _selectedVlan = vlan; _selectedMulticast = null; _showFreeAddresses = false; _subnetSearch = ""; _search.Text = ""; Render(); }
 
     private void RenderVlan(Site site, Vlan vlan)
     {

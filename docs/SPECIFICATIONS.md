@@ -14,6 +14,7 @@ G@IP gère sites → VLAN indépendants → zéro ou un sous-réseau IPv4 → at
 - Suppression site sans VLAN seulement ; suppression VLAN autorisée dès qu’il ne contient plus d’IP attribuée. Une passerelle seule n’est pas bloquante et est supprimée avec le VLAN. Libération d’une IP avec confirmation. Pas de cascade site → VLAN ni VLAN → IP.
 - Dès qu’un sous-réseau contient au moins une IP attribuée, son CIDR ne peut plus être modifié ni retiré tant que toutes les IP n’ont pas été libérées ; le champ CIDR est alors désactivé dans la fiche VLAN. Une passerelle seule ne fige pas le CIDR ; elle doit rester utilisable dans le nouveau réseau ou être ajustée/supprimée.
 - /31 et /32 admis sans IP utilisable. /0 calculé sans débordement ni énumération intégrale.
+- Multicast IPv4 : adresse de groupe unique dans `224.0.0.0/4`, nom requis et description facultative. Chaque groupe contient zéro ou plusieurs flux ; le port UDP 1–65535 est unique dans le groupe, avec contenu requis, description, sources choisies parmi les IP attribuées et VLAN associés. Un groupe ne peut être supprimé qu’après suppression de ses flux.
 
 ## Interface
 

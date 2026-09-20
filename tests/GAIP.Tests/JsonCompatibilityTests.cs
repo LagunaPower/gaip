@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using System.Text.Json.Nodes;
 using GAIP.Core;
 using GAIP.Storage;
 using Xunit;
@@ -45,6 +46,16 @@ public sealed class JsonCompatibilityTests
         var config = JsonSerializer.Deserialize(old, StorageJsonContext.Default.AppConfig)!;
         config.Validate();
         Assert.Equal(3, config.MaxHomeColumns);
+    }
+
+
+    [Fact]
+    public void DatabaseWithoutMulticastGroupsUsesEmptyList()
+    {
+        var node = JsonNode.Parse(JsonData.Serialize(TestData.Example()))!.AsObject();
+        node.Remove("multicastGroups");
+        var restored = JsonData.Read(JsonSerializer.SerializeToUtf8Bytes(node));
+        Assert.Empty(restored.MulticastGroups);
     }
 
     [Fact]

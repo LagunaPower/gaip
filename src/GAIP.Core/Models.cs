@@ -10,6 +10,24 @@ public sealed class Database
     public string LastModifiedBy { get; set; } = "";
     public string LastModifiedFrom { get; set; } = "";
     [JsonRequired] public List<Site> Sites { get; set; } = [];
+    public List<MulticastGroup> MulticastGroups { get; set; } = [];
+}
+
+public sealed class MulticastGroup
+{
+    public string Address { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
+    [JsonRequired] public List<MulticastFlow> Flows { get; set; } = [];
+}
+
+public sealed class MulticastFlow
+{
+    public int Port { get; set; }
+    public string Content { get; set; } = "";
+    public string Description { get; set; } = "";
+    [JsonRequired] public List<string> Sources { get; set; } = [];
+    [JsonRequired] public List<Guid> VlanIds { get; set; } = [];
 }
 
 public sealed class Site

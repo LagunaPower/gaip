@@ -265,6 +265,33 @@ public sealed partial class DesktopTests
         form.Close(false); main.Close(); await Until(() => !main.IsVisible);
     }
 
+
+    [AvaloniaFact]
+    public async Task MulticastCardOpensGroupAndShowsFlows()
+    {
+        using var temp = new TempDirectory();
+        var data = temp.Sub("data");
+        var db = TestData.Example();
+        TestData.Subnet(db).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRC-VIDEO" });
+        db.MulticastGroups.Add(new()
+        {
+            Address = "239.10.20.15",
+            Name = "VIDEO",
+            Description = "Diffusion vidéo",
+            Flows = [new() { Port = 5004, Content = "Vidéo principale", Sources = ["10.20.120.25"], VlanIds = [db.Sites[0].Vlans[0].Id] }]
+        });
+        new GAIP.Storage.FileRepository(temp.Sub("data/local"), "test", "pc").Initialize(db);
+
+        var main = new MainWindow(data, temp.Sub("config")); main.Show(); await UntilReady(main);
+        var card = main.GetLogicalDescendants().OfType<Border>().Single(b => b.Name == "MulticastCard");
+        var row = card.GetLogicalDescendants().OfType<Button>().Single(b => b.Name == "MulticastGroupRow");
+        Click(row);
+        await Until(() => main.GetLogicalDescendants().OfType<Button>().Any(b => b.Content as string == "Modifier le multicast"));
+        Assert.Contains(main.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text == "239.10.20.15 — VIDEO");
+        Assert.Contains(main.GetLogicalDescendants().OfType<Button>(), b => b.Name == "MulticastFlow_5004");
+        main.Close(); await Until(() => !main.IsVisible);
+    }
+
     [AvaloniaFact]
     public async Task ConfigurationMovesLocalToSharedThenEmptyLocalWithBackup()
     {

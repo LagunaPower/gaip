@@ -13,4 +13,6 @@ namespace GAIP.Storage;
 [JsonSerializable(typeof(AuditEntry))]
 [JsonSerializable(typeof(AuditChange))]
 [JsonSerializable(typeof(Vlan))]
+[JsonSerializable(typeof(MulticastGroup))]
+[JsonSerializable(typeof(MulticastFlow))]
 public partial class StorageJsonContext : JsonSerializerContext { }

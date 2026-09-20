@@ -147,4 +147,46 @@ public sealed class CoreTests
         var db = Example(); Subnet(db).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRV-app", Description = "application" });
         Assert.NotEmpty(Queries.Search(db, query));
     }
+    [Fact]
+    public void MulticastGroupsValidateAddressPortsAndReferences()
+    {
+        var db = Example();
+        Subnet(db).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRC-VIDEO" });
+        var vlanId = db.Sites[0].Vlans[0].Id;
+        db.MulticastGroups.Add(new()
+        {
+            Address = "239.10.20.15",
+            Name = "VIDEO",
+            Flows = [new() { Port = 5004, Content = "Vidéo principale", Sources = ["10.20.120.25"], VlanIds = [vlanId] }]
+        });
+        Assert.Empty(ModelValidator.Validate(db));
+
+        var bad = JsonData.Clone(db);
+        bad.MulticastGroups[0].Address = "10.1.1.1";
+        Assert.Contains(ModelValidator.Validate(bad), e => e.Contains("224.0.0.0/4"));
+
+        bad = JsonData.Clone(db);
+        bad.MulticastGroups[0].Flows.Add(new() { Port = 5004, Content = "Doublon" });
+        Assert.Contains(ModelValidator.Validate(bad), e => e.Contains("port déjà utilisé"));
+
+        bad = JsonData.Clone(db);
+        bad.MulticastGroups[0].Flows[0].Sources = ["10.20.120.26"];
+        Assert.Contains(ModelValidator.Validate(bad), e => e.Contains("absente des IP attribuées"));
+
+        bad = JsonData.Clone(db);
+        bad.MulticastGroups[0].Flows[0].VlanIds = [Guid.NewGuid()];
+        Assert.Contains(ModelValidator.Validate(bad), e => e.Contains("VLAN référencé introuvable"));
+    }
+
+    [Fact]
+    public void MulticastGroupDeletionRequiresNoFlow()
+    {
+        var db = Example();
+        db.MulticastGroups.Add(new() { Address = "239.1.1.1", Name = "TEST", Flows = [new() { Port = 5000, Content = "Test" }] });
+        Assert.Throws<ValidationException>(() => ModelValidator.DeleteMulticastGroup(db, "239.1.1.1"));
+        ModelValidator.DeleteMulticastFlow(db, "239.1.1.1", 5000);
+        ModelValidator.DeleteMulticastGroup(db, "239.1.1.1");
+        Assert.Empty(db.MulticastGroups);
+    }
+
 }

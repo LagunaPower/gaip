@@ -9,6 +9,18 @@
   "lastModified": "2026-09-18T14:00:00+00:00",
   "lastModifiedBy": "DOMAINE\\utilisateur",
   "lastModifiedFrom": "POSTE01",
+  "multicastGroups": [{
+    "address": "239.10.20.15",
+    "name": "VIDEO",
+    "description": "Diffusion vidéo",
+    "flows": [{
+      "port": 5004,
+      "content": "Vidéo principale",
+      "description": "",
+      "sources": ["10.20.120.25"],
+      "vlanIds": ["93fa0fd9-051d-4c7b-8fb3-a0b1800f5ac2"]
+    }]
+  }],
   "sites": [{
     "id": "f3fc5c86-6d0b-4ffc-b949-e018bceac6ef",
     "code": "LEVANT",
@@ -30,6 +42,8 @@
 ```
 
 `subnet` et `gateway` peuvent être null. UUID stables pour sites/VLAN ; IP unique comme clé d’attribution. Pas de statut, réseau calculé ni compteur persisté. La passerelle n’est jamais dans `addresses`.
+
+`multicastGroups` est facultatif pour compatibilité avec les bases antérieures et vaut une liste vide s’il est absent. L’adresse multicast est l’identifiant naturel du groupe et doit appartenir à `224.0.0.0/4`. Dans un groupe, le port UDP (1–65535) identifie le flux. Les sources sont des adresses IP déjà attribuées dans la base ; les VLAN sont référencés par leurs UUID stables. Une source ou un VLAN inexistant rend le modèle invalide.
 
 Chaque site peut porter `displayOrder`, entier positif ou nul choisi via Configuration. Ce rang exprime une préférence utilisateur, pas un calcul réseau. Il est absent des anciennes bases : tri par code dans ce cas. L’enregistrement du classement attribue les rangs 0 à N−1 aux IDs courants ; une liste périmée ou incomplète est refusée. Les sites sans rang suivent les sites classés. Les imports CSV préservent les rangs existants. Les anciens exécutables à lecture JSON stricte ne connaissent pas ce champ : mettre les postes d’un partage à la même version avant d’enregistrer un classement.
 
