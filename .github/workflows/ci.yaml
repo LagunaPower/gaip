@@ -269,19 +269,58 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          mapfile -t run_ids < <(
-            gh api --paginate               -H "Accept: application/vnd.github+json"               "/repos/$GH_REPO/actions/workflows/ci.yaml/runs?per_page=100"               --jq '.workflow_runs[].id'
+          mapfile -t runs < <(
+            gh api --paginate \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/$GH_REPO/actions/workflows/ci.yaml/runs?per_page=100" \
+              --jq '.workflow_runs[] | [.id, .run_number, .status, (.conclusion // "en_cours")] | @tsv'
           )
-          total=${#run_ids[@]}
+
+          total=${#runs[@]}
+          keep=$(( total < 30 ? total : 30 ))
           echo "Exécutions CI trouvées : $total"
-          if (( total <= 30 )); then
+
+          if (( total > 30 )); then
+            to_delete=$((total - 30))
+            echo "Suppression de $to_delete ancienne(s) exécution(s) CI."
+            for entry in "${runs[@]:30}"; do
+              read -r run_id run_number status conclusion <<< "$entry"
+              echo "Suppression de CI #$run_number ($conclusion), id=$run_id"
+              gh api --method DELETE \
+                -H "Accept: application/vnd.github+json" \
+                "/repos/$GH_REPO/actions/runs/$run_id"
+            done
+          else
             echo "Aucun nettoyage nécessaire."
-            exit 0
           fi
-          to_delete=$((total - 30))
-          echo "Suppression de $to_delete ancienne(s) exécution(s) CI."
-          for run_id in "${run_ids[@]:30}"; do
-            echo "Suppression de l’exécution CI $run_id"
-            gh api --method DELETE               -H "Accept: application/vnd.github+json"               "/repos/$GH_REPO/actions/runs/$run_id"
+
+          success=0
+          failure=0
+          cancelled=0
+          other=0
+          newest=""
+          oldest=""
+
+          for ((index = 0; index < keep; index++)); do
+            read -r run_id run_number status conclusion <<< "${runs[$index]}"
+            [[ -z "$newest" ]] && newest="$run_number"
+            oldest="$run_number"
+            case "$conclusion" in
+              success)   ((success += 1)) ;;
+              failure)   ((failure += 1)) ;;
+              cancelled) ((cancelled += 1)) ;;
+              *)         ((other += 1)) ;;
+            esac
           done
-          echo "Les 30 exécutions CI les plus récentes sont conservées."
+
+          echo
+          echo "Résumé des exécutions CI conservées :"
+          echo "  Nombre       : $keep"
+          if (( keep > 0 )); then
+            echo "  Plus récente : #$newest"
+            echo "  Plus ancienne: #$oldest"
+          fi
+          echo "  Succès       : $success"
+          echo "  Échecs       : $failure"
+          echo "  Annulées     : $cancelled"
+          echo "  Autres/en cours : $other"

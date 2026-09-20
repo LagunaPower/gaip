@@ -359,7 +359,7 @@ public sealed partial class DesktopTests
         var vlanAvailable = form.Fields.GetLogicalDescendants().OfType<ListBox>()
             .First(list => list.Name == "MulticastVlanSearchAvailable");
 
-        Assert.Equal(1, sourceSelected.Items.Count);
+        Assert.Single(sourceSelected.Items);
         Assert.True(sourceAvailable.Items.Count > 1000);
         sourceAvailable.BringIntoView(); form.UpdateLayout();
         await Until(() => sourceAvailable.GetVisualDescendants().OfType<CheckBox>().Any());
@@ -367,7 +367,7 @@ public sealed partial class DesktopTests
 
         sourceSearch.Text = "SRC-AUDIO";
         await Until(() => sourceAvailable.Items.Count == 1);
-        Assert.Equal(1, sourceSelected.Items.Count);
+        Assert.Single(sourceSelected.Items);
         sourceSelected.BringIntoView(); form.UpdateLayout();
         await Until(() => sourceSelected.GetVisualDescendants().OfType<CheckBox>().Any());
         var source25 = sourceSelected.GetVisualDescendants().OfType<CheckBox>().Single();
@@ -383,8 +383,8 @@ public sealed partial class DesktopTests
         source26.IsChecked = true;
         await Until(() => sourceSelected.Items.Count == 1 && sourceAvailable.Items.Count == 0);
 
-        Assert.Equal(1, vlanSelected.Items.Count);
-        Assert.Equal(1, vlanAvailable.Items.Count);
+        Assert.Single(vlanSelected.Items);
+        Assert.Single(vlanAvailable.Items);
         vlanSearch.Text = "130";
         await Until(() => vlanAvailable.Items.Count == 1);
         vlanSelected.BringIntoView(); form.UpdateLayout();
