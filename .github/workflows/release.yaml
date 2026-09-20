@@ -15,8 +15,33 @@ env:
 
 jobs:
 
+  validate-tag:
+    name: Valider le tag
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      file_version: ${{ steps.version.outputs.file_version }}
+
+    steps:
+      - name: Vérifier vMAJOR.MINOR.PATCH
+        id: version
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Le tag doit respecter vMAJOR.MINOR.PATCH, reçu : $TAG" >&2
+            exit 1
+          fi
+          version="${TAG#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "file_version=$version.0" >> "$GITHUB_OUTPUT"
+
+
   tests:
     name: Tests - ${{ matrix.name }}
+    needs: validate-tag
 
     strategy:
       fail-fast: false
@@ -24,7 +49,6 @@ jobs:
         include:
           - name: Windows
             os: windows-2022
-
           - name: Linux
             os: ubuntu-24.04
 
@@ -32,15 +56,15 @@ jobs:
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Installer .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
-      - name: Restaurer les dépendances
-        run: dotnet restore GAIP.sln
+      - name: Restaurer les dépendances verrouillées
+        run: dotnet restore GAIP.sln --locked-mode
 
       - name: Compiler
         run: dotnet build GAIP.sln -c Release --no-restore
@@ -49,54 +73,29 @@ jobs:
         run: dotnet test GAIP.sln -c Release --no-build
 
 
-  create-release:
-    name: Créer la Release GitHub
-    runs-on: ubuntu-24.04
-    needs: tests
-
-    steps:
-      - name: Récupérer le dépôt
-        uses: actions/checkout@v7
-
-      - name: Créer la Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          gh release create "$TAG" \
-            --verify-tag \
-            --title "G@IP $TAG" \
-            --notes "Code signing policy: https://github.com/LagunaPower/gaip/blob/$TAG/SIGNING.md" \
-            --generate-notes
-
-
   publish-windows:
     name: Publication Windows x64
     runs-on: windows-2022
-    needs: create-release
+    needs:
+      - validate-tag
+      - tests
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Installer .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
-      - name: Déterminer la version
-        id: version
-        shell: pwsh
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          $version = $env:TAG -replace '^v', ''
-          if ($version -notmatch '^\d+\.\d+\.\d+$') {
-            throw "Le tag doit respecter vMAJOR.MINOR.PATCH, reçu: $env:TAG"
-          }
-
-          "version=$version" >> $env:GITHUB_OUTPUT
-          "file_version=$version.0" >> $env:GITHUB_OUTPUT
+      - name: Restaurer les dépendances Windows verrouillées
+        run: >
+          dotnet restore
+          src/GAIP.Desktop/GAIP.Desktop.csproj
+          -r win-x64
+          -p:NuGetLockFilePath=packages.win-x64.lock.json
+          --locked-mode
 
       - name: Publier G@IP Windows standard
         run: >
@@ -105,10 +104,11 @@ jobs:
           -c Release
           -r win-x64
           -p:PublishProfile=Release
-          -p:Version=${{ steps.version.outputs.version }}
-          -p:InformationalVersion=${{ steps.version.outputs.version }}
-          -p:FileVersion=${{ steps.version.outputs.file_version }}
+          -p:Version=${{ needs.validate-tag.outputs.version }}
+          -p:InformationalVersion=${{ needs.validate-tag.outputs.version }}
+          -p:FileVersion=${{ needs.validate-tag.outputs.file_version }}
           -p:IncludeSourceRevisionInInformationalVersion=false
+          --no-restore
 
       - name: Publier G@IP Windows trimmed
         run: >
@@ -117,10 +117,11 @@ jobs:
           -c Release
           -r win-x64
           -p:PublishProfile=ExperimentalTrimmed
-          -p:Version=${{ steps.version.outputs.version }}
-          -p:InformationalVersion=${{ steps.version.outputs.version }}
-          -p:FileVersion=${{ steps.version.outputs.file_version }}
+          -p:Version=${{ needs.validate-tag.outputs.version }}
+          -p:InformationalVersion=${{ needs.validate-tag.outputs.version }}
+          -p:FileVersion=${{ needs.validate-tag.outputs.file_version }}
           -p:IncludeSourceRevisionInInformationalVersion=false
+          --no-restore
 
       - name: Préparer les exécutables pour SignPath
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
@@ -133,7 +134,7 @@ jobs:
       - name: Charger les exécutables non signés
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         id: upload-unsigned-windows
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: gaip-windows-unsigned
           path: signing-input/
@@ -141,7 +142,7 @@ jobs:
 
       - name: Signer les exécutables Windows avec SignPath
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
-        uses: signpath/github-action-submit-signing-request@v3
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
           organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
@@ -153,8 +154,8 @@ jobs:
           wait-for-completion-timeout-in-seconds: 3600
           output-artifact-directory: signing-output
           parameters: |
-            version: "${{ steps.version.outputs.version }}"
-            fileVersion: "${{ steps.version.outputs.file_version }}"
+            version: "${{ needs.validate-tag.outputs.version }}"
+            fileVersion: "${{ needs.validate-tag.outputs.file_version }}"
 
       - name: Vérifier les signatures Authenticode
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
@@ -164,28 +165,22 @@ jobs:
             "signing-output/GAIP-standard.exe",
             "signing-output/GAIP-trimmed.exe"
           )
-
           foreach ($file in $files) {
-            if (-not (Test-Path $file)) {
-              throw "Exécutable signé introuvable: $file"
-            }
-
+            if (-not (Test-Path $file)) { throw "Exécutable signé introuvable: $file" }
             $signature = Get-AuthenticodeSignature $file
             Write-Host "$file : $($signature.Status) - $($signature.SignerCertificate.Subject)"
-
             if ($signature.Status -ne "Valid") {
               throw "Signature Authenticode invalide pour $file : $($signature.Status)"
             }
           }
 
-      - name: Préparer les fichiers Windows à publier
+      - name: Préparer les fichiers Windows
         shell: pwsh
         env:
           SIGNPATH_ENABLED: ${{ vars.SIGNPATH_ENABLED }}
         run: |
           New-Item -ItemType Directory -Force -Path package-standard | Out-Null
           New-Item -ItemType Directory -Force -Path package-trimmed | Out-Null
-
           if ($env:SIGNPATH_ENABLED -eq "true") {
             $standardSource = "signing-output/GAIP-standard.exe"
             $trimmedSource = "signing-output/GAIP-trimmed.exe"
@@ -195,7 +190,6 @@ jobs:
             $standardSource = "artifacts/Release/win-x64/GAIP.exe"
             $trimmedSource = "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe"
           }
-
           Copy-Item $standardSource "package-standard/GAIP.exe"
           Copy-Item $trimmedSource "package-trimmed/GAIP.exe"
 
@@ -205,11 +199,8 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-
-          $standard = "dist/GAIP-$env:TAG-win-x64.zip"
-          Compress-Archive -Path "package-standard/GAIP.exe" -DestinationPath $standard -Force
-          $trimmed = "dist/GAIP-$env:TAG-win-x64-trimmed.zip"
-          Compress-Archive -Path "package-trimmed/GAIP.exe" -DestinationPath $trimmed -Force
+          Compress-Archive -Path "package-standard/GAIP.exe" -DestinationPath "dist/GAIP-$env:TAG-win-x64.zip" -Force
+          Compress-Archive -Path "package-trimmed/GAIP.exe" -DestinationPath "dist/GAIP-$env:TAG-win-x64-trimmed.zip" -Force
 
       - name: Installer WiX Toolset
         shell: pwsh
@@ -223,19 +214,16 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path signing-msi-input | Out-Null
-
           $gaipExe = (Resolve-Path "package-trimmed/GAIP.exe").Path
           $gaipIcon = (Resolve-Path "src/GAIP.Desktop/Assets/GAIP.ico").Path
-
           & $env:WIX_EXE build `
             "packaging/windows/Package.wxs" `
             -arch x64 `
-            -d "Version=${{ steps.version.outputs.version }}" `
+            -d "Version=${{ needs.validate-tag.outputs.version }}" `
             -d "GaipExe=$gaipExe" `
             -d "GaipIcon=$gaipIcon" `
             -pdbtype none `
             -o "signing-msi-input/GAIP.msi"
-
           if (-not (Test-Path "signing-msi-input/GAIP.msi")) {
             throw "Le MSI n'a pas été généré."
           }
@@ -243,7 +231,7 @@ jobs:
       - name: Charger le MSI non signé
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         id: upload-unsigned-msi
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: gaip-windows-msi-unsigned
           path: signing-msi-input/GAIP.msi
@@ -251,7 +239,7 @@ jobs:
 
       - name: Signer le MSI avec SignPath
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
-        uses: signpath/github-action-submit-signing-request@v3
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
           organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
@@ -263,21 +251,17 @@ jobs:
           wait-for-completion-timeout-in-seconds: 3600
           output-artifact-directory: signing-msi-output
           parameters: |
-            version: "${{ steps.version.outputs.version }}"
-            fileVersion: "${{ steps.version.outputs.file_version }}"
+            version: "${{ needs.validate-tag.outputs.version }}"
+            fileVersion: "${{ needs.validate-tag.outputs.file_version }}"
 
       - name: Vérifier la signature Authenticode du MSI
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         shell: pwsh
         run: |
           $file = "signing-msi-output/GAIP.msi"
-          if (-not (Test-Path $file)) {
-            throw "MSI signé introuvable: $file"
-          }
-
+          if (-not (Test-Path $file)) { throw "MSI signé introuvable: $file" }
           $signature = Get-AuthenticodeSignature $file
           Write-Host "$file : $($signature.Status) - $($signature.SignerCertificate.Subject)"
-
           if ($signature.Status -ne "Valid") {
             throw "Signature Authenticode invalide pour le MSI : $($signature.Status)"
           }
@@ -289,7 +273,6 @@ jobs:
           SIGNPATH_ENABLED: ${{ vars.SIGNPATH_ENABLED }}
         run: |
           $destination = "dist/GAIP-$env:TAG-win-x64.msi"
-
           if ($env:SIGNPATH_ENABLED -eq "true") {
             Copy-Item "signing-msi-output/GAIP.msi" $destination
           }
@@ -298,47 +281,37 @@ jobs:
             Copy-Item "signing-msi-input/GAIP.msi" $destination
           }
 
-
-      - name: Ajouter les fichiers Windows à la Release
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          gh release upload $env:TAG `
-            "dist/GAIP-$env:TAG-win-x64.zip" `
-            "dist/GAIP-$env:TAG-win-x64-trimmed.zip" `
-            "dist/GAIP-$env:TAG-win-x64.msi" `
-            --clobber
+      - name: Conserver les fichiers Windows pour la Release
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-windows
+          path: dist/*
+          if-no-files-found: error
 
 
   publish-linux:
     name: Publication Linux x64
     runs-on: ubuntu-24.04
-    needs: create-release
+    needs:
+      - validate-tag
+      - tests
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Installer .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
-      - name: Déterminer la version
-        id: version
-        shell: bash
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          version="${TAG#v}"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Tag invalide: $TAG" >&2
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Restaurer les dépendances Linux verrouillées
+        run: >
+          dotnet restore
+          src/GAIP.Desktop/GAIP.Desktop.csproj
+          -r linux-x64
+          -p:NuGetLockFilePath=packages.linux-x64.lock.json
+          --locked-mode
 
       - name: Publier G@IP Linux standard
         run: >
@@ -347,9 +320,10 @@ jobs:
           -c Release
           -r linux-x64
           -p:PublishProfile=Release
-          -p:Version=${{ steps.version.outputs.version }}
-          -p:InformationalVersion=${{ steps.version.outputs.version }}
+          -p:Version=${{ needs.validate-tag.outputs.version }}
+          -p:InformationalVersion=${{ needs.validate-tag.outputs.version }}
           -p:IncludeSourceRevisionInInformationalVersion=false
+          --no-restore
 
       - name: Publier G@IP Linux trimmed
         run: >
@@ -358,9 +332,10 @@ jobs:
           -c Release
           -r linux-x64
           -p:PublishProfile=ExperimentalTrimmed
-          -p:Version=${{ steps.version.outputs.version }}
-          -p:InformationalVersion=${{ steps.version.outputs.version }}
+          -p:Version=${{ needs.validate-tag.outputs.version }}
+          -p:InformationalVersion=${{ needs.validate-tag.outputs.version }}
           -p:IncludeSourceRevisionInInformationalVersion=false
+          --no-restore
 
       - name: Installer les outils de packaging Linux
         run: |
@@ -369,7 +344,7 @@ jobs:
 
       - name: Construire DEB et RPM à partir du binaire trimmed
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.validate-tag.outputs.version }}
         run: |
           chmod +x packaging/linux/build-packages.sh packaging/linux/gaip
           chmod +x artifacts/ExperimentalTrimmed/linux-x64/GAIP
@@ -377,34 +352,90 @@ jobs:
 
       - name: Vérifier les paquets Linux
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.validate-tag.outputs.version }}
         run: |
           dpkg-deb --info "dist/gaip_${VERSION}_amd64.deb"
           dpkg-deb --contents "dist/gaip_${VERSION}_amd64.deb" | grep -E '/usr/lib/gaip/GAIP$|/usr/bin/gaip$|/usr/share/applications/gaip.desktop$'
           rpm -qip "dist/gaip-${VERSION}-1.x86_64.rpm"
           rpm -qlp "dist/gaip-${VERSION}-1.x86_64.rpm" | grep -E '^/usr/lib/gaip/GAIP$|^/usr/bin/gaip$|^/usr/share/applications/gaip.desktop$'
 
+      - name: Tester l'installation RPM sous AlmaLinux 8
+        env:
+          VERSION: ${{ needs.validate-tag.outputs.version }}
+        run: |
+          docker run --rm             -v "$PWD/dist:/packages:ro"             almalinux:8             bash -lc "
+              set -euo pipefail
+              dnf install -y --nogpgcheck /packages/gaip-${VERSION}-1.x86_64.rpm
+              rpm -q gaip
+              test -x /usr/lib/gaip/GAIP
+              test -x /usr/bin/gaip
+            "
+
       - name: Créer les archives Linux
         env:
           TAG: ${{ github.ref_name }}
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p dist
-
           chmod +x artifacts/Release/linux-x64/GAIP
           tar -C artifacts/Release/linux-x64 -czf "dist/GAIP-$TAG-linux-x64.tar.gz" .
           chmod +x artifacts/ExperimentalTrimmed/linux-x64/GAIP
           tar -C artifacts/ExperimentalTrimmed/linux-x64 -czf "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" .
 
-      - name: Ajouter les fichiers Linux à la Release
+      - name: Conserver les fichiers Linux pour la Release
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-linux
+          path: |
+            dist/GAIP-*.tar.gz
+            dist/*.deb
+            dist/*.rpm
+          if-no-files-found: error
+
+
+  create-release:
+    name: Publier la Release GitHub
+    runs-on: ubuntu-24.04
+    needs:
+      - validate-tag
+      - publish-windows
+      - publish-linux
+
+    steps:
+      - name: Télécharger les fichiers Windows
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: release-windows
+          path: release-assets/windows
+
+      - name: Télécharger les fichiers Linux
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: release-linux
+          path: release-assets/linux
+
+      - name: Créer puis publier la Release
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release upload "$TAG" \
-            "dist/GAIP-$TAG-linux-x64.tar.gz" \
-            "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" \
-            "dist/gaip_${VERSION}_amd64.deb" \
-            "dist/gaip-${VERSION}-1.x86_64.rpm" \
-            --clobber
+          set -euo pipefail
+          mapfile -t files < <(find release-assets -type f -print | sort)
+          if (( ${#files[@]} == 0 )); then
+            echo "Aucun fichier à publier." >&2
+            exit 1
+          fi
+
+          if existing="$(gh release view "$TAG" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
+            if [[ "$existing" == "true" ]]; then
+              echo "Suppression du brouillon résiduel $TAG avant recréation."
+              gh release delete "$TAG" --yes
+            else
+              echo "La Release $TAG existe déjà et est publiée ; arrêt par sécurité." >&2
+              exit 1
+            fi
+          fi
+
+          gh release create "$TAG" "${files[@]}"             --verify-tag             --draft             --title "G@IP $TAG"             --notes "Code signing policy: https://github.com/LagunaPower/gaip/blob/$TAG/SIGNING.md"             --generate-notes
+
+          gh release edit "$TAG" --draft=false

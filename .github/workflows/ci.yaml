@@ -27,7 +27,6 @@ jobs:
         include:
           - name: Windows
             os: windows-2022
-
           - name: Linux
             os: ubuntu-24.04
 
@@ -35,35 +34,18 @@ jobs:
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Installer .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
       - name: Afficher la version .NET
         run: dotnet --info
 
-      - name: Restaurer les dépendances
-        run: dotnet restore GAIP.sln
-
-      - name: Générer les verrouillages NuGet par RID
-        if: ${{ matrix.name == 'Linux' }}
-        shell: bash
-        run: |
-          dotnet restore src/GAIP.Desktop/GAIP.Desktop.csproj -r win-x64 -p:NuGetLockFilePath=packages.win-x64.lock.json --force-evaluate
-          dotnet restore src/GAIP.Desktop/GAIP.Desktop.csproj -r linux-x64 -p:NuGetLockFilePath=packages.linux-x64.lock.json --force-evaluate
-          dotnet restore src/GAIP.Desktop/GAIP.Desktop.csproj -r linux-arm64 -p:NuGetLockFilePath=packages.linux-arm64.lock.json --force-evaluate
-
-      - name: Capturer les fichiers de verrouillage NuGet
-        if: ${{ matrix.name == 'Linux' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: nuget-lockfiles
-          path: |
-            **/packages*.lock.json
-          if-no-files-found: error
+      - name: Restaurer les dépendances verrouillées
+        run: dotnet restore GAIP.sln --locked-mode
 
       - name: Compiler
         run: dotnet build GAIP.sln -c Release --no-restore
@@ -79,12 +61,20 @@ jobs:
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Installer .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
+
+      - name: Restaurer les dépendances Windows verrouillées
+        run: >
+          dotnet restore
+          src/GAIP.Desktop/GAIP.Desktop.csproj
+          -r win-x64
+          -p:NuGetLockFilePath=packages.win-x64.lock.json
+          --locked-mode
 
       - name: Publier G@IP Windows standard
         run: >
@@ -93,6 +83,7 @@ jobs:
           -c Release
           -r win-x64
           -p:PublishProfile=Release
+          --no-restore
 
       - name: Publier G@IP Windows trimmed
         run: >
@@ -105,6 +96,7 @@ jobs:
           -p:InformationalVersion=0.0.0
           -p:FileVersion=0.0.0.0
           -p:IncludeSourceRevisionInInformationalVersion=false
+          --no-restore
 
       - name: Vérifier les exécutables
         shell: pwsh
@@ -113,11 +105,8 @@ jobs:
             "artifacts/Release/win-x64/GAIP.exe",
             "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe"
           )
-
           foreach ($file in $files) {
-            if (-not (Test-Path $file)) {
-              throw "Exécutable introuvable: $file"
-            }
+            if (-not (Test-Path $file)) { throw "Exécutable introuvable: $file" }
             Get-Item $file | Select-Object Name, Length, FullName | Format-List
           }
 
@@ -135,7 +124,6 @@ jobs:
           New-Item -ItemType Directory -Force -Path artifacts/Packaging | Out-Null
           $gaipExe = (Resolve-Path "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe").Path
           $gaipIcon = (Resolve-Path "src/GAIP.Desktop/Assets/GAIP.ico").Path
-
           & $env:WIX_EXE build `
             "packaging/windows/Package.wxs" `
             -arch x64 `
@@ -144,24 +132,22 @@ jobs:
             -d "GaipIcon=$gaipIcon" `
             -pdbtype none `
             -o "artifacts/Packaging/GAIP-ci-win-x64.msi"
-
           if (-not (Test-Path "artifacts/Packaging/GAIP-ci-win-x64.msi")) {
             throw "MSI de validation introuvable"
           }
-
           Get-Item "artifacts/Packaging/GAIP-ci-win-x64.msi" |
             Select-Object Name, Length, FullName |
             Format-List
 
       - name: Publier l'artefact Windows standard
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: GAIP-win-x64
           path: artifacts/Release/win-x64/
           if-no-files-found: error
 
       - name: Publier les artefacts Windows de packaging
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: GAIP-win-x64-packaging
           path: |
@@ -177,12 +163,20 @@ jobs:
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Installer .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
+
+      - name: Restaurer les dépendances Linux verrouillées
+        run: >
+          dotnet restore
+          src/GAIP.Desktop/GAIP.Desktop.csproj
+          -r linux-x64
+          -p:NuGetLockFilePath=packages.linux-x64.lock.json
+          --locked-mode
 
       - name: Publier G@IP Linux standard
         run: >
@@ -191,6 +185,7 @@ jobs:
           -c Release
           -r linux-x64
           -p:PublishProfile=Release
+          --no-restore
 
       - name: Publier G@IP Linux trimmed
         run: >
@@ -202,6 +197,7 @@ jobs:
           -p:Version=0.0.0
           -p:InformationalVersion=0.0.0
           -p:IncludeSourceRevisionInInformationalVersion=false
+          --no-restore
 
       - name: Vérifier les exécutables
         run: |
@@ -219,21 +215,30 @@ jobs:
           chmod +x packaging/linux/build-packages.sh packaging/linux/gaip
           chmod +x artifacts/ExperimentalTrimmed/linux-x64/GAIP
           packaging/linux/build-packages.sh 0.0.0 artifacts/ExperimentalTrimmed/linux-x64 artifacts/Packaging
-
           dpkg-deb --info artifacts/Packaging/gaip_0.0.0_amd64.deb
           dpkg-deb --contents artifacts/Packaging/gaip_0.0.0_amd64.deb | grep -E '/usr/lib/gaip/GAIP$|/usr/bin/gaip$|/usr/share/applications/gaip.desktop$'
           rpm -qip artifacts/Packaging/gaip-0.0.0-1.x86_64.rpm
           rpm -qlp artifacts/Packaging/gaip-0.0.0-1.x86_64.rpm | grep -E '^/usr/lib/gaip/GAIP$|^/usr/bin/gaip$|^/usr/share/applications/gaip.desktop$'
 
+      - name: Tester l'installation RPM sous AlmaLinux 8
+        run: |
+          docker run --rm             -v "$PWD/artifacts/Packaging:/packages:ro"             almalinux:8             bash -lc '
+              set -euo pipefail
+              dnf install -y --nogpgcheck /packages/gaip-0.0.0-1.x86_64.rpm
+              rpm -q gaip
+              test -x /usr/lib/gaip/GAIP
+              test -x /usr/bin/gaip
+            '
+
       - name: Publier l'artefact Linux standard
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: GAIP-linux-x64
           path: artifacts/Release/linux-x64/
           if-no-files-found: error
 
       - name: Publier les artefacts Linux de packaging
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: GAIP-linux-x64-packaging
           path: |
@@ -241,6 +246,7 @@ jobs:
             artifacts/Packaging/*.deb
             artifacts/Packaging/*.rpm
           if-no-files-found: error
+
 
   cleanup-runs:
     name: Nettoyage des anciennes exécutions CI
@@ -263,26 +269,19 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-
           mapfile -t run_ids < <(
             gh api --paginate               -H "Accept: application/vnd.github+json"               "/repos/$GH_REPO/actions/workflows/ci.yaml/runs?per_page=100"               --jq '.workflow_runs[].id'
           )
-
           total=${#run_ids[@]}
           echo "Exécutions CI trouvées : $total"
-
           if (( total <= 30 )); then
             echo "Aucun nettoyage nécessaire."
             exit 0
           fi
-
           to_delete=$((total - 30))
           echo "Suppression de $to_delete ancienne(s) exécution(s) CI."
-
           for run_id in "${run_ids[@]:30}"; do
             echo "Suppression de l’exécution CI $run_id"
             gh api --method DELETE               -H "Accept: application/vnd.github+json"               "/repos/$GH_REPO/actions/runs/$run_id"
           done
-
           echo "Les 30 exécutions CI les plus récentes sont conservées."
-

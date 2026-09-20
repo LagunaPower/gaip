@@ -22,7 +22,9 @@ Les icônes Linux et `install-desktop.sh` sont des fichiers facultatifs d’int�
 
 ## Paquets installables
 
-Le workflow de Release produit aussi trois paquets installables, tous construits à partir de la publication **ExperimentalTrimmed** :
+Le workflow de Release valide d’abord un tag strict `vMAJOR.MINOR.PATCH`, exécute les tests, construit séparément les artefacts Windows et Linux, puis ne crée la Release GitHub qu’après réussite complète de ces jobs. Les fichiers sont d’abord attachés à une Release en brouillon ; celle-ci n’est rendue publique qu’une fois la création et l’attachement de tous les artefacts terminés.
+
+Il produit aussi trois paquets installables, tous construits à partir de la publication **ExperimentalTrimmed** :
 
 - Windows x64 : `GAIP-vX.Y.Z-win-x64.msi`, construit avec WiX Toolset 6.0.2 ;
 - Debian/Ubuntu amd64 : `gaip_X.Y.Z_amd64.deb` ;
@@ -30,9 +32,13 @@ Le workflow de Release produit aussi trois paquets installables, tous construits
 
 Le MSI installe l’application directement dans `Program Files\G@IP`, crée un raccourci dans le menu Démarrer et prend en charge les mises à niveau majeures. Les paquets Linux installent le binaire autonome sous `/usr/lib/gaip/GAIP`, le lanceur `/usr/bin/gaip`, l’entrée de menu et les icônes hicolor.
 
-Les sources de packaging sont sous `packaging/`. Le script Linux vérifie les prérequis de construction et le workflow inspecte le contenu des DEB/RPM avant publication. Les Releases ne génèrent pas de fichiers `.sha256` séparés.
+Les sources de packaging sont sous `packaging/`. Le script Linux vérifie les prérequis de construction et le workflow inspecte le contenu des DEB/RPM avant publication. Le RPM généré est en plus installé réellement avec `dnf install` dans un conteneur AlmaLinux 8, puis le paquet et les exécutables installés sont contrôlés. Les Releases ne génèrent pas de fichiers `.sha256` séparés.
 
 Lorsque SignPath est activé, le MSI est construit à partir de l’exécutable trimmed déjà signé, puis le MSI lui-même est soumis à une seconde signature Authenticode. La configuration correspondante est `.signpath/artifact-configurations/windows-msi.xml`.
+
+## Reproductibilité des builds
+
+Le SDK est fixé par `global.json` à **10.0.401** avec `rollForward=disable`. Les dépendances NuGet sont verrouillées par des `packages.lock.json` génériques pour la solution et par des fichiers `packages.<RID>.lock.json` pour les publications `win-x64`, `linux-x64` et la préparation `linux-arm64`. Les workflows utilisent `dotnet restore --locked-mode` et les actions GitHub tierces sont référencées par leur SHA de commit, avec la version lisible conservée en commentaire.
 
 ## Dépendances de développement
 
@@ -54,7 +60,7 @@ Quand elle est activée, le workflow :
 1. dérive la version du tag `vMAJOR.MINOR.PATCH` et l’intègre dans les métadonnées PE ;
 2. publie les deux exécutables Windows ;
 3. charge les exécutables non signés comme artefact GitHub Actions ;
-4. soumet cet artefact à `signpath/github-action-submit-signing-request@v3` ;
+4. soumet cet artefact à l’action SignPath épinglée sur le SHA correspondant à la version v3 ;
 5. attend le résultat signé et vérifie localement que les deux signatures Authenticode sont valides ;
 6. construit les ZIP uniquement à partir des exécutables signés.
 

@@ -44,15 +44,15 @@ La configuration peut être exportée en JSON depuis la fenêtre Configuration a
 
 ## CSV
 
-UTF-8, BOM en export, séparateur configurable (`;` par défaut). Guillemets et échappements CSV, LF/CRLF. Les valeurs métier multilignes sont refusées.
+UTF-8, BOM en export, séparateur configurable (`;` par défaut). Guillemets et échappements CSV, LF/CRLF. Les champs texte métier libres restent monolignes ; `sources` et `vlans` de `multicast.csv` utilisent explicitement des cellules multilignes.
 
 `vlans.csv` : `site_code;site_name;vid;vlan_name;vlan_description;cidr;gateway;gateway_comment`.
 
 `addresses.csv` : `site_code;vid;ip;hostname;description`.
 
-`multicast.csv` : `multicast_address;group_name;group_description;port;content;flow_description;sources;vlans`. Plusieurs sources ou VLAN sont séparés par `|` dans leur champ ; les VLAN sont référencés sous la forme `SITE/VID`.
+`multicast.csv` : `multicast_address;group_name;group_description;port;content;flow_description;sources;vlans`. Les sources sont écrites une par ligne dans leur cellule. Les VLAN sont écrits un par ligne sous la forme `SITE/VID — NOM_DU_VLAN`. Les nouveaux exports n’utilisent pas `|` ; l’import conserve uniquement une tolérance de compatibilité pour les anciens fichiers qui l’utilisaient. Un groupe sans flux est exporté sur une ligne avec ses métadonnées et des champs de flux vides.
 
-L’import VLAN crée les sites manquants ; pour un site existant son nom est conservé. Les VLAN sont créés/mis à jour par clé site/VID en conservant les IP. Un import VLAN ne peut pas modifier ou retirer le CIDR d’un VLAN qui possède déjà des IP attribuées. L’import IP crée/met à jour l’attribution du VLAN. L’import multicast crée/met à jour les groupes par adresse et les flux par couple adresse/port ; les IP sources et références `SITE/VID` doivent déjà exister. Doublons dans un fichier refusés, aucune suppression des lignes absentes. L’aperçu affiche toutes les erreurs détectées ; revalidation sur la base courante à la publication. Une erreur empêche tout le fichier.
+L’import VLAN crée les sites manquants ; pour un site existant son nom est conservé. Les VLAN sont créés/mis à jour par clé site/VID en conservant les IP. Un import VLAN ne peut pas modifier ou retirer le CIDR d’un VLAN qui possède déjà des IP attribuées. L’import IP crée/met à jour l’attribution du VLAN. L’import multicast crée/met à jour les groupes par adresse et les flux par couple adresse/port ; une même adresse peut donc héberger plusieurs flux de natures différentes sur des ports distincts. Les IP sources et références `SITE/VID` doivent déjà exister. Les lignes répétant une même adresse doivent conserver exactement le même nom et la même description de groupe ; toute contradiction est refusée. Doublons dans un fichier refusés, aucune suppression des lignes absentes. L’aperçu affiche toutes les erreurs détectées ; revalidation sur la base courante à la publication. Une erreur empêche tout le fichier.
 
 L’export complet écrit les trois CSV ; les passerelles restent dans le fichier VLAN. L’export contextuel d’un VLAN reste limité à `vlans.csv` et `addresses.csv`. Ce format n’est pas une sauvegarde intégrale du modèle.
 

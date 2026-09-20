@@ -37,6 +37,10 @@ Base centrale validée avant copie. Le cache partagé contient `gaip-data.json`,
 
 Restauration : sous la garde filesystem, validation du JSON, du journal et de leurs hashes, refus si `gaip-data.json`, `history.jsonl` ou `edit.lock` existe. Les sauvegardes existantes sont laissées intactes ; la présence d’une sauvegarde standard de révision supérieure au cache bloque la restauration automatique. `history.jsonl` est créé et vérifié avant publication de `gaip-data.json` ; aucune entrée artificielle de restauration n’est ajoutée au journal restauré.
 
+## Chaîne de build
+
+Le SDK de construction est fixé à .NET 10.0.401. Les restaurations CI et Release utilisent les fichiers de verrouillage NuGet versionnés en mode `--locked-mode`, avec des variantes par RID pour les publications autonomes. Les actions GitHub utilisées par les workflows sont épinglées par SHA. La Release publique est créée seulement après validation du tag, tests, publications et packaging ; le RPM x86_64 est installé réellement sous AlmaLinux 8 avant qu’un artefact puisse être publié.
+
 ## Linux
 
 Les publications x64 sélectionnent les packages Avalonia par RID : Win32 pour Windows, X11 et Wayland pour Linux, Skia et HarfBuzz dans les deux cas. `Program` configure les mêmes services que les branches de `UsePlatformDetect()` ; les compilations sans RID conservent cette méthode. Linux : ajout de `UseWayland()` uniquement si `XDG_SESSION_TYPE=wayland` et si `GAIP_USE_X11` n’est pas `1`. `WAYLAND_DISPLAY` seul est ignoré (cas WSLg) ; sinon X11/XWayland. Le package Wayland 12.1, expérimental, reste présent dans Linux. Development reste autonome à fichiers séparés ; Release autonome en single-file compressé, sans trimming, ReadyToRun, PDB ni DesignerSupport. Un profil ExperimentalTrimmed séparé pour Windows x64 et Linux x64 active le trimming complet sans NativeAOT. Les sérialisations utilisent des contextes JSON générés ; leur format reste compatible avec les fichiers existants. Voir `PUBLICATION.md`.
