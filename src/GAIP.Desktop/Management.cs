@@ -188,19 +188,53 @@ public sealed partial class MainWindow
         var title = vlanId is null ? "Historique · 1 000 dernières actions" : $"Historique · {VlanLabel(vlanId.Value)} · 1 000 dernières actions liées";
         var form = new FormWindow(title, "Fermer", 920);
         if (lines.Count == 0) form.Fields.Children.Add(Ui.Text("Aucune action enregistrée."));
-        foreach (var line in lines)
+        else
         {
-            try
+            var search = Ui.Input("", "Recherche sur date, révision, action, cible, utilisateur et détails", 300);
+            search.Name = "HistorySearch";
+            var count = Ui.Text("", 11);
+            form.Fields.Children.Add(Ui.SearchField(search, "Rechercher dans l’historique"));
+            form.Fields.Children.Add(count);
+            var rows = new List<(Control Control, string SearchText)>();
+
+            foreach (var line in lines)
             {
-                var entry = JsonSerializer.Deserialize(line, StorageJsonContext.Default.AuditEntry)!;
-                var detail = new Expander
+                try
                 {
-                    Header = $"{entry.Date.LocalDateTime:g} · r{entry.Revision} · {entry.Action} {entry.ObjectType} {entry.Target} · {entry.User} / {entry.Machine}",
-                    Content = new TextBox { Text = HistoryDetails(entry), IsReadOnly = true, AcceptsReturn = true, MaxHeight = 300 }
-                };
-                form.Fields.Children.Add(detail);
+                    var entry = JsonSerializer.Deserialize(line, StorageJsonContext.Default.AuditEntry)!;
+                    var header = $"{entry.Date.LocalDateTime:g} · r{entry.Revision} · {entry.Action} {entry.ObjectType} {entry.Target} · {entry.User} / {entry.Machine}";
+                    var details = HistoryDetails(entry);
+                    var detail = new Expander
+                    {
+                        Header = header,
+                        Content = new TextBox { Text = details, IsReadOnly = true, AcceptsReturn = true, MaxHeight = 300 }
+                    };
+                    rows.Add((detail, $"{entry.Date:O} {header} {details}"));
+                    form.Fields.Children.Add(detail);
+                }
+                catch (JsonException)
+                {
+                    var invalid = Ui.Text("Ligne d’historique incomplète ou illisible : " + line);
+                    rows.Add((invalid, line));
+                    form.Fields.Children.Add(invalid);
+                }
             }
-            catch (JsonException) { form.Fields.Children.Add(Ui.Text("Ligne d’historique incomplète ou illisible : " + line)); }
+
+            void ApplyFilter()
+            {
+                var terms = (search.Text ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var visible = 0;
+                foreach (var row in rows)
+                {
+                    var match = terms.All(term => row.SearchText.Contains(term, StringComparison.OrdinalIgnoreCase));
+                    row.Control.IsVisible = match;
+                    if (match) visible++;
+                }
+                count.Text = terms.Length == 0 ? $"{rows.Count} action(s)" : $"{visible} résultat(s) sur {rows.Count}";
+            }
+
+            search.TextChanged += (_, _) => ApplyFilter();
+            ApplyFilter();
         }
         await form.ShowDialog<bool>(this);
     }

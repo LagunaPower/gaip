@@ -21,6 +21,22 @@ public sealed class StorageTests
     }
     [Fact]
     public void Sha256MatchesKnownVector() => Assert.Equal("BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD", JsonData.Hash(Encoding.UTF8.GetBytes("abc")));
+    [Fact]
+    public void TechnicalGuardLivesUnderGaipDirectoryAndMigratesLegacyFile()
+    {
+        using var temp = new TempDirectory();
+        var legacy = Path.Combine(temp.Path, ".gaip-io.guard");
+        File.WriteAllBytes(legacy, []);
+        var repo = temp.Repository();
+        repo.Initialize(Example());
+
+        var technicalRoot = Path.Combine(temp.Path, ".gaip");
+        Assert.True(Directory.Exists(technicalRoot));
+        Assert.True(File.Exists(Path.Combine(technicalRoot, "io.guard")));
+        Assert.False(File.Exists(legacy));
+        if (OperatingSystem.IsWindows())
+            Assert.True(File.GetAttributes(technicalRoot).HasFlag(FileAttributes.Hidden));
+    }
     [Theory]
     [InlineData("{}")][InlineData("{\"sites\":[]}")][InlineData("{invalid")]
     public void CorruptOrIncompleteJsonRejected(string text) => Assert.ThrowsAny<Exception>(() => JsonData.Read(Encoding.UTF8.GetBytes(text)));

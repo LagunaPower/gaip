@@ -224,6 +224,41 @@ public sealed partial class DesktopTests
     }
 
     [AvaloniaFact]
+    public async Task HistorySearchFiltersHeadersAndChangeDetails()
+    {
+        using var temp = new TempDirectory();
+        var data = temp.Sub("data");
+        var local = temp.Sub("data/local");
+        var repo = new GAIP.Storage.FileRepository(local, "test", "pc");
+        var snapshot = repo.Initialize(TestData.Example());
+        var changed = GAIP.Storage.JsonData.Clone(snapshot.Data);
+        changed.Sites[0].Description = "Premier changement";
+        snapshot = repo.Commit(changed, snapshot.Hash, null, "Modification", "Site", "LEVANT").Snapshot;
+        changed = GAIP.Storage.JsonData.Clone(snapshot.Data);
+        TestData.Subnet(changed).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRV-SEARCH" });
+        repo.Commit(changed, snapshot.Hash, null, "Attribution", "IP", "10.20.120.25");
+
+        var main = new MainWindow(data, temp.Sub("config")); main.Show(); await UntilReady(main);
+        Click(Button(main, "Historique")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        var form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        var search = form.Fields.GetLogicalDescendants().OfType<TextBox>().Single(t => t.Name == "HistorySearch");
+        var entries = form.Fields.GetLogicalDescendants().OfType<Expander>().ToArray();
+        Assert.Equal(2, entries.Length);
+
+        search.Text = "SRV-SEARCH";
+        await Until(() => entries.Count(e => e.IsVisible) == 1 &&
+            (entries.Single(e => e.IsVisible).Header as string)?.Contains("Attribution", StringComparison.Ordinal) == true);
+
+        search.Text = "Modification LEVANT";
+        await Until(() => entries.Count(e => e.IsVisible) == 1 &&
+            (entries.Single(e => e.IsVisible).Header as string)?.Contains("Modification", StringComparison.Ordinal) == true);
+
+        search.Text = "";
+        await Until(() => entries.All(e => e.IsVisible));
+        form.Close(false); main.Close(); await Until(() => !main.IsVisible);
+    }
+
+    [AvaloniaFact]
     public async Task ConfigurationMovesLocalToSharedThenEmptyLocalWithBackup()
     {
         using var temp = new TempDirectory(); var data = temp.Sub("data"); var configRoot = temp.Sub("config"); var central = temp.Sub("central");

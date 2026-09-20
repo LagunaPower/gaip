@@ -13,7 +13,7 @@ GAIP.Tests → ces projets + Avalonia.Headless.XUnit
 
 ## Concurrence
 
-`edit.lock` représente un bail d’écriture. Dans le parcours UI normal, ce bail est très court : actualisation, acquisition juste avant l’enregistrement, publication, puis libération immédiate. `.gaip-io.guard` est une garde technique ouverte avec `FileShare.None` lors d’une publication, acquisition, libération forcée ou heartbeat. Le fichier reste présent : sa suppression pourrait créer deux groupes de clients sur des inodes différents. Les handles sont relâchés à la fin de l’opération ou du processus. Attente maximale de garde : 5 s.
+`edit.lock` représente un bail d’écriture. Dans le parcours UI normal, ce bail est très court : actualisation, acquisition juste avant l’enregistrement, publication, puis libération immédiate. `.gaip/io.guard` est la garde technique ouverte avec `FileShare.None` lors d’une publication, acquisition, libération forcée ou heartbeat. Le fichier reste présent dans le sous-dossier technique `.gaip`, masqué sous Windows lorsque possible. Au premier accès, l’ancien `.gaip-io.guard` n’est supprimé qu’après prise exclusive ; s’il est encore utilisé, l’opération est refusée. Les clients partageant un même stockage doivent donc être mis à jour ensemble. Les handles sont relâchés à la fin de l’opération ou du processus. Attente maximale de garde : 5 s.
 
 Acquisition UI : actualisation cache → garde → absence de verrou → hash central attendu → création `CreateNew` → relecture central → publication → libération. Le formulaire reste ouvert si l’acquisition ou la validation échoue. Publication et force-unlock partagent la garde : une écriture déjà engagée peut terminer avant la libération forcée ; aucune avec l’ancien ID ne peut réussir après.
 

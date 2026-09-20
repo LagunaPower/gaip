@@ -42,6 +42,6 @@ Révision initiale 0, +1 par publication. Le SHA-256 compare les octets complets
 - `backup/gaip-data_<UTC>_rev<révision>_<suffixe>.json` : octets exacts avant publication.
 - `cache/gaip-data.json` et `cache/history.jsonl` : copie locale de récupération en mode partagé. `cache/cache.info` : `hash`, `historyHash`, `source` absolue, `checkedAt`.
 - `config.json` : `mode` (`Local`/`Shared`), `sharedPath`, `syncSeconds` (5–86400, défaut 60), `backupCount` (1–10000, défaut 30), `csvSeparator` (un caractère, défaut `;`), `theme` (`System`/`Light`/`Dark`).
-- `.gaip-io.guard` : garde technique vide, permanente, sans donnée métier.
+- `.gaip/io.guard` : garde technique vide, permanente, sans donnée métier. Le dossier `.gaip` est caché sous Windows lorsque possible ; l’ancien `.gaip-io.guard` est supprimé lors de la transition uniquement s’il n’est plus utilisé.
 
 Les CSV imposés ne représentent pas tous les champs JSON. Voir `SPECIFICATIONS.md` pour leurs règles ; ne pas les utiliser comme sauvegarde intégrale.

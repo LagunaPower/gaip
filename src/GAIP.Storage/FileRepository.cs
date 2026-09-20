@@ -30,15 +30,47 @@ public sealed class FileRepository(string root, string user, string machine, int
     public string HistoryPath => Path.Combine(Root, "history.jsonl");
     public string BackupPath => Path.Combine(Root, "backup");
 
-    // Stable coordination inode. Never delete this file: removal could split contenders
-    // into different locks. It protects force-unlock vs commit, including on Unix.
-    private FileStream Guard()
+    // Stable coordination inode stored outside the business files. Never delete io.guard:
+    // removal while clients are active could split contenders into different locks.
+    private string TechnicalRoot => Path.Combine(Root, ".gaip");
+    private string GuardPath => Path.Combine(TechnicalRoot, "io.guard");
+
+    private void PrepareGuardLayout()
     {
         if (!Directory.Exists(Root)) throw new DirectoryNotFoundException($"Stockage inaccessible : {Root}");
+        Directory.CreateDirectory(TechnicalRoot);
+        if (OperatingSystem.IsWindows())
+        {
+            try { File.SetAttributes(TechnicalRoot, File.GetAttributes(TechnicalRoot) | FileAttributes.Hidden); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or PlatformNotSupportedException) { }
+        }
+
+        var legacyPath = Path.Combine(Root, ".gaip-io.guard");
+        if (!File.Exists(legacyPath)) return;
         var deadline = DateTime.UtcNow.AddSeconds(5);
         while (true)
         {
-            try { return new(Path.Combine(Root, ".gaip-io.guard"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
+            try
+            {
+                using (new FileStream(legacyPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
+                File.Delete(legacyPath);
+                return;
+            }
+            catch (IOException) when (DateTime.UtcNow < deadline) { Thread.Sleep(50); }
+            catch (IOException ex)
+            {
+                throw new IOException("L’ancienne garde .gaip-io.guard est encore utilisée. Fermez ou mettez à jour les anciens clients G@IP avant de réessayer.", ex);
+            }
+        }
+    }
+
+    private FileStream Guard()
+    {
+        PrepareGuardLayout();
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (true)
+        {
+            try { return new(GuardPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
             catch (IOException) when (DateTime.UtcNow < deadline) { Thread.Sleep(50); }
         }
     }
