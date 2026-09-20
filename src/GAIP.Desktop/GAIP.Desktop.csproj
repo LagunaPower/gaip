@@ -4,10 +4,10 @@
     <AssemblyName>GAIP</AssemblyName>
     <AssemblyTitle>G@IP — Gestion d’Adresses IP</AssemblyTitle>
     <Product>G@IP — Gestion d’Adresses IP</Product>
-    <Company>LagunaPower</Company>
-    <Authors>LagunaPower</Authors>
+    <Company>Yannick D.</Company>
+    <Authors>Yannick D.</Authors>
     <Description>Gestion de sites, VLAN et plans IPv4</Description>
-    <Copyright>Copyright © LagunaPower 2026</Copyright>
+    <Copyright>Copyright © Yannick D. 2026</Copyright>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/GAIP.ico</ApplicationIcon>
     <PublishTrimmed Condition="'$(PublishTrimmed)' == ''">false</PublishTrimmed>
