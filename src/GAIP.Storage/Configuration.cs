@@ -20,7 +20,7 @@ public sealed class AppConfig
             throw new InvalidDataException("Indiquez un chemin partagé absolu.");
         if (SyncSeconds is < 5 or > 86400) throw new InvalidDataException("Synchronisation : entre 5 et 86400 secondes.");
         if (BackupCount is < 1 or > 10000) throw new InvalidDataException("Sauvegardes : entre 1 et 10000.");
-        if (MaxHomeColumns is < 1 or > 6) throw new InvalidDataException("Colonnes de l’accueil : entre 1 et 6.");
+        if (MaxHomeColumns is < 1 or > 8) throw new InvalidDataException("Colonnes de l’accueil : entre 1 et 8.");
         if (CsvSeparator.Length != 1 || CsvSeparator[0] is '"' or '\r' or '\n' or '\0')
             throw new InvalidDataException("Le séparateur CSV doit être un caractère autre que guillemet ou retour à la ligne.");
     }

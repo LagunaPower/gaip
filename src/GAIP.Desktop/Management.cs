@@ -12,16 +12,17 @@ public sealed partial class MainWindow
 {
     private async Task Configure()
     {
-        var form = new FormWindow("Configuration", width: 720);
-        var mode = new ComboBox { ItemsSource = new[] { "Personnel / Local", "Réseau / Partagé" }, SelectedIndex = (int)_config.Mode };
-        var path = Ui.Input(_config.SharedPath, "Chemin absolu du dossier partagé", 2000);
-        var interval = new NumericUpDown { Minimum = 5, Maximum = 86400, Value = _config.SyncSeconds, FormatString = "0" };
-        var backups = new NumericUpDown { Minimum = 1, Maximum = 10000, Value = _config.BackupCount, FormatString = "0" };
-        var separator = Ui.Input(_config.CsvSeparator, ";", 1);
-        var theme = new ComboBox { ItemsSource = new[] { "Système", "Clair", "Sombre" }, SelectedIndex = (int)_config.Theme };
-        var homeColumns = new NumericUpDown { Minimum = 1, Maximum = 6, Value = _config.MaxHomeColumns, FormatString = "0" };
-        var migration = new ComboBox { ItemsSource = new[] { "Utiliser uniquement une base réseau existante", "Initialiser depuis la base actuelle si aucune base réseau n’existe" }, SelectedIndex = 0 };
-        var localChoice = new ComboBox { ItemsSource = new[] { "Copier la base réseau / cache actuel", "Créer une base locale vide" }, SelectedIndex = 0 };
+        var form = new FormWindow("Configuration", width: 760);
+        var mode = new ComboBox { Name = "StorageMode", ItemsSource = new[] { "Personnel / Local", "Réseau / Partagé" }, SelectedIndex = (int)_config.Mode };
+        var path = Ui.Input(_config.SharedPath, "Chemin absolu du dossier partagé", 2000); path.Name = "SharedPath";
+        var interval = new NumericUpDown { Name = "SyncSeconds", Minimum = 5, Maximum = 86400, Value = _config.SyncSeconds, FormatString = "0" };
+        var backups = new NumericUpDown { Name = "BackupCount", Minimum = 1, Maximum = 10000, Value = _config.BackupCount, FormatString = "0" };
+        var separator = Ui.Input(_config.CsvSeparator, ";", 1); separator.Name = "CsvSeparator";
+        var theme = new ComboBox { Name = "Theme", ItemsSource = new[] { "Système", "Clair", "Sombre" }, SelectedIndex = (int)_config.Theme };
+        var homeColumns = new NumericUpDown { Name = "MaxHomeColumns", Minimum = 1, Maximum = 8, Value = _config.MaxHomeColumns, FormatString = "0" };
+        var migration = new ComboBox { Name = "SharedMigration", ItemsSource = new[] { "Utiliser uniquement une base réseau existante", "Initialiser depuis la base actuelle si aucune base réseau n’existe" }, SelectedIndex = 0 };
+        var localChoice = new ComboBox { Name = "LocalMigration", ItemsSource = new[] { "Copier la base réseau / cache actuel", "Créer une base locale vide" }, SelectedIndex = 0 };
+
         AppConfig ReadConfig() => new()
         {
             Mode = (StorageMode)mode.SelectedIndex, SharedPath = path.Text?.Trim() ?? "",
@@ -29,23 +30,38 @@ public sealed partial class MainWindow
             CsvSeparator = separator.Text ?? ";", Theme = (AppTheme)theme.SelectedIndex,
             MaxHomeColumns = (int)(homeColumns.Value ?? 3)
         };
-        form.Add("Mode", mode); form.Add("Dossier partagé", path);
-        form.Fields.Children.Add(Ui.Button("Tester l’accès", async () =>
-        {
-            try
+
+        var storage = Ui.Column(
+            Ui.Field("Mode", mode),
+            Ui.Field("Dossier partagé", path),
+            Ui.Button("Tester l’accès", async () =>
             {
-                var repository = new FileRepository(path.Text ?? "", UserPaths.User, UserPaths.Machine);
-                await Io(repository.TestAccess); form.Error.Text = "Accès en lecture et écriture vérifié.";
-            }
-            catch (Exception ex) { form.Error.Text = ex.Message; }
-        }));
-        form.Add("Lors du passage vers un partage", migration);
-        form.Add("Lors du passage du partagé vers le local", localChoice);
-        form.Add("Synchronisation (secondes)", interval); form.Add("Sauvegardes conservées", backups);
-        form.Add("Séparateur CSV", separator); form.Add("Thème", theme);
-        form.Add("Colonnes maximum sur l’accueil", homeColumns);
-        form.Fields.Children.Add(Ui.Text($"Données locales : {_localRoot}\nConfiguration : {_configRoot}", 11));
-        form.Fields.Children.Add(Ui.Button("Exporter la configuration…", async () =>
+                try
+                {
+                    var repository = new FileRepository(path.Text ?? "", UserPaths.User, UserPaths.Machine);
+                    await Io(repository.TestAccess); form.Error.Text = "Accès en lecture et écriture vérifié.";
+                }
+                catch (Exception ex) { form.Error.Text = ex.Message; }
+            }),
+            Ui.Field("Lors du passage vers un partage", migration),
+            Ui.Field("Lors du passage du partagé vers le local", localChoice),
+            Ui.Field("Synchronisation (secondes)", interval),
+            Ui.Field("Sauvegardes conservées", backups),
+            Ui.Text($"Données locales : {_localRoot}\nConfiguration : {_configRoot}", 11),
+            Ui.Button("Diagnostic / gestion du verrou", () => Run(Diagnostics)));
+
+        var siteOrder = new SiteOrderEditor(Db.Sites) { IsEnabled = CanWrite };
+        var display = Ui.Column(
+            Ui.Field("Thème", theme),
+            Ui.Field("Colonnes maximum sur l’accueil", homeColumns),
+            Ui.Text("Le nombre de colonnes s’adapte automatiquement à la largeur disponible sans dépasser cette limite.", 12),
+            Ui.Text("Ordre d’affichage des sites", 16, true),
+            Ui.Text("Classez les sites par glisser-déposer. L’ordre est enregistré avec les autres réglages de cet onglet.", 12),
+            siteOrder,
+            Ui.Text(CanWrite ? "Le verrou partagé sera pris uniquement si l’ordre des sites a changé." :
+                "Lecture seule : le stockage partagé est actuellement hors ligne.", 12));
+
+        var exportButton = Ui.Button("Exporter la configuration…", async () =>
         {
             try
             {
@@ -65,34 +81,25 @@ public sealed partial class MainWindow
                 form.Error.Text = "Configuration exportée.";
             }
             catch (Exception ex) { form.Error.Text = ex.Message; }
-        }));
-        form.Fields.Children.Add(Ui.Button("Diagnostic / gestion du verrou", () => Run(Diagnostics)));
-        var general = new StackPanel { Spacing = 14 };
-        var generalFields = form.Fields.Children.ToArray(); form.Fields.Children.Clear();
-        foreach (var field in generalFields) general.Children.Add(field);
-        var siteOrder = new SiteOrderEditor(Db.Sites) { IsEnabled = CanWrite };
-        var orderPanel = Ui.Column(Ui.Text("Classez les sites par glisser-déposer, puis enregistrez l’ordre pour l’accueil."), siteOrder,
-            Ui.Text(CanWrite ? "Le verrou partagé sera pris uniquement pendant l’enregistrement de l’ordre." :
-                "Lecture seule : le stockage partagé est actuellement hors ligne.", 12));
-        var tabs = new TabControl { Name = "ConfigurationTabs", ItemsSource = new[]
+        });
+        var data = Ui.Column(Ui.Field("Séparateur CSV", separator), exportButton);
+
+        var tabs = new TabControl
         {
-            new TabItem { Header = "Général", Content = general },
-            new TabItem { Header = "Ordre d’affichage", Content = orderPanel }
-        }, SelectedIndex = 0 };
-        tabs.SelectionChanged += (_, _) =>
-        {
-            form.Save.Content = tabs.SelectedIndex == 1 ? "Enregistrer l’ordre" : "Enregistrer";
-            form.Save.IsEnabled = tabs.SelectedIndex != 1 || (CanWrite && Db.Sites.Count > 1);
+            Name = "ConfigurationTabs",
+            ItemsSource = new[]
+            {
+                new TabItem { Header = "Stockage & synchronisation", Content = storage },
+                new TabItem { Header = "Affichage", Content = display },
+                new TabItem { Header = "Données & export", Content = data }
+            },
+            SelectedIndex = 0
         };
+        tabs.SelectionChanged += (_, _) => form.Save.Content = tabs.SelectedIndex == 1 ? "Enregistrer l’affichage" : "Enregistrer";
         form.Fields.Children.Add(tabs);
+
         form.Submit = async () =>
         {
-            if (tabs.SelectedIndex == 1)
-            {
-                if (siteOrder.HasChanges)
-                    await Save(db => SiteOrdering.Apply(db, siteOrder.OrderedIds), "Ordre d’affichage", "Sites", "Accueil");
-                return;
-            }
             var next = ReadConfig();
             next.Validate();
             var allowInitialize = migration.SelectedIndex == 1;
@@ -131,6 +138,9 @@ public sealed partial class MainWindow
                 return session;
             });
             _config = next; _session = opened; _selectedVlan = null; _selectedSite = null; ApplyTheme(); Render();
+
+            if (tabs.SelectedIndex == 1 && siteOrder.HasChanges)
+                await Save(db => SiteOrdering.Apply(db, siteOrder.OrderedIds), "Ordre d’affichage", "Sites", "Accueil");
         };
         await form.ShowDialog<bool>(this);
     }

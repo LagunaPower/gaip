@@ -163,7 +163,7 @@ public sealed partial class DesktopTests
         }).ToList();
         new GAIP.Storage.FileRepository(local, "test", "pc")
             .Initialize(new GAIP.Core.Database { Sites = sites });
-        GAIP.Storage.UserPaths.SaveConfig(configRoot, new GAIP.Storage.AppConfig { MaxHomeColumns = 6 });
+        GAIP.Storage.UserPaths.SaveConfig(configRoot, new GAIP.Storage.AppConfig { MaxHomeColumns = 8 });
 
         var main = new MainWindow(data, configRoot) { Width = 2800 };
         main.Show();
@@ -171,6 +171,7 @@ public sealed partial class DesktopTests
         var cards = main.GetLogicalDescendants().OfType<Grid>().Single(g => g.Name == "SiteCards");
         await Until(() => cards.ColumnDefinitions.Count == 6);
         Assert.Equal(6, cards.ColumnDefinitions.Count);
+        Assert.Equal(8, main.Session!.Config.MaxHomeColumns);
 
         main.Width = 1320;
         await Until(() => cards.ColumnDefinitions.Count == 2);
@@ -272,17 +273,23 @@ public sealed partial class DesktopTests
         var main = new MainWindow(data, configRoot); main.Show(); await UntilReady(main);
         Click(Button(main, "Configuration")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         var form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
-        var combos = form.Fields.GetLogicalDescendants().OfType<ComboBox>().ToArray();
-        combos[0].SelectedIndex = 1; combos[1].SelectedIndex = 1; combos[3].SelectedIndex = 2;
-        form.Fields.GetLogicalDescendants().OfType<TextBox>().First().Text = central;
+        var tabs = form.Fields.GetLogicalDescendants().OfType<TabControl>().Single(t => t.Name == "ConfigurationTabs");
+        Assert.Equal(new[] { "Stockage & synchronisation", "Affichage", "Données & export" },
+            tabs.Items.Cast<TabItem>().Select(t => t.Header as string).ToArray());
+        form.Fields.GetLogicalDescendants().OfType<ComboBox>().First(c => c.Name == "StorageMode").SelectedIndex = 1;
+        form.Fields.GetLogicalDescendants().OfType<ComboBox>().First(c => c.Name == "SharedMigration").SelectedIndex = 1;
+        form.Fields.GetLogicalDescendants().OfType<ComboBox>().First(c => c.Name == "Theme").SelectedIndex = 2;
+        form.Fields.GetLogicalDescendants().OfType<TextBox>().First(t => t.Name == "SharedPath").Text = central;
         Click(form.Save); await Until(() => main.Session!.Config.Mode == GAIP.Storage.StorageMode.Shared && !form.IsVisible);
         Assert.Single(main.Session!.Data.Sites); Assert.False(main.Session.IsEditing);
         Assert.Equal(GAIP.Storage.AppTheme.Dark, GAIP.Storage.UserPaths.LoadConfig(configRoot).Theme);
         Assert.DoesNotContain(main.GetLogicalDescendants().OfType<Button>(), b => b.Content as string is "Passer en modification" or "Terminer la modification");
         Assert.False(File.Exists(main.Session.Repository.LockPath));
         Click(Button(main, "Configuration")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
-        form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible); combos = form.Fields.GetLogicalDescendants().OfType<ComboBox>().ToArray();
-        combos[0].SelectedIndex = 0; combos[2].SelectedIndex = 1; Click(form.Save);
+        form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        form.Fields.GetLogicalDescendants().OfType<ComboBox>().First(c => c.Name == "StorageMode").SelectedIndex = 0;
+        form.Fields.GetLogicalDescendants().OfType<ComboBox>().First(c => c.Name == "LocalMigration").SelectedIndex = 1;
+        Click(form.Save);
         await Until(() => main.OwnedWindows.OfType<FormWindow>().Count(w => w.IsVisible) == 2);
         Click(main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible).Save);
         await Until(() => main.Session!.Config.Mode == GAIP.Storage.StorageMode.Local && !form.IsVisible);
