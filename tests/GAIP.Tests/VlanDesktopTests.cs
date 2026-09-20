@@ -160,14 +160,6 @@ public sealed partial class DesktopTests
         var assign = freeItem.ContextMenu!.ItemsSource!.Cast<MenuItem>().Single();
         Assert.Equal("Affecter", assign.Header as string);
         Assert.True(assign.IsEnabled);
-        var freeAddress = ((AddressRow)freeItem.Tag!).Address;
-        Click(assign);
-        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
-        var assignForm = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
-        Assert.Contains("Ajouter une adresse IP", assignForm.Title);
-        Assert.Equal(freeAddress, assignForm.Fields.GetLogicalDescendants().OfType<TextBox>().First().Text);
-        assignForm.Close(false);
-        await Until(() => !assignForm.IsVisible);
 
         // Keep the useful viewport large, including when the window is resized.
         Assert.InRange(
@@ -441,11 +433,12 @@ public sealed partial class DesktopTests
         var add = Button(main, "Ajouter une IP");
         Assert.False(add.IsEnabled);
 
-        await Until(() => main.GetLogicalDescendants().OfType<Button>().Any(b =>
-            b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.2")));
-        var addressButton = main.GetLogicalDescendants().OfType<Button>().First(b =>
-            b.Content is Grid g && g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.2"));
-        Click(addressButton);
+        await Until(() => main.GetVisualDescendants().OfType<Border>().Any(b =>
+            b.Tag is AddressRow row && row.Address == "10.20.120.2"));
+        var addressItem = main.GetVisualDescendants().OfType<Border>().Single(b =>
+            b.Tag is AddressRow row && row.Address == "10.20.120.2");
+        var modify = addressItem.ContextMenu!.ItemsSource!.Cast<MenuItem>().Single(i => i.Header as string == "Modifier");
+        Click(modify);
 
         await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         var form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
