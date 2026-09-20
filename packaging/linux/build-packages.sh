@@ -120,6 +120,12 @@ tar -C "$WORK_DIR/source" -czf "$RPM_TOP/SOURCES/gaip-$VERSION.tar.gz" "gaip-$VE
 
 SPEC="$RPM_TOP/SPECS/gaip.spec"
 cat > "$SPEC" <<EOF
+# Binaire .NET single-file : ne jamais le passer à strip (perte du bundle).
+%global debug_package %{nil}
+%global __strip /bin/true
+%global __os_install_post %{nil}
+%global _build_id_links none
+
 Name:           gaip
 Version:        $VERSION
 Release:        1
@@ -137,14 +143,14 @@ Requires:       libstdc++
 Requires:       libicu
 Requires:       tzdata
 Requires:       krb5-libs
-Requires:       libX11
-Requires:       libICE
-Requires:       libSM
-Requires:       fontconfig
-Requires:       wayland-libs
-Requires:       libxkbcommon
-Requires:       mesa-libEGL
-Requires:       mesa-libGL
+Requires:       libX11.so.6()(64bit)
+Requires:       libICE.so.6()(64bit)
+Requires:       libSM.so.6()(64bit)
+Requires:       libfontconfig.so.1()(64bit)
+Requires:       libxkbcommon.so.0()(64bit)
+Requires:       libwayland-client.so.0()(64bit)
+Requires:       libEGL.so.1()(64bit)
+Requires:       libGL.so.1()(64bit)
 
 %description
 G@IP est une application desktop de gestion de sites, VLAN, sous-réseaux
