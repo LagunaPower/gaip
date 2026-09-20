@@ -7,6 +7,7 @@ namespace GAIP.Core;
 public static class ExcelExchange
 {
     private const string MainSheetName = "Sites et VLAN";
+    private const string MulticastSheetName = "Multicast";
     private const int ExcelMaxRows = 1_048_576;
 
     private sealed record NetworkSheet(Site Site, Vlan Vlan, string Name);
@@ -21,6 +22,7 @@ public static class ExcelExchange
         if (errors.Count > 0) throw new ValidationException(errors);
 
         var networks = BuildNetworkSheets(db);
+        var includeMulticast = db.MulticastGroups.Count > 0;
         foreach (var item in networks)
         {
             var network = Ipv4Network.Parse(item.Vlan.Subnet!.Cidr);
@@ -32,14 +34,17 @@ public static class ExcelExchange
         }
 
         using var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true);
-        WriteContentTypes(archive, networks.Count + 1);
+        var sheetCount = networks.Count + 1 + (includeMulticast ? 1 : 0);
+        WriteContentTypes(archive, sheetCount);
         WriteRootRelationships(archive);
-        WriteWorkbook(archive, networks);
-        WriteWorkbookRelationships(archive, networks.Count + 1);
+        WriteWorkbook(archive, networks, includeMulticast);
+        WriteWorkbookRelationships(archive, sheetCount);
         WriteStyles(archive);
         WriteMainWorksheet(archive, db, networks);
+        if (includeMulticast) WriteMulticastWorksheet(archive, 2, db);
+        var firstNetworkSheet = includeMulticast ? 3 : 2;
         for (var i = 0; i < networks.Count; i++)
-            WriteNetworkWorksheet(archive, i + 2, networks[i]);
+            WriteNetworkWorksheet(archive, firstNetworkSheet + i, networks[i]);
     }
 
     private static List<NetworkSheet> BuildNetworkSheets(Database db)
@@ -109,7 +114,7 @@ public static class ExcelExchange
         });
     }
 
-    private static void WriteWorkbook(ZipArchive archive, IReadOnlyList<NetworkSheet> networks)
+    private static void WriteWorkbook(ZipArchive archive, IReadOnlyList<NetworkSheet> networks, bool includeMulticast)
     {
         WriteXml(archive, "xl/workbook.xml", writer =>
         {
@@ -117,8 +122,14 @@ public static class ExcelExchange
             writer.WriteAttributeString("xmlns", "r", null, "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
             writer.WriteStartElement("sheets");
             WriteSheet(MainSheetName, 1, "rId1");
+            var offset = 1;
+            if (includeMulticast)
+            {
+                WriteSheet(MulticastSheetName, 2, "rId2");
+                offset = 2;
+            }
             for (var i = 0; i < networks.Count; i++)
-                WriteSheet(networks[i].Name, i + 2, $"rId{i + 2}");
+                WriteSheet(networks[i].Name, i + offset + 1, $"rId{i + offset + 1}");
             writer.WriteEndElement();
             writer.WriteEndElement();
 
@@ -163,12 +174,14 @@ public static class ExcelExchange
             writer.WriteStartElement("styleSheet", ns);
 
             writer.WriteStartElement("fonts");
-            writer.WriteAttributeString("count", "5");
+            writer.WriteAttributeString("count", "7");
             WriteFont(writer, 11, false, null, false);
             WriteFont(writer, 16, true, "1F4E78", false);
             WriteFont(writer, 11, true, null, false);
             WriteFont(writer, 11, true, "FFFFFF", false);
             WriteFont(writer, 11, false, "0563C1", true);
+            WriteFont(writer, 11, true, "008000", false);
+            WriteFont(writer, 11, true, "C00000", false);
             writer.WriteEndElement();
 
             writer.WriteStartElement("fills");
@@ -201,7 +214,7 @@ public static class ExcelExchange
             WriteXf(writer, 0, 0, 0, false, false);
             writer.WriteEndElement();
 
-            writer.WriteStartElement("cellXfs"); writer.WriteAttributeString("count", "8");
+            writer.WriteStartElement("cellXfs"); writer.WriteAttributeString("count", "10");
             WriteXf(writer, 0, 0, 0, false, false); // 0 default
             WriteXf(writer, 1, 0, 0, true, false);  // 1 title
             WriteXf(writer, 2, 3, 1, true, false);  // 2 label
@@ -210,6 +223,8 @@ public static class ExcelExchange
             WriteXf(writer, 0, 4, 1, false, false); // 5 alternate
             WriteXf(writer, 4, 0, 1, false, false); // 6 hyperlink
             WriteXf(writer, 0, 0, 1, false, false); // 7 meta value
+            WriteXf(writer, 5, 0, 1, true, true);   // 8 multicast présent
+            WriteXf(writer, 6, 0, 1, true, true);   // 9 multicast absent
             writer.WriteEndElement();
 
             writer.WriteStartElement("cellStyles"); writer.WriteAttributeString("count", "1");
@@ -331,6 +346,99 @@ public static class ExcelExchange
                 }
                 writer.WriteEndElement();
             }
+            EndWorksheet(writer);
+        });
+    }
+
+    private static void WriteMulticastWorksheet(ZipArchive archive, int sheetIndex, Database db)
+    {
+        var sites = SiteOrdering.Ordered(db.Sites).ToArray();
+        var siteVlans = sites.ToDictionary(
+            site => site.Id,
+            site => site.Vlans.Select(vlan => vlan.Id).ToHashSet());
+        var vlanLabels = db.Sites
+            .SelectMany(site => site.Vlans.Select(vlan => (vlan.Id, Label: $"{site.Code}/{vlan.Vid}")))
+            .ToDictionary(item => item.Id, item => item.Label);
+        var sourceLabels = db.Sites
+            .SelectMany(site => site.Vlans.SelectMany(vlan => (vlan.Subnet?.Addresses ?? [])
+                .Select(ip => ip)))
+            .ToDictionary(
+                ip => ip.Address,
+                ip => string.IsNullOrWhiteSpace(ip.Hostname) ? ip.Address : $"{ip.Address} — {ip.Hostname}",
+                StringComparer.Ordinal);
+
+        var dataRows = db.MulticastGroups.Sum(group => Math.Max(1, group.Flows.Count));
+        var lastRow = Math.Max(3, dataRows + 3);
+        var lastColumn = 8 + sites.Length;
+        var lastColumnName = CellRef(lastColumn, 1);
+        lastColumnName = lastColumnName[..^1];
+
+        WriteXml(archive, $"xl/worksheets/sheet{sheetIndex}.xml", writer =>
+        {
+            StartWorksheet(writer, $"A1:{lastColumnName}{lastRow}", freezeRows: 3);
+            var widths = new List<double> { 18d, 24d, 34d, 10d, 28d, 38d, 38d, 34d };
+            widths.AddRange(Enumerable.Repeat(14d, sites.Length));
+            WriteColumns(writer, widths);
+
+            writer.WriteStartElement("sheetData");
+
+            writer.WriteStartElement("row"); writer.WriteAttributeString("r", "1"); writer.WriteAttributeString("ht", "24"); writer.WriteAttributeString("customHeight", "1");
+            WriteTextCell(writer, "A1", "G@IP — Multicast", 1);
+            writer.WriteEndElement();
+
+            writer.WriteStartElement("row"); writer.WriteAttributeString("r", "3");
+            var headers = new[] { "Adresse multicast", "Groupe", "Description groupe", "Port", "Contenu", "Description flux", "Sources", "VLAN" };
+            for (var col = 0; col < headers.Length; col++) WriteTextCell(writer, CellRef(col + 1, 3), headers[col], 3);
+            for (var index = 0; index < sites.Length; index++)
+                WriteTextCell(writer, CellRef(9 + index, 3), sites[index].Code, 3);
+            writer.WriteEndElement();
+
+            var row = 4;
+            foreach (var group in db.MulticastGroups.OrderBy(group => Ipv4Network.ParseAddress(group.Address)))
+            {
+                if (group.Flows.Count == 0)
+                {
+                    writer.WriteStartElement("row"); writer.WriteAttributeString("r", row.ToString());
+                    WriteTextCell(writer, $"A{row}", group.Address, 4);
+                    WriteTextCell(writer, $"B{row}", group.Name, 4);
+                    WriteTextCell(writer, $"C{row}", group.Description, 4);
+                    for (var col = 4; col <= lastColumn; col++) WriteTextCell(writer, CellRef(col, row), "", 4);
+                    writer.WriteEndElement();
+                    row++;
+                    continue;
+                }
+
+                foreach (var flow in group.Flows.OrderBy(flow => flow.Port))
+                {
+                    var style = row % 2 == 0 ? 5 : 4;
+                    writer.WriteStartElement("row"); writer.WriteAttributeString("r", row.ToString());
+                    WriteTextCell(writer, $"A{row}", group.Address, style);
+                    WriteTextCell(writer, $"B{row}", group.Name, style);
+                    WriteTextCell(writer, $"C{row}", group.Description, style);
+                    WriteNumberCell(writer, $"D{row}", (ulong)flow.Port, style);
+                    WriteTextCell(writer, $"E{row}", flow.Content, style);
+                    WriteTextCell(writer, $"F{row}", flow.Description, style);
+                    WriteTextCell(writer, $"G{row}", string.Join(", ", flow.Sources.Select(source =>
+                        sourceLabels.TryGetValue(source, out var label) ? label : source)), style);
+                    WriteTextCell(writer, $"H{row}", string.Join(", ", flow.VlanIds.Select(id =>
+                        vlanLabels.TryGetValue(id, out var label) ? label : id.ToString())), style);
+
+                    for (var index = 0; index < sites.Length; index++)
+                    {
+                        var used = flow.VlanIds.Any(siteVlans[sites[index].Id].Contains);
+                        WriteTextCell(writer, CellRef(9 + index, row), used ? "✔" : "✖", used ? 8 : 9);
+                    }
+
+                    writer.WriteEndElement();
+                    row++;
+                }
+            }
+
+            writer.WriteEndElement();
+            writer.WriteStartElement("autoFilter"); writer.WriteAttributeString("ref", $"A3:{lastColumnName}{lastRow}"); writer.WriteEndElement();
+            writer.WriteStartElement("mergeCells"); writer.WriteAttributeString("count", "1");
+            writer.WriteStartElement("mergeCell"); writer.WriteAttributeString("ref", $"A1:{lastColumnName}1"); writer.WriteEndElement();
+            writer.WriteEndElement();
             EndWorksheet(writer);
         });
     }

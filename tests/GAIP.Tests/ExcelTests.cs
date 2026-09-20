@@ -55,6 +55,77 @@ public sealed class ExcelTests
     }
 
     [Fact]
+    public void WorkbookContainsMulticastSheetWithSourcesVlansAndSiteMatrix()
+    {
+        var db = Example();
+        db.Sites[0].DisplayOrder = 1;
+        Subnet(db).Addresses.Add(new IpAddress { Address = "10.20.120.25", Hostname = "SRC-VIDEO" });
+        var coudon = new Site
+        {
+            Code = "COUDON", Name = "Mont Coudon", DisplayOrder = 0,
+            Vlans = [new Vlan { Vid = 310, Name = "VIDEO" }]
+        };
+        db.Sites.Add(coudon);
+        db.MulticastGroups.Add(new MulticastGroup
+        {
+            Address = "239.10.20.15",
+            Name = "VIDEO",
+            Description = "Diffusion vidéo",
+            Flows =
+            [
+                new MulticastFlow
+                {
+                    Port = 5004,
+                    Content = "Vidéo principale",
+                    Description = "Flux H264",
+                    Sources = ["10.20.120.25"],
+                    VlanIds = [db.Sites[0].Vlans[0].Id]
+                }
+            ]
+        });
+        db.MulticastGroups.Add(new MulticastGroup
+        {
+            Address = "239.10.20.16",
+            Name = "RESERVE",
+            Description = "Groupe sans flux"
+        });
+
+        using var stream = new MemoryStream();
+        ExcelExchange.Export(db, stream);
+        stream.Position = 0;
+
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        var workbook = ReadXml(archive, "xl/workbook.xml");
+        XNamespace main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        var sheets = workbook.Descendants(main + "sheet").ToArray();
+        Assert.Equal(3, sheets.Length);
+        Assert.Equal("Sites et VLAN", sheets[0].Attribute("name")!.Value);
+        Assert.Equal("Multicast", sheets[1].Attribute("name")!.Value);
+        Assert.Equal("LEVANT-VLAN120", sheets[2].Attribute("name")!.Value);
+
+        var multicast = ReadXml(archive, "xl/worksheets/sheet2.xml");
+        var text = multicast.Descendants(main + "t").Select(node => node.Value).ToArray();
+        Assert.Contains("239.10.20.15", text);
+        Assert.Contains("239.10.20.16", text);
+        Assert.Contains("VIDEO", text);
+        Assert.Contains("Vidéo principale", text);
+        Assert.Contains("10.20.120.25 — SRC-VIDEO", text);
+        Assert.Contains("LEVANT/120", text);
+
+        string CellText(string reference) => multicast.Descendants(main + "c")
+            .Single(cell => cell.Attribute("r")?.Value == reference)
+            .Descendants(main + "t").Single().Value;
+        var coudonMark = multicast.Descendants(main + "c").Single(cell => cell.Attribute("r")?.Value == "I4");
+        var levantMark = multicast.Descendants(main + "c").Single(cell => cell.Attribute("r")?.Value == "J4");
+        Assert.Equal("COUDON", CellText("I3"));
+        Assert.Equal("LEVANT", CellText("J3"));
+        Assert.Equal("✖", CellText("I4"));
+        Assert.Equal("✔", CellText("J4"));
+        Assert.Equal("9", coudonMark.Attribute("s")!.Value);
+        Assert.Equal("8", levantMark.Attribute("s")!.Value);
+    }
+
+    [Fact]
     public void VlanWithoutSubnetStaysOnIndexWithoutCreatingNetworkSheet()
     {
         var db = Example();

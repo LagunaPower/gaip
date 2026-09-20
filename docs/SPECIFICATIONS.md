@@ -54,7 +54,7 @@ L’export complet écrit les trois CSV ; les passerelles restent dans le fichie
 
 ## Excel
 
-L’export Excel produit un classeur `.xlsx` complet. Le premier onglet, **Sites et VLAN**, liste tous les sites et VLAN ; la cellule VLAN contient un lien hypertexte vers l’onglet du réseau lorsqu’un sous-réseau est défini.
+L’export Excel produit un classeur `.xlsx` complet. Le premier onglet, **Sites et VLAN**, liste tous les sites et VLAN ; la cellule VLAN contient un lien hypertexte vers l’onglet du réseau lorsqu’un sous-réseau est défini. Lorsqu’au moins un groupe multicast existe, un onglet **Multicast** est ajouté avant les onglets réseau. Il contient une ligne par flux, conserve aussi les groupes sans flux, liste sources et VLAN associés, puis ajoute une colonne par site dans l’ordre d’affichage avec ✔ vert si le flux utilise au moins un VLAN du site et ✖ rouge sinon.
 
 Chaque sous-réseau possède un onglet dédié. Les informations réseau (site, VLAN, description, CIDR, masque, réseau, broadcast, première/dernière IP utilisable, passerelle, commentaire et compteurs) sont affichées en haut de feuille. Le tableau contient toutes les adresses IPv4 utilisables, y compris la passerelle, avec l’état `PASSERELLE`, `UTILISÉE` ou `LIBRE`, le hostname et la description.
 
