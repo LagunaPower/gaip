@@ -368,4 +368,37 @@ public sealed class StorageTests
         config.MaxHomeColumns = 9; Assert.Throws<InvalidDataException>(config.Validate);
         config.MaxHomeColumns = 3; config.SyncSeconds = 0; Assert.Throws<InvalidDataException>(config.Validate);
     }
+    [Fact]
+    public void MulticastHistoryStoresCompactDetailsAndCanBeFilteredByGroup()
+    {
+        using var temp = new TempDirectory();
+        var db = Example();
+        Subnet(db).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRC-VIDEO" });
+        db.MulticastGroups.Add(new() { Address = "239.10.20.15", Name = "VIDEO" });
+        var repo = temp.Repository();
+        var snapshot = repo.Initialize(db);
+
+        var changed = JsonData.Clone(snapshot.Data);
+        changed.MulticastGroups[0].Flows.Add(new()
+        {
+            Port = 5004,
+            Content = "Vidéo principale",
+            Sources = ["10.20.120.25"],
+            VlanIds = [changed.Sites[0].Vlans[0].Id]
+        });
+        snapshot = repo.Commit(changed, snapshot.Hash, null, "Création", "Flux multicast", "239.10.20.15:5004").Snapshot;
+
+        changed = JsonData.Clone(snapshot.Data);
+        changed.Sites[0].Description = "Modification sans rapport";
+        repo.Commit(changed, snapshot.Hash, null, "Modification", "Site", "LEVANT");
+
+        var scoped = Assert.Single(repo.History("239.10.20.15"));
+        var entry = JsonSerializer.Deserialize<AuditEntry>(scoped, JsonData.Options)!;
+        Assert.Equal("239.10.20.15:5004", entry.Target);
+        Assert.Contains(entry.Changes, change => change.Field == "content" && change.NewValue == "Vidéo principale");
+        Assert.Contains(entry.Changes, change => change.Field == "sources" && change.NewValue == "10.20.120.25");
+        Assert.Contains(entry.Changes, change => change.Field == "vlans" && change.NewValue!.Contains("LEVANT/VLAN 120"));
+        Assert.DoesNotContain("Modification sans rapport", scoped);
+    }
+
 }

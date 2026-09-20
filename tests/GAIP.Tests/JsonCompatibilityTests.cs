@@ -46,6 +46,7 @@ public sealed class JsonCompatibilityTests
         var config = JsonSerializer.Deserialize(old, StorageJsonContext.Default.AppConfig)!;
         config.Validate();
         Assert.Equal(3, config.MaxHomeColumns);
+        Assert.Equal(1, config.MulticastHomeTiles);
     }
 
 

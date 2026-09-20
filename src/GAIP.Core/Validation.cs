@@ -107,7 +107,7 @@ public static class ModelValidator
                         {
                             var normalized = Ipv4Network.Format(Ipv4Network.ParseAddress(source));
                             if (!sources.Add(normalized)) errors.Add($"{fl} : source {normalized} dupliquée.");
-                            if (!assignedIps.Contains(normalized)) errors.Add($"{fl} : source {normalized} absente des IP attribuées.");
+                            if (!assignedIps.Contains(normalized)) errors.Add($"{fl} : source {normalized} absente des IP attribuées. Retirez d'abord cette référence multicast avant de libérer ou modifier l'adresse.");
                         }
                         catch (FormatException ex) { errors.Add($"{fl} / source : {ex.Message}"); }
                     }
@@ -122,7 +122,7 @@ public static class ModelValidator
                         if (vlanId == Guid.Empty || !references.Add(vlanId))
                             errors.Add($"{fl} : référence VLAN invalide ou dupliquée.");
                         else if (!vlanIds.Contains(vlanId))
-                            errors.Add($"{fl} : VLAN référencé introuvable.");
+                            errors.Add($"{fl} : VLAN référencé introuvable. Retirez d'abord cette référence multicast avant de supprimer le VLAN.");
                     }
                 }
             }

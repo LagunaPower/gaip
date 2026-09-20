@@ -19,6 +19,7 @@ public static class AuditDiff
             newSites.TryGetValue(id, out var newSite);
             DiffSite(changes, oldSite, newSite);
         }
+        DiffMulticast(changes, before, after);
         return changes;
     }
 
@@ -84,6 +85,50 @@ public static class AuditDiff
             Add(changes, siteId, vlanId, "IP", address, "hostname", oldAddress?.Hostname, newAddress?.Hostname);
             Add(changes, siteId, vlanId, "IP", address, "description", oldAddress?.Description, newAddress?.Description);
         }
+    }
+
+    private static void DiffMulticast(List<AuditChange> changes, Database before, Database after)
+    {
+        var oldGroups = before.MulticastGroups.ToDictionary(g => g.Address, StringComparer.Ordinal);
+        var newGroups = after.MulticastGroups.ToDictionary(g => g.Address, StringComparer.Ordinal);
+        foreach (var address in oldGroups.Keys.Union(newGroups.Keys, StringComparer.Ordinal).OrderBy(Ipv4Network.ParseAddress))
+        {
+            oldGroups.TryGetValue(address, out var oldGroup);
+            newGroups.TryGetValue(address, out var newGroup);
+            if (oldGroup is null || newGroup is null)
+                Add(changes, null, null, "Multicast", address, "exists", Bool(oldGroup is not null), Bool(newGroup is not null));
+            Add(changes, null, null, "Multicast", address, "name", oldGroup?.Name, newGroup?.Name);
+            Add(changes, null, null, "Multicast", address, "description", oldGroup?.Description, newGroup?.Description);
+
+            var oldFlows = (oldGroup?.Flows ?? []).ToDictionary(f => f.Port);
+            var newFlows = (newGroup?.Flows ?? []).ToDictionary(f => f.Port);
+            foreach (var port in oldFlows.Keys.Union(newFlows.Keys).OrderBy(p => p))
+            {
+                oldFlows.TryGetValue(port, out var oldFlow);
+                newFlows.TryGetValue(port, out var newFlow);
+                var target = $"{address}:{port}";
+                if (oldFlow is null || newFlow is null)
+                    Add(changes, null, null, "Flux multicast", target, "exists", Bool(oldFlow is not null), Bool(newFlow is not null));
+                Add(changes, null, null, "Flux multicast", target, "content", oldFlow?.Content, newFlow?.Content);
+                Add(changes, null, null, "Flux multicast", target, "description", oldFlow?.Description, newFlow?.Description);
+                Add(changes, null, null, "Flux multicast", target, "sources", Sources(oldFlow), Sources(newFlow));
+                Add(changes, null, null, "Flux multicast", target, "vlans",
+                    oldFlow is null ? null : Vlans(before, oldFlow.VlanIds),
+                    newFlow is null ? null : Vlans(after, newFlow.VlanIds));
+            }
+        }
+    }
+
+    private static string? Sources(MulticastFlow? flow) => flow is null ? null :
+        string.Join(", ", flow.Sources.OrderBy(Ipv4Network.ParseAddress));
+
+    private static string Vlans(Database db, IEnumerable<Guid> ids)
+    {
+        var labels = db.Sites
+            .SelectMany(site => site.Vlans.Select(vlan => (vlan.Id, Label: $"{site.Code}/VLAN {vlan.Vid}")))
+            .ToDictionary(x => x.Id, x => x.Label);
+        return string.Join(", ", ids.Select(id => labels.TryGetValue(id, out var label) ? label : id.ToString())
+            .OrderBy(label => label, StringComparer.OrdinalIgnoreCase));
     }
 
     private static void Add(List<AuditChange> changes, Guid? siteId, Guid? vlanId, string objectType, string target,

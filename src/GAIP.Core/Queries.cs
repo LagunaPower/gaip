@@ -1,7 +1,7 @@
 namespace GAIP.Core;
 
 public sealed record AddressRow(string Address, string Hostname, string Description, bool IsUsed, bool IsGateway);
-public sealed record SearchResult(Guid SiteId, Guid? VlanId, string? Address, string Label);
+public sealed record SearchResult(Guid? SiteId, Guid? VlanId, string? Address, string Label, string? MulticastAddress = null);
 
 public static class Queries
 {
@@ -20,6 +20,7 @@ public static class Queries
         }
         return candidate <= network.Last ? Ipv4Network.Format((uint)candidate) : null;
     }
+
     private static HashSet<uint> Used(Subnet subnet)
     {
         var used = subnet.Addresses.Select(a => Ipv4Network.ParseAddress(a.Address)).ToHashSet();
@@ -31,6 +32,15 @@ public static class Queries
     {
         if (string.IsNullOrWhiteSpace(query)) yield break;
         bool Match(params string[] values) => values.Any(v => v.Contains(query, StringComparison.OrdinalIgnoreCase));
+
+        var ipIndex = db.Sites
+            .SelectMany(site => site.Vlans.SelectMany(vlan => (vlan.Subnet?.Addresses ?? [])
+                .Select(ip => (site, vlan, ip))))
+            .ToDictionary(x => x.ip.Address, StringComparer.Ordinal);
+        var vlanIndex = db.Sites
+            .SelectMany(site => site.Vlans.Select(vlan => (site, vlan)))
+            .ToDictionary(x => x.vlan.Id);
+
         foreach (var site in db.Sites.OrderBy(s => s.Code))
         {
             if (Match(site.Code, site.Name, site.Description)) yield return new(site.Id, null, null, $"{site.Code} · {site.Name}");
@@ -43,7 +53,29 @@ public static class Queries
                 if (subnet.Gateway is { } gw && Match(gw.Address, gw.Comment, "PASSERELLE"))
                     yield return new(site.Id, vlan.Id, gw.Address, $"{label} · {gw.Address} PASSERELLE · {gw.Comment}");
                 foreach (var ip in subnet.Addresses.OrderBy(a => Ipv4Network.ParseAddress(a.Address)))
-                    if (Match(ip.Address, ip.Hostname, ip.Description)) yield return new(site.Id, vlan.Id, ip.Address, $"{label} · {ip.Address} · {ip.Hostname} · {ip.Description}");
+                    if (Match(ip.Address, ip.Hostname, ip.Description))
+                        yield return new(site.Id, vlan.Id, ip.Address, $"{label} · {ip.Address} · {ip.Hostname} · {ip.Description}");
+            }
+        }
+
+        foreach (var group in db.MulticastGroups.OrderBy(g => Ipv4Network.ParseAddress(g.Address)))
+        {
+            if (Match(group.Address, group.Name, group.Description))
+                yield return new(null, null, null, $"Multicast · {group.Address} · {group.Name}", group.Address);
+
+            foreach (var flow in group.Flows.OrderBy(f => f.Port))
+            {
+                var sourceMatch = flow.Sources.Any(source =>
+                {
+                    if (Match(source)) return true;
+                    return ipIndex.TryGetValue(source, out var found) &&
+                        Match(found.ip.Hostname, found.ip.Description, found.site.Code, found.vlan.Name, found.vlan.Vid.ToString());
+                });
+                var vlanMatch = flow.VlanIds.Any(id => vlanIndex.TryGetValue(id, out var found) &&
+                    Match(found.site.Code, found.site.Name, found.vlan.Vid.ToString(), found.vlan.Name, found.vlan.Description));
+                if (Match(flow.Port.ToString(), flow.Content, flow.Description) || sourceMatch || vlanMatch)
+                    yield return new(null, null, null,
+                        $"Multicast · {group.Address}:{flow.Port} · {flow.Content} · {group.Name}", group.Address);
             }
         }
     }

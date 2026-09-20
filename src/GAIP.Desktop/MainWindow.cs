@@ -179,7 +179,7 @@ public sealed partial class MainWindow : Window
             _actions.Children.Add(Ui.Button("Modifier le VLAN", () => Run(() => EditVlan(site, vlan)), CanWrite));
         }
         _actions.Children.Add(Ui.Button("CSV / Excel", () => Run(() => CsvDialog(context))));
-        _actions.Children.Add(Ui.Button("Historique", () => Run(() => History(context))));
+        _actions.Children.Add(Ui.Button("Historique", () => Run(() => History(context, selectedMulticast?.Address))));
         _actions.Children.Add(Ui.Button("Configuration", () => Run(Configure)));
         foreach (var action in _actions.Children)
         {
@@ -312,13 +312,21 @@ public sealed partial class MainWindow : Window
     {
         var results = Queries.Search(Db, _search.Text!).ToArray();
         _pageHeading.Content = Ui.Text("Recherche globale", 22, true);
-        var stack = Ui.Column(Ui.Text($"{results.Length} résultat(s) · IP, sites, VLAN et descriptions", 12));
+        var stack = Ui.Column(Ui.Text($"{results.Length} résultat(s) · IP, sites, VLAN, multicast et descriptions", 12));
         foreach (var result in results.Take(1000))
         {
             var button = Ui.Button(result.Label, () =>
             {
-                _selectedSite = result.SiteId; _selectedVlan = result.VlanId; _showFreeAddresses = false;
-                _subnetSearch = result.Address ?? ""; _search.Text = ""; Render();
+                if (result.MulticastAddress is { } multicast)
+                {
+                    _selectedSite = null; _selectedVlan = null; _selectedMulticast = multicast; _subnetSearch = "";
+                }
+                else
+                {
+                    _selectedSite = result.SiteId; _selectedVlan = result.VlanId; _selectedMulticast = null;
+                    _subnetSearch = result.Address ?? "";
+                }
+                _showFreeAddresses = false; _search.Text = ""; Render();
             });
             button.HorizontalAlignment = HorizontalAlignment.Stretch; stack.Children.Add(button);
         }

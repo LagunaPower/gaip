@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using GAIP.Core;
@@ -9,42 +10,52 @@ namespace GAIP.Desktop;
 
 public sealed partial class MainWindow
 {
+    private static int MaxMulticastHomeTiles(int multicastCount) =>
+        Math.Max(1, multicastCount / 5);
+
     private void AddMulticastHomeCard(Grid cards)
     {
-        if (Db.MulticastGroups.Count == 0) return;
+        var groups = Db.MulticastGroups.OrderBy(g => Ipv4Network.ParseAddress(g.Address)).ToArray();
+        if (groups.Length == 0) return;
 
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
-        header.Children.Add(Ui.Text("Multicast", 18, true));
-        var stats = Ui.Text($"{Db.MulticastGroups.Count} groupe(s)", 11);
-        Grid.SetColumn(stats, 1); header.Children.Add(stats);
+        var tileCount = Math.Min(Math.Max(1, _config.MulticastHomeTiles), MaxMulticastHomeTiles(groups.Length));
+        var baseSize = groups.Length / tileCount;
+        var remainder = groups.Length % tileCount;
+        var offset = 0;
 
-        var details = Ui.Column(header);
-        foreach (var group in Db.MulticastGroups.OrderBy(g => Ipv4Network.ParseAddress(g.Address)))
+        for (var tileIndex = 0; tileIndex < tileCount; tileIndex++)
         {
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("130,*,Auto"), ColumnSpacing = 8 };
-            row.Children.Add(Ui.Text(group.Address, 13, true));
-            var name = Ui.Text(group.Name, 13); Grid.SetColumn(name, 1); row.Children.Add(name);
-            var flows = Ui.Text($"{group.Flows.Count} flux", 12); Grid.SetColumn(flows, 2); row.Children.Add(flows);
-            var button = Ui.Button("", () => OpenMulticast(group.Address));
-            button.Name = "MulticastGroupRow";
-            button.Content = row;
-            button.Background = Brushes.Transparent;
-            button.BorderThickness = new Thickness(0, 0, 0, 1);
-            button.HorizontalAlignment = HorizontalAlignment.Stretch;
-            button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
-            details.Children.Add(button);
-        }
+            var size = baseSize + (tileIndex < remainder ? 1 : 0);
+            var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
+            header.Children.Add(Ui.Text(tileCount == 1 ? "Multicast" : $"Multicast {tileIndex + 1}/{tileCount}", 18, true));
+            var stats = Ui.Text($"{size} groupe(s)", 11);
+            Grid.SetColumn(stats, 1); header.Children.Add(stats);
 
-        var actions = Ui.Row(Ui.Button("Ajouter un multicast", () => Run(() => EditMulticastGroup(null)), CanWrite));
-        actions.HorizontalAlignment = HorizontalAlignment.Center;
-        var content = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), RowSpacing = 12 };
-        content.Children.Add(details); Grid.SetRow(actions, 2); content.Children.Add(actions);
-        var card = Ui.Card(content);
-        card.Name = "MulticastCard";
-        card.Margin = new Thickness(0);
-        card.HorizontalAlignment = HorizontalAlignment.Stretch;
-        card.VerticalAlignment = VerticalAlignment.Stretch;
-        cards.Children.Add(card);
+            var details = Ui.Column(header);
+            foreach (var group in groups.Skip(offset).Take(size))
+            {
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("130,*,Auto"), ColumnSpacing = 8 };
+                row.Children.Add(Ui.Text(group.Address, 13, true));
+                var name = Ui.Text(group.Name, 13); Grid.SetColumn(name, 1); row.Children.Add(name);
+                var flows = Ui.Text($"{group.Flows.Count} flux", 12); Grid.SetColumn(flows, 2); row.Children.Add(flows);
+                var button = Ui.Button("", () => OpenMulticast(group.Address));
+                button.Name = "MulticastGroupRow";
+                button.Content = row;
+                button.Background = Brushes.Transparent;
+                button.BorderThickness = new Thickness(0, 0, 0, 1);
+                button.HorizontalAlignment = HorizontalAlignment.Stretch;
+                button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+                details.Children.Add(button);
+            }
+            offset += size;
+
+            var card = Ui.Card(details);
+            card.Name = "MulticastCard";
+            card.Margin = new Thickness(0);
+            card.HorizontalAlignment = HorizontalAlignment.Stretch;
+            card.VerticalAlignment = VerticalAlignment.Stretch;
+            cards.Children.Add(card);
+        }
     }
 
     private void OpenMulticast(string address)
@@ -64,22 +75,52 @@ public sealed partial class MainWindow
         var stack = new StackPanel { Spacing = 8 };
         if (!string.IsNullOrWhiteSpace(group.Description)) stack.Children.Add(Ui.Text(group.Description));
 
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("70,180,*,220"), ColumnSpacing = 10 };
+        var sites = SiteOrdering.Ordered(Db.Sites).ToArray();
+        Grid Row()
+        {
+            var row = new Grid { ColumnSpacing = 10 };
+            row.ColumnDefinitions.Add(new ColumnDefinition(70, GridUnitType.Pixel));
+            row.ColumnDefinitions.Add(new ColumnDefinition(180, GridUnitType.Pixel));
+            row.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
+            foreach (var _ in sites) row.ColumnDefinitions.Add(new ColumnDefinition(90, GridUnitType.Pixel));
+            return row;
+        }
+
+        var header = Row();
         header.Children.Add(Ui.Text("Port", 12, true));
         var hContent = Ui.Text("Contenu", 12, true); Grid.SetColumn(hContent, 1); header.Children.Add(hContent);
         var hSources = Ui.Text("Sources", 12, true); Grid.SetColumn(hSources, 2); header.Children.Add(hSources);
-        var hVlans = Ui.Text("VLAN", 12, true); Grid.SetColumn(hVlans, 3); header.Children.Add(hVlans);
+        for (var index = 0; index < sites.Length; index++)
+        {
+            var siteHeader = Ui.Text(sites[index].Code, 12, true);
+            siteHeader.Name = $"MulticastSiteHeader_{sites[index].Id:N}";
+            siteHeader.HorizontalAlignment = HorizontalAlignment.Center;
+            Grid.SetColumn(siteHeader, 3 + index); header.Children.Add(siteHeader);
+        }
         stack.Children.Add(header);
 
         foreach (var flow in group.Flows.OrderBy(f => f.Port))
         {
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("70,180,*,220"), ColumnSpacing = 10 };
+            var row = Row();
             row.Children.Add(Ui.Text(flow.Port.ToString(), 13, true));
             var content = Ui.Text(flow.Content, 13); Grid.SetColumn(content, 1); row.Children.Add(content);
             var sources = Ui.Text(flow.Sources.Count == 0 ? "—" : string.Join(", ", flow.Sources.Select(MulticastSourceLabel)), 12);
             Grid.SetColumn(sources, 2); row.Children.Add(sources);
-            var vlans = Ui.Text(flow.VlanIds.Count == 0 ? "—" : string.Join(", ", flow.VlanIds.Select(MulticastVlanLabel)), 12);
-            Grid.SetColumn(vlans, 3); row.Children.Add(vlans);
+
+            for (var index = 0; index < sites.Length; index++)
+            {
+                var site = sites[index];
+                var usedVlans = site.Vlans.Where(vlan => flow.VlanIds.Contains(vlan.Id)).OrderBy(vlan => vlan.Vid).ToArray();
+                var mark = Ui.Text(usedVlans.Length > 0 ? "✔" : "✖", 16, true);
+                mark.Name = $"MulticastSite_{flow.Port}_{site.Id:N}";
+                mark.Foreground = usedVlans.Length > 0 ? Brushes.SeaGreen : Brushes.IndianRed;
+                mark.HorizontalAlignment = HorizontalAlignment.Center;
+                if (usedVlans.Length > 0)
+                    ToolTip.SetTip(mark, string.Join("\n", usedVlans.Select(vlan => $"VLAN {vlan.Vid} — {vlan.Name}")));
+                else ToolTip.SetTip(mark, "Aucun VLAN de ce site n’utilise ce flux.");
+                Grid.SetColumn(mark, 3 + index); row.Children.Add(mark);
+            }
+
             var button = Ui.Button("", () => Run(() => EditMulticastFlow(group, flow)));
             button.Name = $"MulticastFlow_{flow.Port}";
             button.Content = row;
@@ -92,7 +133,13 @@ public sealed partial class MainWindow
 
         if (group.Flows.Count == 0)
             stack.Children.Add(Ui.Card(Ui.Text("Aucun flux. Ajoutez un port pour décrire le contenu diffusé.")));
-        _body.Content = Ui.Scroll(stack);
+
+        _body.Content = new ScrollViewer
+        {
+            Content = stack,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
     }
 
     private string MulticastSourceLabel(string address)

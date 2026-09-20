@@ -40,11 +40,17 @@ public sealed partial class DesktopTests
             Click(Button(main, "Configuration")); await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
             var form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
             form.GetLogicalDescendants().OfType<TabControl>().Single().SelectedIndex = 1;
+            await Task.Delay(50);
+            form.GetLogicalDescendants().OfType<SiteOrderEditor>().First().BringIntoView();
             await Task.Delay(100); return form;
         }
         static async Task Drag(FormWindow form, int from, int to, bool below)
         {
-            var list = form.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SiteOrderList");
+            var list = form.GetVisualDescendants().OfType<ListBox>().First(l => l.Name == "SiteOrderList");
+            list.BringIntoView();
+            form.UpdateLayout();
+            await Task.Delay(100);
+
             var source = list.GetVisualDescendants().OfType<ListBoxItem>().Single(i => i.Content == list.Items[from]);
             var target = list.GetVisualDescendants().OfType<ListBoxItem>().Single(i => i.Content == list.Items[to]);
             var start = source.TranslatePoint(new Point(20, source.Bounds.Height / 2), form)!.Value;

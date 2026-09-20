@@ -305,8 +305,13 @@ public sealed class FileRepository(string root, string user, string machine, int
         stream.Write(bytes);
         stream.Flush(true);
     }
-    public IReadOnlyList<string> History() => History(null);
-    public IReadOnlyList<string> History(Guid? vlanId)
+    public IReadOnlyList<string> History() => ReadHistory(null);
+    public IReadOnlyList<string> History(Guid? vlanId) =>
+        vlanId is null ? History() : ReadHistory(entry => VlanHistory.Project(entry, vlanId.Value));
+    public IReadOnlyList<string> History(string multicastAddress) =>
+        ReadHistory(entry => MulticastHistory.Project(entry, multicastAddress));
+
+    private IReadOnlyList<string> ReadHistory(Func<AuditEntry, AuditEntry?>? projector)
     {
         if (!File.Exists(HistoryPath)) return [];
         using var stream = new FileStream(HistoryPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
@@ -315,12 +320,12 @@ public sealed class FileRepository(string root, string user, string machine, int
         while (reader.ReadLine() is { } line)
         {
             var result = line;
-            if (vlanId is { } id)
+            if (projector is not null)
             {
                 try
                 {
                     var entry = JsonSerializer.Deserialize(line, StorageJsonContext.Default.AuditEntry);
-                    var scoped = entry is null ? null : VlanHistory.Project(entry, id);
+                    var scoped = entry is null ? null : projector(entry);
                     if (scoped is null) continue;
                     result = JsonSerializer.Serialize(scoped, StorageJsonContext.Default.AuditEntry);
                 }

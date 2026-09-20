@@ -20,6 +20,13 @@ public sealed partial class MainWindow
         var separator = Ui.Input(_config.CsvSeparator, ";", 1); separator.Name = "CsvSeparator";
         var theme = new ComboBox { Name = "Theme", ItemsSource = new[] { "Système", "Clair", "Sombre" }, SelectedIndex = (int)_config.Theme };
         var homeColumns = new NumericUpDown { Name = "MaxHomeColumns", Minimum = 1, Maximum = 8, Value = _config.MaxHomeColumns, FormatString = "0" };
+        var multicastTileMax = MaxMulticastHomeTiles(Db.MulticastGroups.Count);
+        var multicastTiles = new NumericUpDown
+        {
+            Name = "MulticastHomeTiles", Minimum = 1, Maximum = multicastTileMax,
+            Value = Math.Min(_config.MulticastHomeTiles, multicastTileMax), FormatString = "0",
+            IsEnabled = Db.MulticastGroups.Count >= 10
+        };
         var migration = new ComboBox { Name = "SharedMigration", ItemsSource = new[] { "Utiliser uniquement une base réseau existante", "Initialiser depuis la base actuelle si aucune base réseau n’existe" }, SelectedIndex = 0 };
         var localChoice = new ComboBox { Name = "LocalMigration", ItemsSource = new[] { "Copier la base réseau / cache actuel", "Créer une base locale vide" }, SelectedIndex = 0 };
 
@@ -28,7 +35,8 @@ public sealed partial class MainWindow
             Mode = (StorageMode)mode.SelectedIndex, SharedPath = path.Text?.Trim() ?? "",
             SyncSeconds = (int)(interval.Value ?? 60), BackupCount = (int)(backups.Value ?? 30),
             CsvSeparator = separator.Text ?? ";", Theme = (AppTheme)theme.SelectedIndex,
-            MaxHomeColumns = (int)(homeColumns.Value ?? 3)
+            MaxHomeColumns = (int)(homeColumns.Value ?? 3),
+            MulticastHomeTiles = (int)(multicastTiles.Value ?? 1)
         };
 
         var storage = Ui.Column(
@@ -55,6 +63,10 @@ public sealed partial class MainWindow
             Ui.Field("Thème", theme),
             Ui.Field("Colonnes maximum sur l’accueil", homeColumns),
             Ui.Text("Le nombre de colonnes s’adapte automatiquement à la largeur disponible sans dépasser cette limite.", 12),
+            Ui.Field("Tuiles multicast sur l’accueil", multicastTiles),
+            Ui.Text(Db.MulticastGroups.Count == 0
+                ? "Aucun groupe multicast : aucune tuile multicast n’est affichée."
+                : $"Maximum actuel : {multicastTileMax} tuile(s), afin de conserver environ 5 groupes minimum par tuile.", 12),
             Ui.Text("Ordre d’affichage des sites", 16, true),
             Ui.Text("Classez les sites par glisser-déposer. L’ordre est enregistré avec les autres réglages de cet onglet.", 12),
             siteOrder,
@@ -137,7 +149,7 @@ public sealed partial class MainWindow
                 UserPaths.SaveConfig(_configRoot, next);
                 return session;
             });
-            _config = next; _session = opened; _selectedVlan = null; _selectedSite = null; ApplyTheme(); Render();
+            _config = next; _session = opened; _selectedVlan = null; _selectedSite = null; _selectedMulticast = null; ApplyTheme(); Render();
 
             if (tabs.SelectedIndex == 1 && siteOrder.HasChanges)
                 await Save(db => SiteOrdering.Apply(db, siteOrder.OrderedIds), "Ordre d’affichage", "Sites", "Accueil");
@@ -191,11 +203,15 @@ public sealed partial class MainWindow
         await form.ShowDialog<bool>(this);
     }
 
-    private async Task History(Guid? vlanId = null)
+    private async Task History(Guid? vlanId = null, string? multicastAddress = null)
     {
         if (_session is null) return;
-        var lines = await Io(() => _session.Repository.History(vlanId));
-        var title = vlanId is null ? "Historique · 1 000 dernières actions" : $"Historique · {VlanLabel(vlanId.Value)} · 1 000 dernières actions liées";
+        var lines = await Io(() => multicastAddress is not null
+            ? _session.Repository.History(multicastAddress)
+            : _session.Repository.History(vlanId));
+        var title = multicastAddress is not null
+            ? $"Historique · Multicast {multicastAddress} · 1 000 dernières actions liées"
+            : vlanId is null ? "Historique · 1 000 dernières actions" : $"Historique · {VlanLabel(vlanId.Value)} · 1 000 dernières actions liées";
         var form = new FormWindow(title, "Fermer", 920);
         if (lines.Count == 0) form.Fields.Children.Add(Ui.Text("Aucune action enregistrée."));
         else
@@ -289,6 +305,9 @@ public sealed partial class MainWindow
         "address" => "Adresse",
         "comment" => "Commentaire",
         "hostname" => "Hostname",
+        "content" => "Contenu",
+        "sources" => "Sources",
+        "vlans" => "VLAN",
         "holder" => "Détenteur",
         "startRevision" => "Révision de départ",
         "startHash" => "Hash de départ",

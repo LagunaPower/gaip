@@ -189,4 +189,53 @@ public sealed class CoreTests
         Assert.Empty(db.MulticastGroups);
     }
 
+    [Fact]
+    public void GlobalSearchIncludesMulticastFlowSourcesAndVlans()
+    {
+        var db = Example();
+        Subnet(db).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRC-VIDEO", Description = "Encodeur" });
+        db.MulticastGroups.Add(new()
+        {
+            Address = "239.10.20.15",
+            Name = "VIDEO",
+            Description = "Diffusion principale",
+            Flows = [new()
+            {
+                Port = 5004,
+                Content = "Image HD",
+                Sources = ["10.20.120.25"],
+                VlanIds = [db.Sites[0].Vlans[0].Id]
+            }]
+        });
+
+        foreach (var query in new[] { "239.10.20.15", "VIDEO", "5004", "Image HD", "SRC-VIDEO", "Encodeur", "SERVEURS" })
+            Assert.Contains(Queries.Search(db, query), result => result.MulticastAddress == "239.10.20.15");
+    }
+
+    [Fact]
+    public void MulticastReferencesBlockSourceAndVlanRemoval()
+    {
+        var db = Example();
+        Subnet(db).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRC-VIDEO" });
+        var vlanId = db.Sites[0].Vlans[0].Id;
+        db.MulticastGroups.Add(new()
+        {
+            Address = "239.10.20.15",
+            Name = "VIDEO",
+            Flows = [new() { Port = 5004, Content = "Vidéo", Sources = ["10.20.120.25"], VlanIds = [vlanId] }]
+        });
+        Assert.Empty(ModelValidator.Validate(db));
+
+        var withoutSource = JsonData.Clone(db);
+        Subnet(withoutSource).Addresses.Clear();
+        Assert.Contains(ModelValidator.Validate(withoutSource), error =>
+            error.Contains("Retirez d'abord cette référence multicast") && error.Contains("10.20.120.25"));
+
+        var withoutVlan = JsonData.Clone(db);
+        withoutVlan.MulticastGroups[0].Flows[0].Sources.Clear();
+        withoutVlan.Sites[0].Vlans.Clear();
+        Assert.Contains(ModelValidator.Validate(withoutVlan), error =>
+            error.Contains("Retirez d'abord cette référence multicast") && error.Contains("VLAN"));
+    }
+
 }

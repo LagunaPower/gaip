@@ -13,6 +13,7 @@ public sealed class AppConfig
     public string CsvSeparator { get; set; } = ";";
     public AppTheme Theme { get; set; }
     public int MaxHomeColumns { get; set; } = 3;
+    public int MulticastHomeTiles { get; set; } = 1;
     public void Validate()
     {
         if (!Enum.IsDefined(Mode) || !Enum.IsDefined(Theme)) throw new InvalidDataException("Mode ou thème inconnu.");
@@ -21,6 +22,7 @@ public sealed class AppConfig
         if (SyncSeconds is < 5 or > 86400) throw new InvalidDataException("Synchronisation : entre 5 et 86400 secondes.");
         if (BackupCount is < 1 or > 10000) throw new InvalidDataException("Sauvegardes : entre 1 et 10000.");
         if (MaxHomeColumns is < 1 or > 8) throw new InvalidDataException("Colonnes de l’accueil : entre 1 et 8.");
+        if (MulticastHomeTiles is < 1 or > 1000) throw new InvalidDataException("Tuiles multicast : entre 1 et 1000.");
         if (CsvSeparator.Length != 1 || CsvSeparator[0] is '"' or '\r' or '\n' or '\0')
             throw new InvalidDataException("Le séparateur CSV doit être un caractère autre que guillemet ou retour à la ligne.");
     }

@@ -292,6 +292,76 @@ public sealed partial class DesktopTests
         main.Close(); await Until(() => !main.IsVisible);
     }
 
+
+    [AvaloniaFact]
+    public async Task MulticastTilesAreBalancedCappedAndUseSiteDisplayOrder()
+    {
+        using var temp = new TempDirectory();
+        var data = temp.Sub("data");
+        var configRoot = temp.Sub("config");
+        var db = TestData.Example();
+        db.Sites[0].DisplayOrder = 1;
+        TestData.Subnet(db).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRC-VIDEO" });
+        var coudon = new GAIP.Core.Site
+        {
+            Code = "COUDON", Name = "Mont Coudon", DisplayOrder = 0,
+            Vlans = [new() { Vid = 310, Name = "VIDEO" }]
+        };
+        db.Sites.Add(coudon);
+
+        for (var index = 1; index <= 17; index++)
+            db.MulticastGroups.Add(new()
+            {
+                Address = $"239.10.0.{index}",
+                Name = $"MCAST-{index:D2}",
+                Flows = index == 1
+                    ? [new()
+                    {
+                        Port = 5004, Content = "Vidéo",
+                        Sources = ["10.20.120.25"],
+                        VlanIds = [db.Sites[0].Vlans[0].Id]
+                    }]
+                    : []
+            });
+
+        new GAIP.Storage.FileRepository(temp.Sub("data/local"), "test", "pc").Initialize(db);
+        GAIP.Storage.UserPaths.SaveConfig(configRoot, new GAIP.Storage.AppConfig { MulticastHomeTiles = 8 });
+        var main = new MainWindow(data, configRoot); main.Show(); await UntilReady(main);
+
+        var cards = main.GetLogicalDescendants().OfType<Border>().Where(b => b.Name == "MulticastCard").ToArray();
+        Assert.Equal(3, cards.Length);
+        Assert.Equal(new[] { 6, 6, 5 }, cards.Select(card =>
+            card.GetLogicalDescendants().OfType<Button>().Count(button => button.Name == "MulticastGroupRow")).ToArray());
+
+        var firstGroup = cards[0].GetLogicalDescendants().OfType<Button>().First(button => button.Name == "MulticastGroupRow");
+        Click(firstGroup);
+        await Until(() => main.GetLogicalDescendants().OfType<Button>().Any(button => button.Name == "MulticastFlow_5004"));
+
+        var siteHeaders = main.GetLogicalDescendants().OfType<TextBlock>()
+            .Where(text => text.Name?.StartsWith("MulticastSiteHeader_", StringComparison.Ordinal) == true)
+            .Select(text => text.Text).ToArray();
+        Assert.Equal(new[] { "COUDON", "LEVANT" }, siteHeaders);
+
+        var coudonMark = main.GetLogicalDescendants().OfType<TextBlock>()
+            .Single(text => text.Name == $"MulticastSite_5004_{coudon.Id:N}");
+        var levantMark = main.GetLogicalDescendants().OfType<TextBlock>()
+            .Single(text => text.Name == $"MulticastSite_5004_{db.Sites[0].Id:N}");
+        Assert.Equal("✖", coudonMark.Text);
+        Assert.Equal("✔", levantMark.Text);
+
+        Click(Button(main, "Accueil"));
+        Click(Button(main, "Configuration"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(window => window.IsVisible));
+        var form = main.OwnedWindows.OfType<FormWindow>().Last(window => window.IsVisible);
+        var multicastTiles = form.Fields.GetLogicalDescendants().OfType<NumericUpDown>()
+            .First(control => control.Name == "MulticastHomeTiles");
+        Assert.Equal(3, multicastTiles.Maximum);
+        Assert.Equal(3, multicastTiles.Value);
+        form.Close(false);
+
+        main.Close(); await Until(() => !main.IsVisible);
+    }
+
     [AvaloniaFact]
     public async Task ConfigurationMovesLocalToSharedThenEmptyLocalWithBackup()
     {
