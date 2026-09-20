@@ -18,19 +18,17 @@
     <StandardDirectory Id="ProgramMenuFolder" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
-      <Directory Id="ManufacturerFolder" Name="LagunaPower">
-        <Directory Id="INSTALLFOLDER" Name="G@IP">
-          <Component Id="MainExecutable" Guid="*">
-            <File Id="GAIPExe" Source="$(GaipExe)" Name="GAIP.exe" KeyPath="yes">
-              <Shortcut
-                  Id="StartMenuShortcut"
-                  Directory="ProgramMenuFolder"
-                  Name="G@IP"
-                  Description="Gestion d’Adresses IP"
-                  WorkingDirectory="INSTALLFOLDER" />
-            </File>
-          </Component>
-        </Directory>
+      <Directory Id="INSTALLFOLDER" Name="G@IP">
+        <Component Id="MainExecutable" Guid="*">
+          <File Id="GAIPExe" Source="$(GaipExe)" Name="GAIP.exe" KeyPath="yes">
+            <Shortcut
+                Id="StartMenuShortcut"
+                Directory="ProgramMenuFolder"
+                Name="G@IP"
+                Description="Gestion d’Adresses IP"
+                WorkingDirectory="INSTALLFOLDER" />
+          </File>
+        </Component>
       </Directory>
     </StandardDirectory>
 

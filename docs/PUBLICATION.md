@@ -28,7 +28,7 @@ Le workflow de Release produit aussi trois paquets installables, tous construits
 - Debian/Ubuntu amd64 : `gaip_X.Y.Z_amd64.deb` ;
 - RHEL/Fedora/AlmaLinux x86_64 : `gaip-X.Y.Z-1.x86_64.rpm`.
 
-Le MSI installe l’application dans `Program Files\LagunaPower\G@IP`, crée un raccourci dans le menu Démarrer et prend en charge les mises à niveau majeures. Les paquets Linux installent le binaire autonome sous `/usr/lib/gaip/GAIP`, le lanceur `/usr/bin/gaip`, l’entrée de menu et les icônes hicolor.
+Le MSI installe l’application directement dans `Program Files\G@IP`, crée un raccourci dans le menu Démarrer et prend en charge les mises à niveau majeures. Les paquets Linux installent le binaire autonome sous `/usr/lib/gaip/GAIP`, le lanceur `/usr/bin/gaip`, l’entrée de menu et les icônes hicolor.
 
 Les sources de packaging sont sous `packaging/`. Le script Linux vérifie les prérequis de construction et le workflow inspecte le contenu des DEB/RPM avant publication. Les Releases ne génèrent pas de fichiers `.sha256` séparés.
 
