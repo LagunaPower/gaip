@@ -4,7 +4,8 @@ using GAIP.Storage;
 
 namespace GAIP.Sync;
 
-public sealed record CacheInfo(string Hash, string Source, DateTimeOffset CheckedAt);
+public sealed record CacheInfo(string Hash, string Source, DateTimeOffset CheckedAt, string? HistoryHash = null);
+internal sealed record CachedState(Snapshot Snapshot, byte[]? HistoryBytes, CacheInfo Info);
 
 // All calls are serialized by the desktop controller. No UI dependency.
 public sealed class DataSession(AppConfig config, string localRoot, string user, string machine)
@@ -39,24 +40,60 @@ public sealed class DataSession(AppConfig config, string localRoot, string user,
     {
         Data = snapshot.Data; Hash = snapshot.Hash; HasData = true;
     }
-    private void Cache(Snapshot snapshot)
+    private void Cache(Snapshot snapshot, byte[] historyBytes)
     {
+        FileRepository.ValidateHistory(historyBytes);
         Directory.CreateDirectory(CacheRoot);
         var dataPath = Path.Combine(CacheRoot, "gaip-data.json");
+        var historyPath = Path.Combine(CacheRoot, "history.jsonl");
+        var historyHash = JsonData.Hash(historyBytes);
         JsonData.AtomicWrite(dataPath, snapshot.Bytes);
-        if (JsonData.HashFile(dataPath) != snapshot.Hash) throw new IOException("Cache non vérifié.");
+        if (JsonData.HashFile(dataPath) != snapshot.Hash) throw new IOException("Cache de base non vérifié.");
+        JsonData.AtomicWrite(historyPath, historyBytes);
+        if (JsonData.HashFile(historyPath) != historyHash) throw new IOException("Cache d’historique non vérifié.");
         JsonData.AtomicWrite(Path.Combine(CacheRoot, "cache.info"), JsonSerializer.SerializeToUtf8Bytes(
-            new CacheInfo(snapshot.Hash, Path.GetFullPath(Config.SharedPath), DateTimeOffset.UtcNow), SyncJsonContext.Default.CacheInfo));
+            new CacheInfo(snapshot.Hash, Path.GetFullPath(Config.SharedPath), DateTimeOffset.UtcNow, historyHash), SyncJsonContext.Default.CacheInfo));
     }
-    private Snapshot LoadCache()
+    private CachedState LoadCache(bool requireHistory = false)
     {
         var info = JsonSerializer.Deserialize(JsonData.ReadFileBytes(Path.Combine(CacheRoot, "cache.info")), SyncJsonContext.Default.CacheInfo)
             ?? throw new InvalidDataException("Métadonnées du cache absentes.");
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         if (!string.Equals(info.Source, Path.GetFullPath(Config.SharedPath), comparison)) throw new InvalidDataException("Cache provenant d'un autre partage.");
         var bytes = JsonData.ReadFileBytes(Path.Combine(CacheRoot, "gaip-data.json"));
-        if (JsonData.Hash(bytes) != info.Hash) throw new InvalidDataException("Cache corrompu (SHA-256 incorrect).");
-        return new(JsonData.Read(bytes), info.Hash, bytes);
+        if (JsonData.Hash(bytes) != info.Hash) throw new InvalidDataException("Cache de base corrompu (SHA-256 incorrect).");
+        var snapshot = new Snapshot(JsonData.Read(bytes), info.Hash, bytes);
+
+        byte[]? historyBytes = null;
+        if (!string.IsNullOrWhiteSpace(info.HistoryHash))
+        {
+            try
+            {
+                var candidate = JsonData.ReadFileBytes(Path.Combine(CacheRoot, "history.jsonl"));
+                if (JsonData.Hash(candidate) != info.HistoryHash) throw new InvalidDataException("Cache d’historique corrompu (SHA-256 incorrect).");
+                FileRepository.ValidateHistory(candidate);
+                historyBytes = candidate;
+            }
+            catch (Exception ex) when (!requireHistory && ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException or ValidationException)
+            {
+                historyBytes = null;
+            }
+        }
+        if (requireHistory && historyBytes is null)
+            throw new InvalidDataException("Aucun historique local validé n’est disponible pour cette restauration. Reconnectez G@IP au partage pour actualiser le cache.");
+        return new(snapshot, historyBytes, info);
+    }
+    private void EnsureCache(Snapshot snapshot, byte[] historyBytes)
+    {
+        FileRepository.ValidateHistory(historyBytes);
+        var historyHash = JsonData.Hash(historyBytes);
+        try
+        {
+            var cached = LoadCache(true);
+            if (cached.Snapshot.Hash == snapshot.Hash && cached.Info.HistoryHash == historyHash) return;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException or ValidationException) { }
+        Cache(snapshot, historyBytes);
     }
     public void Refresh()
     {
@@ -64,53 +101,53 @@ public sealed class DataSession(AppConfig config, string localRoot, string user,
         if (Config.Mode == StorageMode.Local) { Accept(Repository.Read()); return; }
         try
         {
-            var current = Repository.Read();
+            var recovery = Repository.ReadRecoverySnapshot();
+            var current = recovery.Snapshot;
             if (Lease is { } lease)
             {
                 Repository.Heartbeat(lease.Id);
                 if (current.Hash != Hash) throw new IOException("Base modifiée hors de votre session ; édition interrompue.");
             }
-            if (!HasData || current.Hash != Hash) { Cache(current); Accept(current); }
-            // Heal a damaged disk cache even if this process already has the latest bytes.
-            else { try { LoadCache(); } catch { Cache(current); } }
+            if (!HasData || current.Hash != Hash) Accept(current);
             RemoteLease = Repository.ReadLease();
             IsOffline = false;
             Status = Lease is not null ? "Modification en cours · votre session" : RemoteLease is { } other
                 ? $"Modification en cours par {other.User} / {other.Machine}" : "À jour";
+            try { EnsureCache(current, recovery.HistoryBytes); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException or ValidationException)
+            {
+                Warning = "Base centrale accessible, mais cache de récupération non actualisé : " + ex.Message;
+            }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ValidationException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException or ValidationException)
         {
             var oldLease = Lease;
             Lease = null;
-            if (oldLease is not null) { try { Repository.Release(oldLease.Id); } catch { /* unavailable: keep central lease for explicit recovery */ } }
+            if (oldLease is not null) { try { Repository.Release(oldLease.Id); } catch { } }
             IsOffline = true;
             Warning = ex.Message;
             if (!HasData)
             {
-                try { Accept(LoadCache()); }
+                try { Accept(LoadCache().Snapshot); }
                 catch (Exception cacheError) { throw new IOException($"Base centrale inaccessible et aucun cache valide. {ex.Message}\n{cacheError.Message}", cacheError); }
             }
             Status = "Mode hors ligne — cache local · lecture seule";
         }
     }
-    public void RestoreSharedFromCache()
+    public RestoreResult RestoreSharedFromCache()
     {
         if (Config.Mode != StorageMode.Shared) throw new InvalidOperationException("La restauration du cache n’est disponible qu’en mode partagé.");
         if (Lease is not null) throw new IOException("Terminez la modification en cours avant de restaurer le cache.");
-        var cached = LoadCache();
-        var result = Repository.RestoreMissingData(cached.Bytes);
+        var cached = LoadCache(true);
+        var result = Repository.RestoreMissingData(cached.Snapshot.Bytes, cached.HistoryBytes!);
         Accept(result.Snapshot);
-        Warning = result.Warning;
-        try { Cache(result.Snapshot); }
-        catch (Exception ex)
-        {
-            Warning = string.IsNullOrWhiteSpace(Warning)
-                ? $"Base restaurée ; mise à jour du cache impossible : {ex.Message}"
-                : Warning + "\nMise à jour du cache impossible : " + ex.Message;
-        }
+        Warning = null;
+        try { Cache(result.Snapshot, cached.HistoryBytes!); }
+        catch (Exception ex) { Warning = "Base et historique restaurés ; mise à jour du cache impossible : " + ex.Message; }
         RemoteLease = Repository.ReadLease();
         IsOffline = false;
         Status = "À jour";
+        return result;
     }
 
     public void BeginEdit()
@@ -152,8 +189,19 @@ public sealed class DataSession(AppConfig config, string localRoot, string user,
         Warning = result.Warning;
         if (Config.Mode == StorageMode.Shared)
         {
-            try { Cache(result.Snapshot); }
-            catch (Exception ex) { Warning = $"Publication réussie ; mise à jour du cache impossible : {ex.Message}"; }
+            try
+            {
+                var recovery = Repository.ReadRecoverySnapshot();
+                if (recovery.Snapshot.Hash != result.Snapshot.Hash)
+                    throw new IOException("La base centrale a changé avant la mise à jour du cache.");
+                Cache(result.Snapshot, recovery.HistoryBytes);
+            }
+            catch (Exception ex)
+            {
+                Warning = string.IsNullOrWhiteSpace(Warning)
+                    ? $"Publication réussie ; mise à jour du cache impossible : {ex.Message}"
+                    : Warning + "\nMise à jour du cache impossible : " + ex.Message;
+            }
         }
     }
 }

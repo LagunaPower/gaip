@@ -29,7 +29,9 @@ Historique : lignes JSON compactes contenant uniquement les différences métier
 
 ## Cache
 
-Base centrale validée avant copie. Métadonnées `hash`, `source`, `checkedAt`. Copie atomique et vérification. Un cache corrompu est réparé en ligne ; hors ligne, il est rejeté au démarrage. La copie mémoire déjà validée peut rester consultable lors d’une panne. Le cache d’un autre partage est toujours refusé.
+Base centrale validée avant copie. Le cache partagé contient `gaip-data.json`, `history.jsonl` et des métadonnées `hash`, `historyHash`, `source`, `checkedAt`. La base et l’historique sont copiés atomiquement et vérifiés ; un ancien cache sans hash d’historique reste utilisable pour la consultation hors ligne mais pas pour une restauration complète. Un historique central invalide n’empêche pas la consultation de la base, mais empêche l’actualisation du cache de récupération et produit un avertissement. Le cache d’un autre partage est toujours refusé.
+
+Restauration : sous la garde filesystem, validation du JSON, du journal et de leurs hashes, refus si `gaip-data.json`, `history.jsonl` ou `edit.lock` existe. Les sauvegardes existantes sont laissées intactes ; la présence d’une sauvegarde standard de révision supérieure au cache bloque la restauration automatique. `history.jsonl` est créé et vérifié avant publication de `gaip-data.json` ; aucune entrée artificielle de restauration n’est ajoutée au journal restauré.
 
 ## Linux
 

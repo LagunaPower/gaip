@@ -142,19 +142,21 @@ public sealed partial class MainWindow
         form.Fields.Children.Add(Ui.Text($"État : {_session.Status}\nRévision : {Db.Revision}\nSHA-256 : {_session.Hash}\nStockage : {_session.Repository.Root}\nDernière modification : {Db.LastModified.LocalDateTime:g}\nPar : {Db.LastModifiedBy} / {Db.LastModifiedFrom}"));
         if (_session.Config.Mode == StorageMode.Shared)
         {
-            form.Fields.Children.Add(Ui.Text("Récupération : copie le cache local validé vers le partage uniquement si gaip-data.json a disparu. Une base existante n’est jamais écrasée.", 12));
-            form.Fields.Children.Add(Ui.Button("Restaurer la base partagée depuis le cache…", async () =>
+            form.Fields.Children.Add(Ui.Text("Récupération : restaure la base et l’historique depuis le cache local validé. Refus si gaip-data.json, history.jsonl ou edit.lock existe. Les sauvegardes sont conservées ; une sauvegarde plus récente que le cache bloque l’opération.", 12));
+            form.Fields.Children.Add(Ui.Button("Restaurer la base et l’historique depuis le cache…", async () =>
             {
                 try
                 {
-                    if (!await Confirm("Restaurer depuis le cache", $"Copier le cache local validé vers {_session.Repository.DataPath} ?\n\nLa restauration est refusée si une base existe déjà sur le partage.")) return;
-                    await Io(_session.RestoreSharedFromCache);
+                    if (!await Confirm("Restaurer depuis le cache",
+                        $"Restaurer la base et l’historique du dernier cache local validé vers {_session.Repository.Root} ?\n\n" +
+                        "Aucun fichier existant ne sera écrasé. La restauration est refusée si gaip-data.json, history.jsonl ou edit.lock existe. " +
+                        "Les sauvegardes présentes sont conservées et servent de garde-fou contre un cache trop ancien.")) return;
+                    var result = await Io(_session.RestoreSharedFromCache);
                     Render();
                     var warning = _session.Warning;
                     form.Close(true);
-                    await Message("Restauration terminée", warning is null
-                        ? "La base partagée a été restaurée depuis le cache local validé."
-                        : "La base partagée a été restaurée.\n" + warning);
+                    var message = $"Base et historique restaurés depuis le cache local validé.\nRévision : {result.Snapshot.Data.Revision}\nHistorique : {result.HistoryEntries} entrée(s).\nLes sauvegardes existantes ont été conservées.";
+                    await Message("Restauration terminée", warning is null ? message : message + "\n" + warning);
                 }
                 catch (Exception ex) { form.Error.Text = ex.Message; }
             }));

@@ -80,7 +80,62 @@ public sealed class StorageTests
     }
 
     [Fact]
-    public void ValidatedCacheRestoresMissingSharedDatabaseWithoutOverwrite()
+    public void ValidatedCacheRestoresMissingSharedDatabaseAndHistoryWithoutOverwrite()
+    {
+        using var temp = new TempDirectory();
+        var central = temp.Sub("central");
+        var local = temp.Sub("local");
+        var repository = new FileRepository(central, "seed", "pc");
+        var start = repository.Initialize(Example());
+        var changed = JsonData.Clone(start.Data); changed.Sites[0].Description = "Historique à conserver";
+        repository.Commit(changed, start.Hash, null, "Modification", "Site", "LEVANT");
+        var session = new DataSession(new() { Mode = StorageMode.Shared, SharedPath = central }, local, "user", "pc");
+        session.Open();
+        var cachedHash = session.Hash;
+        var cachedHistory = File.ReadAllBytes(repository.HistoryPath);
+        var backupCount = Directory.GetFiles(repository.BackupPath).Length;
+
+        File.Delete(repository.DataPath);
+        File.Delete(repository.HistoryPath);
+        session.Refresh();
+        Assert.True(session.IsOffline);
+
+        var restored = session.RestoreSharedFromCache();
+        Assert.False(session.IsOffline);
+        Assert.Equal(cachedHash, JsonData.HashFile(repository.DataPath));
+        Assert.Equal(cachedHistory, File.ReadAllBytes(repository.HistoryPath));
+        Assert.Equal(1, restored.HistoryEntries);
+        Assert.Equal(backupCount, Directory.GetFiles(repository.BackupPath).Length);
+
+        var restoredData = File.ReadAllBytes(repository.DataPath);
+        var restoredHistory = File.ReadAllBytes(repository.HistoryPath);
+        Assert.Throws<IOException>(session.RestoreSharedFromCache);
+        Assert.Equal(restoredData, File.ReadAllBytes(repository.DataPath));
+        Assert.Equal(restoredHistory, File.ReadAllBytes(repository.HistoryPath));
+    }
+
+    [Fact]
+    public void RecoveryRefusesExistingSharedHistory()
+    {
+        using var temp = new TempDirectory();
+        var central = temp.Sub("central");
+        var local = temp.Sub("local");
+        var repository = new FileRepository(central, "seed", "pc");
+        var start = repository.Initialize(Example());
+        var changed = JsonData.Clone(start.Data); changed.Sites[0].Description = "Journal";
+        repository.Commit(changed, start.Hash, null, "Modification", "Site", "LEVANT");
+        var session = new DataSession(new() { Mode = StorageMode.Shared, SharedPath = central }, local, "user", "pc");
+        session.Open();
+        var existingHistory = File.ReadAllBytes(repository.HistoryPath);
+
+        File.Delete(repository.DataPath);
+        Assert.Throws<IOException>(session.RestoreSharedFromCache);
+        Assert.False(File.Exists(repository.DataPath));
+        Assert.Equal(existingHistory, File.ReadAllBytes(repository.HistoryPath));
+    }
+
+    [Fact]
+    public void RecoveryRejectsCorruptCachedHistoryWithoutCreatingSharedFiles()
     {
         using var temp = new TempDirectory();
         var central = temp.Sub("central");
@@ -89,20 +144,55 @@ public sealed class StorageTests
         repository.Initialize(Example());
         var session = new DataSession(new() { Mode = StorageMode.Shared, SharedPath = central }, local, "user", "pc");
         session.Open();
-        var cachedHash = session.Hash;
+
+        File.WriteAllText(Path.Combine(local, "cache", "history.jsonl"), "{not-json}\n");
+        File.Delete(repository.DataPath);
+        File.Delete(repository.HistoryPath);
+        Assert.ThrowsAny<Exception>(session.RestoreSharedFromCache);
+        Assert.False(File.Exists(repository.DataPath));
+        Assert.False(File.Exists(repository.HistoryPath));
+    }
+
+    [Fact]
+    public void RecoveryKeepsBackupsButRejectsCacheOlderThanThem()
+    {
+        using var temp = new TempDirectory();
+        var central = temp.Sub("central");
+        var local = temp.Sub("local");
+        var repository = new FileRepository(central, "seed", "pc");
+        var snapshot = repository.Initialize(Example());
+        var first = JsonData.Clone(snapshot.Data); first.Sites[0].Description = "r1";
+        snapshot = repository.Commit(first, snapshot.Hash, null, "Modification", "Site", "LEVANT").Snapshot;
+        var session = new DataSession(new() { Mode = StorageMode.Shared, SharedPath = central }, local, "user", "pc");
+        session.Open();
+
+        var second = JsonData.Clone(snapshot.Data); second.Sites[0].Description = "r2";
+        snapshot = repository.Commit(second, snapshot.Hash, null, "Modification", "Site", "LEVANT").Snapshot;
+        var third = JsonData.Clone(snapshot.Data); third.Sites[0].Description = "r3";
+        repository.Commit(third, snapshot.Hash, null, "Modification", "Site", "LEVANT");
+        var backupCount = Directory.GetFiles(repository.BackupPath).Length;
 
         File.Delete(repository.DataPath);
-        session.Refresh();
-        Assert.True(session.IsOffline);
+        File.Delete(repository.HistoryPath);
+        var ex = Assert.Throws<IOException>(session.RestoreSharedFromCache);
+        Assert.Contains("plus récente que le cache", ex.Message);
+        Assert.False(File.Exists(repository.DataPath));
+        Assert.False(File.Exists(repository.HistoryPath));
+        Assert.Equal(backupCount, Directory.GetFiles(repository.BackupPath).Length);
+    }
 
-        session.RestoreSharedFromCache();
-        Assert.False(session.IsOffline);
-        Assert.Equal(cachedHash, JsonData.HashFile(repository.DataPath));
-        Assert.Contains(repository.History(), line => line.Contains("Restauration"));
+    [Fact]
+    public void RecoveryRefusesExistingSharedLock()
+    {
+        using var temp = new TempDirectory();
+        var repository = temp.Repository();
+        var snapshot = repository.Initialize(Example());
+        repository.Acquire(snapshot.Hash);
+        File.Delete(repository.DataPath);
 
-        var restoredBytes = File.ReadAllBytes(repository.DataPath);
-        Assert.Throws<IOException>(session.RestoreSharedFromCache);
-        Assert.Equal(restoredBytes, File.ReadAllBytes(repository.DataPath));
+        var ex = Assert.Throws<IOException>(() => repository.RestoreMissingData(snapshot.Bytes, []));
+        Assert.Contains("verrou", ex.Message);
+        Assert.False(File.Exists(repository.DataPath));
     }
 
     [Fact]

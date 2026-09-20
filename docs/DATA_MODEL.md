@@ -40,7 +40,7 @@ Révision initiale 0, +1 par publication. Le SHA-256 compare les octets complets
 - `edit.lock` : `id`, `user`, `machine`, `acquiredAt`, `heartbeat`, `startRevision`, `startHash`. Nouvel ID à chaque acquisition. Le heartbeat n’autorise jamais une reprise automatique.
 - `history.jsonl` : une ligne compacte par action avec `date`, `user`, `machine`, `revision`, `action`, `objectType`, `target` et `changes[]`. Chaque changement porte `siteId`, `vlanId`, `objectType`, `target`, `field`, `oldValue`, `newValue`. Seules les différences métier sont journalisées ; les snapshots complets de la base ne sont jamais recopiés dans l’historique.
 - `backup/gaip-data_<UTC>_rev<révision>_<suffixe>.json` : octets exacts avant publication.
-- `cache/cache.info` : `hash`, `source` absolue, `checkedAt`.
+- `cache/gaip-data.json` et `cache/history.jsonl` : copie locale de récupération en mode partagé. `cache/cache.info` : `hash`, `historyHash`, `source` absolue, `checkedAt`.
 - `config.json` : `mode` (`Local`/`Shared`), `sharedPath`, `syncSeconds` (5–86400, défaut 60), `backupCount` (1–10000, défaut 30), `csvSeparator` (un caractère, défaut `;`), `theme` (`System`/`Light`/`Dark`).
 - `.gaip-io.guard` : garde technique vide, permanente, sans donnée métier.
 

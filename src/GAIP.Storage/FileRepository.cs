@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using GAIP.Core;
@@ -5,6 +6,7 @@ using GAIP.Core;
 namespace GAIP.Storage;
 
 public sealed record Snapshot(Database Data, string Hash, byte[] Bytes);
+public sealed record RecoverySnapshot(Snapshot Snapshot, byte[] HistoryBytes);
 public sealed record AuditEntry(DateTimeOffset Date, string User, string Machine, long Revision, string Action,
     string ObjectType, string Target, List<AuditChange> Changes);
 public sealed class EditLease
@@ -18,6 +20,7 @@ public sealed class EditLease
     public string StartHash { get; set; } = "";
 }
 public sealed record CommitResult(Snapshot Snapshot, string? Warning);
+public sealed record RestoreResult(Snapshot Snapshot, int HistoryEntries);
 
 public sealed class FileRepository(string root, string user, string machine, int backups = 30)
 {
@@ -25,6 +28,7 @@ public sealed class FileRepository(string root, string user, string machine, int
     public string DataPath => Path.Combine(Root, "gaip-data.json");
     public string LockPath => Path.Combine(Root, "edit.lock");
     public string HistoryPath => Path.Combine(Root, "history.jsonl");
+    public string BackupPath => Path.Combine(Root, "backup");
 
     // Stable coordination inode. Never delete this file: removal could split contenders
     // into different locks. It protects force-unlock vs commit, including on Unix.
@@ -42,6 +46,36 @@ public sealed class FileRepository(string root, string user, string machine, int
     {
         var bytes = JsonData.ReadFileBytes(DataPath);
         return new(JsonData.Read(bytes), JsonData.Hash(bytes), bytes);
+    }
+    private byte[] ReadHistoryBytesRaw() => File.Exists(HistoryPath) ? JsonData.ReadFileBytes(HistoryPath) : [];
+    public byte[] ReadHistoryBytes()
+    {
+        var bytes = ReadHistoryBytesRaw();
+        ValidateHistory(bytes);
+        return bytes;
+    }
+    public RecoverySnapshot ReadRecoverySnapshot()
+    {
+        using var guard = Guard();
+        return new(Read(), ReadHistoryBytesRaw());
+    }
+    public static int ValidateHistory(byte[] bytes)
+    {
+        var count = 0;
+        try
+        {
+            using var reader = new StreamReader(new MemoryStream(bytes, writable: false), new UTF8Encoding(false, true), true);
+            while (reader.ReadLine() is { } line)
+            {
+                if (string.IsNullOrWhiteSpace(line)) throw new InvalidDataException($"Historique : ligne {count + 1} vide.");
+                _ = JsonSerializer.Deserialize(line, StorageJsonContext.Default.AuditEntry)
+                    ?? throw new InvalidDataException($"Historique : ligne {count + 1} vide.");
+                count++;
+            }
+        }
+        catch (DecoderFallbackException ex) { throw new InvalidDataException("Historique : UTF-8 invalide.", ex); }
+        catch (JsonException ex) { throw new InvalidDataException($"Historique : ligne {count + 1} invalide.", ex); }
+        return count;
     }
     public Snapshot Initialize(Database seed)
     {
@@ -127,7 +161,7 @@ public sealed class FileRepository(string root, string user, string machine, int
         db.LastModifiedFrom = machine;
         var bytes = JsonData.Serialize(db);
         JsonData.Read(bytes);
-        var backupDir = Path.Combine(Root, "backup");
+        var backupDir = BackupPath;
         Directory.CreateDirectory(backupDir);
         var backup = Path.Combine(backupDir, $"gaip-data_{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss_fffffff}_rev{old.Data.Revision:D4}_{Guid.NewGuid():N}.json");
         using (var stream = new FileStream(backup, FileMode.CreateNew, FileAccess.Write, FileShare.None))
@@ -156,30 +190,81 @@ public sealed class FileRepository(string root, string user, string machine, int
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { warnings.Add("Nettoyage des sauvegardes impossible : " + ex.Message); }
         return new(published, warnings.Count == 0 ? null : string.Join("\n", warnings));
     }
-    public CommitResult RestoreMissingData(byte[] cachedBytes)
+    public RestoreResult RestoreMissingData(byte[] cachedBytes, byte[] cachedHistoryBytes)
     {
         using var guard = Guard();
-        if (File.Exists(DataPath)) throw new IOException("La base partagée existe déjà : aucune restauration n’a été effectuée.");
-        if (ReadLease() is not null) throw new IOException("Un verrou est présent sur le partage : restauration refusée.");
+        if (File.Exists(DataPath)) throw new IOException("La base partagée existe déjà : restauration refusée.");
+        if (File.Exists(HistoryPath)) throw new IOException("Un historique existe déjà sur le partage : restauration refusée.");
+        if (File.Exists(LockPath)) throw new IOException("Un verrou existe sur le partage : restauration refusée.");
+
         var db = JsonData.Read(cachedBytes);
         var expectedHash = JsonData.Hash(cachedBytes);
-        JsonData.AtomicWrite(DataPath, cachedBytes);
-        var published = Read();
-        if (published.Hash != expectedHash) throw new IOException("La copie restaurée ne correspond pas au cache validé.");
+        var historyEntries = ValidateHistory(cachedHistoryBytes);
+        var expectedHistoryHash = JsonData.Hash(cachedHistoryBytes);
+        var latestBackupRevision = LatestBackupRevision();
+        if (latestBackupRevision > db.Revision)
+            throw new IOException($"Une sauvegarde du partage en révision {latestBackupRevision} est plus récente que le cache (révision {db.Revision}) : restauration automatique refusée.");
 
-        string? warning = null;
+        var historyPublished = false;
         try
         {
-            AppendHistory(new(DateTimeOffset.UtcNow, user, machine, db.Revision, "Restauration", "Base", "Cache local",
-            [
-                new(null, null, "Base", "Cache local", "hash", null, expectedHash)
-            ]));
+            AtomicCreate(HistoryPath, cachedHistoryBytes);
+            historyPublished = true;
+            var restoredHistory = ReadHistoryBytes();
+            if (JsonData.Hash(restoredHistory) != expectedHistoryHash)
+                throw new IOException("L’historique restauré ne correspond pas au cache validé.");
+
+            AtomicCreate(DataPath, cachedBytes);
+            var published = Read();
+            if (published.Hash != expectedHash)
+                throw new IOException("La base restaurée ne correspond pas au cache validé.");
+            return new(published, historyEntries);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch
         {
-            warning = "Base restaurée, historique non écrit : " + ex.Message;
+            if (historyPublished && !File.Exists(DataPath))
+            {
+                try
+                {
+                    if (File.Exists(HistoryPath) && JsonData.HashFile(HistoryPath) == expectedHistoryHash)
+                        File.Delete(HistoryPath);
+                }
+                catch { }
+            }
+            throw;
         }
-        return new(published, warning);
+    }
+    private static void AtomicCreate(string path, byte[] bytes)
+    {
+        var temp = path + "." + Guid.NewGuid().ToString("N") + ".restore.tmp";
+        try
+        {
+            using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+            {
+                stream.Write(bytes);
+                stream.Flush(true);
+            }
+            if (JsonData.HashFile(temp) != JsonData.Hash(bytes)) throw new IOException("Échec de vérification du fichier temporaire de restauration.");
+            File.Move(temp, path);
+        }
+        finally { if (File.Exists(temp)) File.Delete(temp); }
+    }
+    private long LatestBackupRevision()
+    {
+        if (!Directory.Exists(BackupPath)) return -1;
+        long latest = -1;
+        foreach (var file in Directory.EnumerateFiles(BackupPath, "gaip-data_*_rev*_*.json"))
+        {
+            var name = Path.GetFileNameWithoutExtension(file);
+            var marker = name.LastIndexOf("_rev", StringComparison.Ordinal);
+            if (marker < 0) continue;
+            var start = marker + 4;
+            var end = name.IndexOf('_', start);
+            if (end <= start) continue;
+            if (long.TryParse(name.AsSpan(start, end - start), NumberStyles.None, CultureInfo.InvariantCulture, out var revision))
+                latest = Math.Max(latest, revision);
+        }
+        return latest;
     }
     private void AppendHistory(AuditEntry entry)
     {

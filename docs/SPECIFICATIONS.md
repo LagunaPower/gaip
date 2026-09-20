@@ -35,7 +35,7 @@ Un rédacteur à la fois. L’interface n’expose plus de mode modification man
 
 Avant publication : validation, hash attendu, sauvegarde vérifiée. Temporaire complet, remplacement dans le même dossier, relecture/hash. Révision +1. Cache/historique, avertissement si leur mise à jour échoue après publication. L’historique est un journal JSONL compact de différences champ par champ ; il ne contient plus de snapshots complets de la base. Le filtrage par VLAN repose directement sur les IDs portés par les changements. Rétention des sauvegardes 30 par défaut.
 
-La configuration peut être exportée en JSON depuis la fenêtre Configuration. En mode partagé, le diagnostic propose une restauration de secours depuis le cache local validé lorsque `gaip-data.json` a été supprimé accidentellement ; cette restauration conserve les octets et la révision du cache et refuse systématiquement d’écraser une base partagée déjà présente ou d’agir si un verrou existe.
+La configuration peut être exportée en JSON depuis la fenêtre Configuration afin d’être distribuée sur d’autres postes. En mode partagé, le cache local conserve `gaip-data.json` et `history.jsonl` avec leurs SHA-256 et le chemin source. Le diagnostic propose une restauration de secours de la base et de l’historique lorsque les fichiers du partage ont été supprimés accidentellement. La restauration refuse tout écrasement si `gaip-data.json`, `history.jsonl` ou `edit.lock` existe déjà. Le dossier `backup/` est conservé ; si une sauvegarde standard porte une révision supérieure à celle du cache, la restauration automatique est refusée afin d’éviter un retour à un état ancien.
 
 ## CSV
 

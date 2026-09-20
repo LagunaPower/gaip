@@ -32,7 +32,7 @@ $env:NUGET_PACKAGES="$PWD/.nuget/packages"
 - **Modifier le VLAN**, **Modifier le site**, **Libérer l’adresse** : modifications et suppressions avec validation. Aucun parent non vide n’est supprimé. Dès qu’un sous-réseau contient au moins une IP attribuée, son CIDR devient non modifiable jusqu’à libération de toutes les IP ; une passerelle seule ne bloque pas ce changement.
 - **CSV** : import avec toutes les erreurs détectées avant publication, export VLAN, IP ou les deux. **Excel** : export `.xlsx` complet avec un onglet Sites et VLAN, des liens hypertextes vers un onglet par réseau, les informations réseau et toutes les IP utilisables. **Historique** : 1 000 dernières actions, détails dépliables.
 - Dans une vue VLAN, **CSV** exporte uniquement ce VLAN et ses IP ; **Historique** affiche ses dernières actions liées, y compris les libérations d’IP, sans exposer les autres VLAN dans les détails. Les ajouts génériques sont accessibles à l’accueil.
-- **Configuration** : mode, chemin partagé, fréquence, rétention, séparateur, thème, export JSON de la configuration et diagnostic/verrou. En mode partagé, le diagnostic permet aussi de restaurer une base centrale supprimée accidentellement à partir du cache local validé ; une base existante n’est jamais écrasée.
+- **Configuration** : mode, chemin partagé, fréquence, rétention, séparateur, thème, export JSON de la configuration pour distribution et diagnostic/verrou. En mode partagé, le diagnostic permet aussi de restaurer la base et l’historique supprimés accidentellement à partir du cache local validé, sans écraser de fichier existant.
 - **Configuration → Ordre d’affichage** : déplacer les sites par glisser-déposer, puis **Enregistrer l’ordre**. Monter/Descendre permet aussi un classement au clavier. Annuler conserve l’ordre précédent. L’ordre est commun aux postes ; en mode partagé, le verrou est pris automatiquement uniquement pendant l’enregistrement. Sans ordre enregistré, tri par code ; les nouveaux sites suivent les sites déjà classés. Les cartes de l’accueil sont espacées de 8 px.
 
 La base initiale est vide. Pour une démonstration volontaire, importer `samples/vlans.csv`, puis `samples/addresses.csv`. Le jeu de démonstration contient 6 sites avec respectivement 5, 7, 9, 11, 13 et 15 VLAN, soit 60 VLAN au total, 6 tailles de sous-réseaux différentes (/23 à /28) et 3 470 attributions IP, avec entre 5 et 200 adresses par VLAN.
@@ -54,11 +54,11 @@ Hors ligne : cache validé consultable, modifications interdites. Sans cache val
 | Données | `%LOCALAPPDATA%/GAIP` | `$XDG_DATA_HOME/GAIP` ou `~/.local/share/GAIP` |
 | Configuration | `%LOCALAPPDATA%/GAIP/config.json` | `$XDG_CONFIG_HOME/GAIP/config.json` ou `~/.config/GAIP/config.json` |
 | Base locale | `local/gaip-data.json` sous les données | idem |
-| Cache partagé | `cache/gaip-data.json` et `cache/cache.info` | idem |
+| Cache partagé | `cache/gaip-data.json`, `cache/history.jsonl` et `cache/cache.info` | idem |
 
 Stockage de référence : `gaip-data.json`, `history.jsonl`, `backup/`, `edit.lock` pendant une publication partagée. `history.jsonl` est un journal compact de différences champ par champ et ne recopie plus les états complets de la base. `.gaip-io.guard` est un fichier technique permanent de coordination ; ne pas le supprimer pendant l’utilisation. Les temporaires `.tmp` ne sont jamais lus comme base.
 
-Avant chaque publication, sauvegarde de l’ancienne base. Rétention configurable, 30 par défaut. Pas de restauration dans l’interface ; une restauration manuelle se fait avec tous les clients fermés et après conservation de la base courante.
+Avant chaque publication, sauvegarde de l’ancienne base. Rétention configurable, 30 par défaut. Les backups ne sont pas restaurés automatiquement depuis l’interface ; la récupération depuis le cache restaure uniquement la base courante et son historique lorsque ceux-ci ont disparu, tout en conservant les sauvegardes présentes.
 
 ## Téléchargements
 
