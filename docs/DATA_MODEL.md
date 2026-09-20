@@ -2,6 +2,8 @@
 
 `gaip-data.json` contient l’unique état métier courant. UTF-8, propriétés camelCase, version explicite. Schéma inconnu ou modèle invalide refusés sans réinitialisation silencieuse.
 
+**À compter du gel de la V1, le format décrit dans ce document est le schéma `1` de référence.** Toute future évolution incompatible doit utiliser un `schemaVersion` supérieur et une migration explicite. Les ajouts antérieurs (`displayOrder`, `multicastGroups`) font partie intégrante de cette V1 de référence.
+
 ```json
 {
   "schemaVersion": 1,

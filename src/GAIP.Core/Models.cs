@@ -4,7 +4,10 @@ namespace GAIP.Core;
 
 public sealed class Database
 {
-    public int SchemaVersion { get; set; } = 1;
+    // Le format métier actuel constitue la V1 de référence. Toute évolution
+    // incompatible future doit incrémenter cette version et prévoir une migration explicite.
+    public const int CurrentSchemaVersion = 1;
+    public int SchemaVersion { get; set; } = CurrentSchemaVersion;
     public long Revision { get; set; }
     public DateTimeOffset LastModified { get; set; } = DateTimeOffset.UtcNow;
     public string LastModifiedBy { get; set; } = "";

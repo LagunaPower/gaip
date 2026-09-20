@@ -346,7 +346,7 @@ public sealed partial class MainWindow
             form.Fields.Children.Add(Ui.Button("Exporter les multicast…", () => Run(() => ExportCsv(CsvKind.Multicast))));
         form.Fields.Children.Add(Ui.Button(vlanId is null ? "Exporter les trois fichiers CSV…" : "Exporter les deux fichiers CSV…", () => Run(() => ExportAll(vlanId))));
         form.Fields.Children.Add(Ui.Button("Exporter le classeur Excel complet…", () => Run(ExportExcel)));
-        form.Fields.Children.Add(Ui.Text("Excel : le premier onglet liste les sites et VLAN avec des liens vers un onglet par réseau. Chaque onglet réseau contient ses informations et toutes les adresses IP utilisables.", 12));
+        form.Fields.Children.Add(Ui.Text("Excel : le premier onglet liste les sites et VLAN, l’onglet Multicast reprend les groupes/flux et leur matrice de sites, puis chaque réseau possède son onglet avec toutes les adresses IP utilisables.", 12));
         form.Fields.Children.Add(Ui.Text("Les passerelles figurent dans vlans.csv uniquement.", 12));
         await form.ShowDialog<bool>(this);
     }

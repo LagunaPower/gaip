@@ -70,13 +70,13 @@ Version: $VERSION
 Section: net
 Priority: optional
 Architecture: amd64
-Maintainer: LagunaPower <80133998+LagunaPower@users.noreply.github.com>
+Maintainer: Yannick D. <80133998+LagunaPower@users.noreply.github.com>
 Homepage: https://github.com/LagunaPower/gaip
 Installed-Size: $INSTALLED_SIZE
 Depends: ca-certificates, libc6, libgcc-s1 | libgcc1, libgssapi-krb5-2, libstdc++6, libssl3 | libssl3t64, libicu72 | libicu74 | libicu76 | libicu78, tzdata, zlib1g, libx11-6, libice6, libsm6, libfontconfig1, libwayland-client0, libxkbcommon0, libegl1, libgl1
-Description: Gestion d'Adresses IP
- G@IP est une application desktop de gestion de sites, VLAN, sous-réseaux
- IPv4, passerelles et adresses IP attribuées.
+Description: Gestion de sites, VLAN, adressage IPv4 et multicast
+ G@IP est une application desktop de gestion de sites, VLAN, sous-réseaux IPv4,
+ passerelles, adresses IP attribuées et flux multicast.
 EOF
 
 cat > "$DEB_ROOT/DEBIAN/postinst" <<'EOF'
@@ -129,7 +129,7 @@ cat > "$SPEC" <<EOF
 Name:           gaip
 Version:        $VERSION
 Release:        1
-Summary:        Gestion d'Adresses IP
+Summary:        Gestion de sites, VLAN, adressage IPv4 et multicast
 License:        MIT
 URL:            https://github.com/LagunaPower/gaip
 Source0:        %{name}-%{version}.tar.gz
@@ -153,8 +153,8 @@ Requires:       libEGL.so.1()(64bit)
 Requires:       libGL.so.1()(64bit)
 
 %description
-G@IP est une application desktop de gestion de sites, VLAN, sous-réseaux
-IPv4, passerelles et adresses IP attribuées.
+G@IP est une application desktop de gestion de sites, VLAN, sous-réseaux IPv4,
+passerelles, adresses IP attribuées et flux multicast.
 
 %prep
 %setup -q
@@ -190,7 +190,7 @@ fi
 /usr/share/icons/hicolor/*/apps/GAIP.png
 
 %changelog
-* Sat Sep 19 2026 LagunaPower <80133998+LagunaPower@users.noreply.github.com> - $VERSION-1
+* Sat Sep 19 2026 Yannick D. <80133998+LagunaPower@users.noreply.github.com> - $VERSION-1
 - Automated G@IP package build
 EOF
 

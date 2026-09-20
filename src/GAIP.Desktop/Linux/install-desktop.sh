@@ -15,7 +15,7 @@ escaped=$(printf '%s' "$root/GAIP" | sed 's/\\/\\\\/g; s/"/\\"/g; s/`/\\`/g; s/\
 {
   printf '%s\n' '[Desktop Entry]' 'Type=Application' 'Name=G@IP' 'GenericName=Gestion d’Adresses IP'
   printf 'Exec="%s"\n' "$escaped"
-  printf '%s\n' 'Icon=GAIP' 'Terminal=false' 'Categories=Network;Utility;' 'StartupWMClass=GAIP'
+  printf '%s\n' 'Comment=Gestion de sites, VLAN, adressage IPv4 et multicast' 'Icon=GAIP' 'Terminal=false' 'Categories=Network;Utility;' 'StartupWMClass=GAIP'
 } > "$data/applications/GAIP.desktop"
 chmod +x "$root/GAIP"
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then gtk-update-icon-cache -f -t "$data/icons/hicolor" >/dev/null 2>&1 || true; fi

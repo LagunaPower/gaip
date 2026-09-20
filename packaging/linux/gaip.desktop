@@ -2,7 +2,7 @@
 Type=Application
 Name=G@IP
 GenericName=Gestion d’Adresses IP
-Comment=Gestion de sites, VLAN et plans IPv4
+Comment=Gestion de sites, VLAN, adressage IPv4 et multicast
 Exec=gaip
 Icon=GAIP
 Terminal=false

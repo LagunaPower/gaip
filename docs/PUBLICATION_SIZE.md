@@ -1,5 +1,7 @@
 # Taille et validation des publications — 19 septembre 2026
 
+> **Rapport historique daté.** Les nombres de tests, tailles et constats ci-dessous décrivent l’état mesuré le 19 septembre 2026. Pour l’état courant du dépôt et le nombre actuel de tests, voir [`VALIDATION.md`](VALIDATION.md).
+
 Mesures locales avec SDK .NET 10.0.401, runtime 10.0.12 et Avalonia 12.1.0. Aucune montée de version ni NativeAOT. Les tailles sont en octets et en Mio (1 Mio = 1 048 576 octets).
 
 ## Mesures avant / après

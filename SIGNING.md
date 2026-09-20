@@ -12,8 +12,8 @@ Unsigned development builds and local builds are not covered by this policy.
 
 ## Roles
 
-- Committer and reviewer: [LagunaPower](https://github.com/LagunaPower), repository owner and maintainer.
-- Approver for release signing requests: [LagunaPower](https://github.com/LagunaPower).
+- Committer and reviewer: Yannick D. ([LagunaPower](https://github.com/LagunaPower)), repository owner and maintainer.
+- Approver for release signing requests: Yannick D. ([LagunaPower](https://github.com/LagunaPower)).
 
 Changes contributed by other people are reviewed by the maintainer before they are merged.
 

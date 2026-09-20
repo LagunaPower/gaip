@@ -311,13 +311,19 @@ public sealed partial class DesktopTests
 
 
     [AvaloniaFact]
-    public async Task MulticastFlowEditorKeepsSelectionsAboveFilteredAvailableItems()
+    public async Task MulticastFlowEditorKeepsSelectionsAboveVirtualizedFilteredAvailableItems()
     {
         using var temp = new TempDirectory();
         var data = temp.Sub("data");
-        var db = TestData.Example();
+        var db = TestData.Example("10.20.112.0/20");
         TestData.Subnet(db).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRC-VIDEO" });
         TestData.Subnet(db).Addresses.Add(new() { Address = "10.20.120.26", Hostname = "SRC-AUDIO" });
+        var network = GAIP.Core.Ipv4Network.Parse("10.20.112.0/20");
+        for (var index = 0; index < 1000; index++)
+        {
+            var address = GAIP.Core.Ipv4Network.Format(network.First + (uint)index);
+            TestData.Subnet(db).Addresses.Add(new() { Address = address, Hostname = $"BULK-{index:D4}" });
+        }
         db.Sites[0].Vlans.Add(new() { Vid = 130, Name = "AUDIO" });
         db.MulticastGroups.Add(new()
         {
@@ -344,42 +350,51 @@ public sealed partial class DesktopTests
             .First(box => box.Name == "MulticastSourceSearch");
         var vlanSearch = form.Fields.GetLogicalDescendants().OfType<TextBox>()
             .First(box => box.Name == "MulticastVlanSearch");
-        var sourceSelected = form.Fields.GetLogicalDescendants().OfType<StackPanel>()
-            .First(panel => panel.Name == "MulticastSourceSearchSelected");
-        var sourceAvailable = form.Fields.GetLogicalDescendants().OfType<StackPanel>()
-            .First(panel => panel.Name == "MulticastSourceSearchAvailable");
-        var vlanSelected = form.Fields.GetLogicalDescendants().OfType<StackPanel>()
-            .First(panel => panel.Name == "MulticastVlanSearchSelected");
-        var vlanAvailable = form.Fields.GetLogicalDescendants().OfType<StackPanel>()
-            .First(panel => panel.Name == "MulticastVlanSearchAvailable");
+        var sourceSelected = form.Fields.GetLogicalDescendants().OfType<ListBox>()
+            .First(list => list.Name == "MulticastSourceSearchSelected");
+        var sourceAvailable = form.Fields.GetLogicalDescendants().OfType<ListBox>()
+            .First(list => list.Name == "MulticastSourceSearchAvailable");
+        var vlanSelected = form.Fields.GetLogicalDescendants().OfType<ListBox>()
+            .First(list => list.Name == "MulticastVlanSearchSelected");
+        var vlanAvailable = form.Fields.GetLogicalDescendants().OfType<ListBox>()
+            .First(list => list.Name == "MulticastVlanSearchAvailable");
 
-        var sourceChecks = form.Fields.GetLogicalDescendants().OfType<CheckBox>()
-            .Where(check => (check.Content as string)?.StartsWith("10.20.120.", StringComparison.Ordinal) == true).ToArray();
-        var source25 = sourceChecks.Single(check => (check.Content as string)!.StartsWith("10.20.120.25", StringComparison.Ordinal));
-        var source26 = sourceChecks.Single(check => (check.Content as string)!.StartsWith("10.20.120.26", StringComparison.Ordinal));
-        Assert.Contains(source25, sourceSelected.Children);
-        Assert.Contains(source26, sourceAvailable.Children);
+        Assert.Equal(1, sourceSelected.Items.Count);
+        Assert.True(sourceAvailable.Items.Count > 1000);
+        sourceAvailable.BringIntoView(); form.UpdateLayout();
+        await Until(() => sourceAvailable.GetVisualDescendants().OfType<CheckBox>().Any());
+        Assert.InRange(sourceAvailable.GetVisualDescendants().OfType<CheckBox>().Count(), 1, 50);
 
         sourceSearch.Text = "SRC-AUDIO";
-        await Until(() => sourceAvailable.Children.Count == 1 && sourceAvailable.Children.Contains(source26));
-        Assert.Contains(source25, sourceSelected.Children);
-
+        await Until(() => sourceAvailable.Items.Count == 1);
+        Assert.Equal(1, sourceSelected.Items.Count);
+        sourceSelected.BringIntoView(); form.UpdateLayout();
+        await Until(() => sourceSelected.GetVisualDescendants().OfType<CheckBox>().Any());
+        var source25 = sourceSelected.GetVisualDescendants().OfType<CheckBox>().Single();
+        Assert.StartsWith("10.20.120.25", source25.Content as string);
         source25.IsChecked = false;
-        await Until(() => sourceSelected.Children.Count == 0);
-        Assert.DoesNotContain(source25, sourceAvailable.Children);
+        await Until(() => sourceSelected.Items.Count == 0 && sourceAvailable.Items.Count == 1);
+
+        sourceAvailable.BringIntoView(); form.UpdateLayout();
+        await Until(() => sourceAvailable.GetVisualDescendants().OfType<CheckBox>()
+            .Any(check => (check.Content as string)?.StartsWith("10.20.120.26", StringComparison.Ordinal) == true));
+        var source26 = sourceAvailable.GetVisualDescendants().OfType<CheckBox>()
+            .Single(check => (check.Content as string)!.StartsWith("10.20.120.26", StringComparison.Ordinal));
         source26.IsChecked = true;
-        await Until(() => sourceSelected.Children.Contains(source26) && sourceAvailable.Children.Count == 0);
+        await Until(() => sourceSelected.Items.Count == 1 && sourceAvailable.Items.Count == 0);
 
-        var vlanChecks = form.Fields.GetLogicalDescendants().OfType<CheckBox>()
-            .Where(check => (check.Content as string)?.StartsWith("LEVANT — VLAN", StringComparison.Ordinal) == true).ToArray();
-        var vlan120 = vlanChecks.Single(check => (check.Content as string)!.Contains("VLAN 120"));
-        var vlan130 = vlanChecks.Single(check => (check.Content as string)!.Contains("VLAN 130"));
-        Assert.Contains(vlan120, vlanSelected.Children);
-        Assert.Contains(vlan130, vlanAvailable.Children);
-
+        Assert.Equal(1, vlanSelected.Items.Count);
+        Assert.Equal(1, vlanAvailable.Items.Count);
         vlanSearch.Text = "130";
-        await Until(() => vlanAvailable.Children.Count == 1 && vlanAvailable.Children.Contains(vlan130));
-        Assert.Contains(vlan120, vlanSelected.Children);
+        await Until(() => vlanAvailable.Items.Count == 1);
+        vlanSelected.BringIntoView(); form.UpdateLayout();
+        await Until(() => vlanSelected.GetVisualDescendants().OfType<CheckBox>().Any());
+        var vlan120 = vlanSelected.GetVisualDescendants().OfType<CheckBox>().Single();
+        Assert.Contains("VLAN 120", vlan120.Content as string);
+        vlanAvailable.BringIntoView(); form.UpdateLayout();
+        await Until(() => vlanAvailable.GetVisualDescendants().OfType<CheckBox>().Any());
+        var vlan130 = vlanAvailable.GetVisualDescendants().OfType<CheckBox>().Single();
+        Assert.Contains("VLAN 130", vlan130.Content as string);
 
         form.Close(false); main.Close(); await Until(() => !main.IsVisible);
     }

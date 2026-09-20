@@ -5,7 +5,7 @@ public static class ModelValidator
     public static IReadOnlyList<string> Validate(Database db)
     {
         var errors = new List<string>();
-        if (db.SchemaVersion != 1) errors.Add("Version du schéma non prise en charge.");
+        if (db.SchemaVersion != Database.CurrentSchemaVersion) errors.Add("Version du schéma non prise en charge.");
         if (db.Revision < 0) errors.Add("Révision négative.");
         if (db.Sites is null) return ["La liste des sites est absente."];
         var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

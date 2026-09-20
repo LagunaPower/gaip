@@ -259,78 +259,102 @@ public sealed partial class MainWindow
         await form.ShowDialog<bool>(this);
     }
 
-    private sealed record MulticastFilterChoice<T>(T Value, CheckBox Check, string SearchText);
+    private sealed record MulticastFilterChoice<T>(T Value, string Label, string SearchText) where T : notnull;
 
     private static Control MulticastFilterPicker<T>(
         string searchName,
         string searchLabel,
         IReadOnlyList<MulticastFilterChoice<T>> choices,
+        HashSet<T> selected,
         string emptyMessage,
         Action selectionChanged)
+        where T : notnull
     {
         var search = Ui.Input("", searchLabel);
         search.Name = searchName;
-        var selectedRows = new StackPanel { Name = searchName + "Selected", Spacing = 3 };
-        var availableRows = new StackPanel { Name = searchName + "Available", Spacing = 3 };
         var selectedTitle = Ui.Text("", 12, true);
         var selectedEmpty = Ui.Text("Aucune sélection.", 12);
         var availableTitle = Ui.Text("Disponibles", 12, true);
         var availableEmpty = Ui.Text(emptyMessage, 12);
 
-        Border Box(Control child, double maxHeight) => new()
+        ListBox? selectedList = null;
+        ListBox? availableList = null;
+        selectedList = PickerList(searchName + "Selected", true);
+        availableList = PickerList(searchName + "Available", false);
+
+        ListBox PickerList(string name, bool isSelectedList)
+        {
+            var list = new ListBox
+            {
+                Name = name,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel()),
+                ItemTemplate = new FuncDataTemplate<MulticastFilterChoice<T>>((choice, _) =>
+                {
+                    if (choice is null) return null;
+                    var check = new CheckBox
+                    {
+                        Content = choice.Label,
+                        IsChecked = isSelectedList,
+                        HorizontalAlignment = HorizontalAlignment.Stretch
+                    };
+                    Avalonia.Automation.AutomationProperties.SetName(check,
+                        isSelectedList ? $"Désélectionner {choice.Label}" : $"Sélectionner {choice.Label}");
+                    check.IsCheckedChanged += (_, _) =>
+                    {
+                        if (check.IsChecked == true) selected.Add(choice.Value);
+                        else selected.Remove(choice.Value);
+                        Refresh();
+                        selectionChanged();
+                    };
+                    return check;
+                })
+            };
+            list.Styles.Add(new Style(x => x.OfType<ListBoxItem>()) { Setters =
+            {
+                new Setter(ListBoxItem.HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch),
+                new Setter(ListBoxItem.PaddingProperty, new Thickness(4, 1)),
+                new Setter(ListBoxItem.MinHeightProperty, 30d)
+            } });
+            return list;
+        }
+
+        Border Box(Control list, TextBlock empty) => new()
         {
             BorderBrush = new SolidColorBrush(Color.Parse("#65758B"), .35),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(5),
-            Padding = new Thickness(6),
-            MaxHeight = maxHeight,
-            Child = new ScrollViewer
-            {
-                Content = child,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
-            }
+            Padding = new Thickness(4),
+            Child = new Grid { Children = { list, empty } }
         };
 
         void Refresh()
         {
             var query = search.Text?.Trim() ?? "";
-            selectedRows.Children.Clear();
-            availableRows.Children.Clear();
+            var selectedItems = choices.Where(choice => selected.Contains(choice.Value)).ToArray();
+            var availableItems = choices.Where(choice => !selected.Contains(choice.Value) &&
+                (query.Length == 0 || choice.SearchText.Contains(query, StringComparison.OrdinalIgnoreCase))).ToArray();
 
-            foreach (var choice in choices)
-            {
-                if (choice.Check.IsChecked == true)
-                {
-                    choice.Check.IsVisible = true;
-                    selectedRows.Children.Add(choice.Check);
-                    continue;
-                }
+            selectedList!.ItemsSource = selectedItems;
+            availableList!.ItemsSource = availableItems;
+            selectedList!.Height = selectedItems.Length == 0 ? 0 : Math.Min(160, 8 + selectedItems.Length * 30);
+            availableList!.Height = availableItems.Length == 0 ? 0 : Math.Min(220, 8 + availableItems.Length * 30);
+            selectedList!.IsVisible = selectedItems.Length > 0;
+            availableList!.IsVisible = availableItems.Length > 0;
 
-                var visible = query.Length == 0 ||
-                    choice.SearchText.Contains(query, StringComparison.OrdinalIgnoreCase);
-                choice.Check.IsVisible = visible;
-                if (visible) availableRows.Children.Add(choice.Check);
-            }
-
-            var selectedCount = choices.Count(choice => choice.Check.IsChecked == true);
-            selectedTitle.Text = $"Sélectionnés ({selectedCount})";
-            selectedEmpty.IsVisible = selectedCount == 0;
-            availableEmpty.IsVisible = choices.Count == 0 || availableRows.Children.Count == 0;
+            selectedTitle.Text = $"Sélectionnés ({selectedItems.Length})";
+            selectedEmpty.IsVisible = selectedItems.Length == 0;
+            availableEmpty.IsVisible = availableItems.Length == 0;
             availableEmpty.Text = choices.Count == 0 ? emptyMessage :
                 query.Length == 0 ? "Aucun élément disponible." : "Aucun résultat dans les éléments disponibles.";
         }
 
         search.TextChanged += (_, _) => Refresh();
-        foreach (var choice in choices)
-            choice.Check.IsCheckedChanged += (_, _) => { Refresh(); selectionChanged(); };
         Refresh();
 
-        var selectedContent = Ui.Column(selectedEmpty, selectedRows);
-        var availableContent = Ui.Column(availableEmpty, availableRows);
         return Ui.Column(
             selectedTitle,
-            Box(selectedContent, 160),
+            Box(selectedList, selectedEmpty),
             new Border
             {
                 Height = 1,
@@ -339,7 +363,7 @@ public sealed partial class MainWindow
             },
             availableTitle,
             Ui.SearchField(search, searchLabel),
-            Box(availableContent, 220));
+            Box(availableList, availableEmpty));
     }
 
     private async Task EditMulticastFlow(MulticastGroup group, MulticastFlow? existing)
@@ -360,14 +384,9 @@ public sealed partial class MainWindow
                 var display = $"{item.ip.Address} — {(string.IsNullOrWhiteSpace(item.ip.Hostname) ? item.ip.Description : item.ip.Hostname)} — {item.site.Code}/VLAN {item.vlan.Vid}";
                 var searchText = string.Join(" ", item.ip.Address, item.ip.Hostname, item.ip.Description,
                     item.site.Code, item.site.Name, item.vlan.Vid.ToString(), item.vlan.Name, item.vlan.Description);
-                var check = new CheckBox
-                {
-                    Content = display,
-                    IsChecked = existing?.Sources.Contains(item.ip.Address) == true
-                };
-                Avalonia.Automation.AutomationProperties.SetName(check, $"Source multicast {item.ip.Address}");
-                return new MulticastFilterChoice<string>(item.ip.Address, check, searchText);
+                return new MulticastFilterChoice<string>(item.ip.Address, display, searchText);
             }).ToList();
+        var selectedSources = existing?.Sources.ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>(StringComparer.Ordinal);
 
         var vlanChoices = SiteOrdering.Ordered(Db.Sites)
             .SelectMany(site => site.Vlans.OrderBy(vlan => vlan.Vid).Select(vlan => (site, vlan)))
@@ -376,22 +395,17 @@ public sealed partial class MainWindow
                 var display = $"{item.site.Code} — VLAN {item.vlan.Vid} — {item.vlan.Name}";
                 var searchText = string.Join(" ", item.site.Code, item.site.Name, item.vlan.Vid.ToString(),
                     item.vlan.Name, item.vlan.Description, item.vlan.Subnet?.Cidr ?? "");
-                var check = new CheckBox
-                {
-                    Content = display,
-                    IsChecked = existing?.VlanIds.Contains(item.vlan.Id) == true
-                };
-                Avalonia.Automation.AutomationProperties.SetName(check, $"VLAN multicast {item.site.Code} {item.vlan.Vid}");
-                return new MulticastFilterChoice<Guid>(item.vlan.Id, check, searchText);
+                return new MulticastFilterChoice<Guid>(item.vlan.Id, display, searchText);
             }).ToList();
+        var selectedVlans = existing?.VlanIds.ToHashSet() ?? [];
 
         Action<Database> Mutation()
         {
             if (!int.TryParse(port.Text, out var p)) throw new FormatException("Port entier attendu entre 1 et 65535.");
             var c = content.Text ?? "";
             var d = description.Text ?? "";
-            var sources = sourceChoices.Where(choice => choice.Check.IsChecked == true).Select(choice => choice.Value).ToList();
-            var vlans = vlanChoices.Where(choice => choice.Check.IsChecked == true).Select(choice => choice.Value).ToList();
+            var sources = sourceChoices.Where(choice => selectedSources.Contains(choice.Value)).Select(choice => choice.Value).ToList();
+            var vlans = vlanChoices.Where(choice => selectedVlans.Contains(choice.Value)).Select(choice => choice.Value).ToList();
             return db =>
             {
                 var targetGroup = db.MulticastGroups.Single(g => g.Address == group.Address);
@@ -424,10 +438,10 @@ public sealed partial class MainWindow
 
         form.Fields.Children.Add(Ui.Field("Source(s) du flux",
             MulticastFilterPicker("MulticastSourceSearch", "Rechercher une IP, un hostname, un site ou un VLAN",
-                sourceChoices, "Aucune IP attribuée n’est disponible comme source.", Validate)));
+                sourceChoices, selectedSources, "Aucune IP attribuée n’est disponible comme source.", Validate)));
         form.Fields.Children.Add(Ui.Field("VLAN utilisé(s)",
             MulticastFilterPicker("MulticastVlanSearch", "Rechercher un site, un VLAN, un nom ou un CIDR",
-                vlanChoices, "Aucun VLAN disponible.", Validate)));
+                vlanChoices, selectedVlans, "Aucun VLAN disponible.", Validate)));
 
         port.TextChanged += (_, _) => Validate();
         content.TextChanged += (_, _) => Validate();

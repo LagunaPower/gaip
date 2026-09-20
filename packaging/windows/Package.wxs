@@ -2,7 +2,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package
       Name="G@IP — Gestion d’Adresses IP"
-      Manufacturer="LagunaPower"
+      Manufacturer="Yannick D."
       Version="$(Version)"
       Language="1036"
       Scope="perMachine"
@@ -25,7 +25,7 @@
                 Id="StartMenuShortcut"
                 Directory="ProgramMenuFolder"
                 Name="G@IP"
-                Description="Gestion d’Adresses IP"
+                Description="Gestion de sites, VLAN, adressage IPv4 et multicast"
                 WorkingDirectory="INSTALLFOLDER" />
           </File>
         </Component>

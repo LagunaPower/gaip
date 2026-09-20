@@ -6,7 +6,7 @@
     <Product>G@IP — Gestion d’Adresses IP</Product>
     <Company>Yannick D.</Company>
     <Authors>Yannick D.</Authors>
-    <Description>Gestion de sites, VLAN et plans IPv4</Description>
+    <Description>Gestion de sites, VLAN, adressage IPv4 et multicast</Description>
     <Copyright>Copyright © Yannick D. 2026</Copyright>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/GAIP.ico</ApplicationIcon>

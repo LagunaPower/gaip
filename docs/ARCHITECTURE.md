@@ -11,6 +11,10 @@ GAIP.Tests → ces projets + Avalonia.Headless.XUnit
 - **Desktop** : contrôles Avalonia en C#, fenêtres/formulaires et contrôleur de présentation. Règles dans Core. Sémaphore de session, I/O hors du thread UI. En partagé, les formulaires ne gardent pas le verrou : il est acquis automatiquement seulement pendant la publication.
 - **Tests** : xUnit v3, invariants, imports, concurrence/stockage et parcours UI Headless.
 
+## Version du modèle
+
+Le schéma métier V1 est désormais figé dans son état actuel (sites, VLAN, sous-réseaux, IP, ordre d’affichage et multicast). Toute évolution future incompatible de `gaip-data.json` doit incrémenter `schemaVersion` et passer par une migration explicite ; une simple nouvelle propriété inconnue ne doit pas être introduite sous le même numéro de schéma.
+
 ## Concurrence
 
 `edit.lock` représente un bail d’écriture. Dans le parcours UI normal, ce bail est très court : actualisation, acquisition juste avant l’enregistrement, publication, puis libération immédiate. `.gaip/io.guard` est la garde technique ouverte avec `FileShare.None` lors d’une publication, acquisition, libération forcée ou heartbeat. Le fichier reste présent dans le sous-dossier technique `.gaip`, masqué sous Windows lorsque possible. Au premier accès, l’ancien `.gaip-io.guard` n’est supprimé qu’après prise exclusive ; s’il est encore utilisé, l’opération est refusée. Les clients partageant un même stockage doivent donc être mis à jour ensemble. Les handles sont relâchés à la fin de l’opération ou du processus. Attente maximale de garde : 5 s.
@@ -35,7 +39,7 @@ Restauration : sous la garde filesystem, validation du JSON, du journal et de le
 
 ## Linux
 
-Les publications x64 sélectionnent les packages Avalonia par RID : Win32 pour Windows, X11 et Wayland pour Linux, Skia et HarfBuzz dans les deux cas. `Program` configure les mêmes services que les branches de `UsePlatformDetect()` ; les compilations sans RID conservent cette méthode. Linux : ajout de `UseWayland()` uniquement si `XDG_SESSION_TYPE=wayland` et si `GAIP_USE_X11` n’est pas `1`. `WAYLAND_DISPLAY` seul est ignoré (cas WSLg) ; sinon X11/XWayland. Le package Wayland 12.1, expérimental, reste présent dans Linux. Development reste autonome à fichiers séparés ; Release autonome en single-file compressé, sans trimming, ReadyToRun, PDB ni DesignerSupport. Un profil ExperimentalTrimmed Windows x64 séparé active le trimming complet sans NativeAOT. Les sérialisations utilisent des contextes JSON générés ; leur format reste compatible avec les fichiers existants. Voir `PUBLICATION.md`.
+Les publications x64 sélectionnent les packages Avalonia par RID : Win32 pour Windows, X11 et Wayland pour Linux, Skia et HarfBuzz dans les deux cas. `Program` configure les mêmes services que les branches de `UsePlatformDetect()` ; les compilations sans RID conservent cette méthode. Linux : ajout de `UseWayland()` uniquement si `XDG_SESSION_TYPE=wayland` et si `GAIP_USE_X11` n’est pas `1`. `WAYLAND_DISPLAY` seul est ignoré (cas WSLg) ; sinon X11/XWayland. Le package Wayland 12.1, expérimental, reste présent dans Linux. Development reste autonome à fichiers séparés ; Release autonome en single-file compressé, sans trimming, ReadyToRun, PDB ni DesignerSupport. Un profil ExperimentalTrimmed séparé pour Windows x64 et Linux x64 active le trimming complet sans NativeAOT. Les sérialisations utilisent des contextes JSON générés ; leur format reste compatible avec les fichiers existants. Voir `PUBLICATION.md`.
 
 ## Vue VLAN et identité
 
