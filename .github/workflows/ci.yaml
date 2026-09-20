@@ -224,3 +224,48 @@ jobs:
             artifacts/Packaging/*.deb
             artifacts/Packaging/*.rpm
           if-no-files-found: error
+
+  cleanup-runs:
+    name: Nettoyage des anciennes exécutions CI
+    runs-on: ubuntu-24.04
+    needs:
+      - tests
+      - publish-windows
+      - publish-linux
+    if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+
+    permissions:
+      actions: write
+      contents: read
+
+    steps:
+      - name: Conserver uniquement les 30 dernières exécutions CI
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t run_ids < <(
+            gh api --paginate               -H "Accept: application/vnd.github+json"               "/repos/$GH_REPO/actions/workflows/ci.yaml/runs?per_page=100"               --jq '.workflow_runs[].id'
+          )
+
+          total=${#run_ids[@]}
+          echo "Exécutions CI trouvées : $total"
+
+          if (( total <= 30 )); then
+            echo "Aucun nettoyage nécessaire."
+            exit 0
+          fi
+
+          to_delete=$((total - 30))
+          echo "Suppression de $to_delete ancienne(s) exécution(s) CI."
+
+          for run_id in "${run_ids[@]:30}"; do
+            echo "Suppression de l’exécution CI $run_id"
+            gh api --method DELETE               -H "Accept: application/vnd.github+json"               "/repos/$GH_REPO/actions/runs/$run_id"
+          done
+
+          echo "Les 30 exécutions CI les plus récentes sont conservées."
+
