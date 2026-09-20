@@ -23,6 +23,7 @@ public static class CsvExchange
         var header = Header(kind).Split(';');
         if (!rows[0].SequenceEqual(header)) return new(null, [$"En-tête attendu : {string.Join(separator, header)}"], 0);
         var duplicates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var multicastMetadata = new Dictionary<string, (string Name, string Description)>(StringComparer.Ordinal);
         for (var index = 1; index < rows.Count; index++)
         {
             var row = rows[index];
@@ -33,9 +34,15 @@ public static class CsvExchange
                 if (kind == CsvKind.Multicast)
                 {
                     var address = Ipv4Network.Format(Ipv4Network.ParseAddress(row[0].Trim()));
-                    if (!int.TryParse(row[3], out var port)) throw new FormatException("Port UDP invalide.");
-                    var key = $"{address}:{port}";
-                    if (!duplicates.Add(key)) throw new FormatException($"Entrée répétée dans le fichier : {key}.");
+                    var name = row[1];
+                    var description = row[2];
+                    if (multicastMetadata.TryGetValue(address, out var metadata))
+                    {
+                        if (!string.Equals(metadata.Name, name, StringComparison.Ordinal) ||
+                            !string.Equals(metadata.Description, description, StringComparison.Ordinal))
+                            throw new FormatException($"Métadonnées incohérentes pour le groupe {address} : le nom et la description doivent être identiques sur toutes ses lignes.");
+                    }
+                    else multicastMetadata[address] = (name, description);
 
                     var group = db.MulticastGroups.FirstOrDefault(g => g.Address == address);
                     if (group is null)
@@ -43,17 +50,32 @@ public static class CsvExchange
                         group = new MulticastGroup { Address = address };
                         db.MulticastGroups.Add(group);
                     }
-                    group.Name = row[1];
-                    group.Description = row[2];
+                    group.Name = name;
+                    group.Description = description;
+
+                    var portText = row[3].Trim();
+                    if (portText.Length == 0)
+                    {
+                        if (row.Skip(4).Any(value => !string.IsNullOrWhiteSpace(value)))
+                            throw new FormatException("Un groupe multicast sans flux doit laisser port, contenu, description du flux, sources et VLAN vides.");
+                        var metadataKey = $"{address}:<groupe>";
+                        if (!duplicates.Add(metadataKey)) throw new FormatException($"Entrée répétée dans le fichier : {address} sans flux.");
+                        continue;
+                    }
+
+                    if (!int.TryParse(portText, out var port)) throw new FormatException("Port UDP invalide.");
+                    var key = $"{address}:{port}";
+                    if (!duplicates.Add(key)) throw new FormatException($"Entrée répétée dans le fichier : {key}.");
 
                     var sources = SplitMulti(row[6]).Select(source =>
                         Ipv4Network.Format(Ipv4Network.ParseAddress(source))).ToList();
                     var vlanIds = new List<Guid>();
-                    foreach (var reference in SplitMulti(row[7]))
+                    foreach (var displayReference in SplitMulti(row[7]))
                     {
+                        var reference = displayReference.Split(" — ", 2, StringSplitOptions.None)[0].Trim();
                         var slash = reference.LastIndexOf('/');
                         if (slash <= 0 || !int.TryParse(reference[(slash + 1)..], out var vid))
-                            throw new FormatException($"Référence VLAN invalide : {reference}. Format attendu SITE/VID.");
+                            throw new FormatException($"Référence VLAN invalide : {displayReference}. Format attendu SITE/VID — NOM.");
                         var code = reference[..slash];
                         var site = db.Sites.FirstOrDefault(site =>
                             string.Equals(site.Code, code, StringComparison.OrdinalIgnoreCase))
@@ -124,13 +146,27 @@ public static class CsvExchange
         Write(Header(kind).Split(';'));
         if (kind == CsvKind.Multicast)
         {
-            var vlanLabels = db.Sites.SelectMany(site => site.Vlans.Select(vlan =>
-                (vlan.Id, Label: $"{site.Code}/{vlan.Vid}"))).ToDictionary(item => item.Id, item => item.Label);
+            var orderedVlans = SiteOrdering.Ordered(db.Sites)
+                .SelectMany(site => site.Vlans.OrderBy(vlan => vlan.Vid)
+                    .Select(vlan => (vlan.Id, Label: $"{site.Code}/{vlan.Vid} — {vlan.Name}")))
+                .ToArray();
             foreach (var group in db.MulticastGroups.OrderBy(group => Ipv4Network.ParseAddress(group.Address)))
+            {
+                if (group.Flows.Count == 0)
+                {
+                    Write([group.Address, group.Name, group.Description, "", "", "", "", ""]);
+                    continue;
+                }
+
                 foreach (var flow in group.Flows.OrderBy(flow => flow.Port))
+                {
+                    var vlanSet = flow.VlanIds.ToHashSet();
                     Write([group.Address, group.Name, group.Description, flow.Port.ToString(), flow.Content,
-                        flow.Description, string.Join('|', flow.Sources),
-                        string.Join('|', flow.VlanIds.Select(id => vlanLabels.TryGetValue(id, out var label) ? label : id.ToString()))]);
+                        flow.Description,
+                        string.Join('\n', flow.Sources.OrderBy(Ipv4Network.ParseAddress)),
+                        string.Join('\n', orderedVlans.Where(item => vlanSet.Contains(item.Id)).Select(item => item.Label))]);
+                }
+            }
         }
         else
         {
@@ -158,7 +194,8 @@ public static class CsvExchange
     };
 
     private static IEnumerable<string> SplitMulti(string value) =>
-        value.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n')
+            .Split(['\n', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     public static List<List<string>> Parse(string text, char separator)
     {

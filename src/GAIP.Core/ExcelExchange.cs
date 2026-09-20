@@ -21,8 +21,14 @@ public static class ExcelExchange
         var errors = ModelValidator.Validate(db);
         if (errors.Count > 0) throw new ValidationException(errors);
 
-        var networks = BuildNetworkSheets(db);
+        var mainDataRows = db.Sites.Sum(site => (long)site.Vlans.Count);
+        EnsureDataRowsFit(mainDataRows, MainSheetName);
+
+        var multicastDataRows = db.MulticastGroups.Sum(group => (long)Math.Max(1, group.Flows.Count));
         var includeMulticast = db.MulticastGroups.Count > 0;
+        if (includeMulticast) EnsureDataRowsFit(multicastDataRows, MulticastSheetName);
+
+        var networks = BuildNetworkSheets(db);
         foreach (var item in networks)
         {
             var network = Ipv4Network.Parse(item.Vlan.Subnet!.Cidr);
@@ -45,6 +51,14 @@ public static class ExcelExchange
         var firstNetworkSheet = includeMulticast ? 3 : 2;
         for (var i = 0; i < networks.Count; i++)
             WriteNetworkWorksheet(archive, firstNetworkSheet + i, networks[i]);
+    }
+
+    private static void EnsureDataRowsFit(long dataRows, string sheetName)
+    {
+        // Rows 1 and 3 are reserved for the title and headers; data starts on row 4.
+        if (dataRows > ExcelMaxRows - 3)
+            throw new InvalidOperationException(
+                $"L’onglet « {sheetName} » nécessite {dataRows:N0} lignes de données. Excel ne peut pas les contenir dans un seul onglet.");
     }
 
     private static List<NetworkSheet> BuildNetworkSheets(Database db)

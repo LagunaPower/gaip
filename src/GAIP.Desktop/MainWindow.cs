@@ -318,9 +318,11 @@ public sealed partial class MainWindow : Window
     }
     private void RenderSearch()
     {
-        var results = Queries.Search(Db, _search.Text!).ToArray();
+        var results = Queries.Search(Db, _search.Text!).Take(1001).ToArray();
+        var truncated = results.Length > 1000;
         _pageHeading.Content = Ui.Text("Recherche globale", 22, true);
-        var stack = Ui.Column(Ui.Text($"{results.Length} résultat(s) · IP, sites, VLAN, multicast et descriptions", 12));
+        var count = truncated ? "Plus de 1 000 résultats" : $"{results.Length} résultat(s)";
+        var stack = Ui.Column(Ui.Text($"{count} · IP, sites, VLAN, multicast et descriptions", 12));
         foreach (var result in results.Take(1000))
         {
             var button = Ui.Button(result.Label, () =>
@@ -338,7 +340,7 @@ public sealed partial class MainWindow : Window
             });
             button.HorizontalAlignment = HorizontalAlignment.Stretch; stack.Children.Add(button);
         }
-        if (results.Length > 1000) stack.Children.Add(Ui.Text("Les 1 000 premiers résultats sont affichés. Précisez votre recherche."));
+        if (truncated) stack.Children.Add(Ui.Text("Les 1 000 premiers résultats sont affichés. Précisez votre recherche."));
         _body.Content = Ui.Scroll(stack);
     }
     private void OpenVlan(Guid site, Guid vlan)

@@ -48,6 +48,23 @@ jobs:
       - name: Restaurer les dépendances
         run: dotnet restore GAIP.sln
 
+      - name: Générer les verrouillages NuGet par RID
+        if: ${{ matrix.name == 'Linux' }}
+        shell: bash
+        run: |
+          dotnet restore src/GAIP.Desktop/GAIP.Desktop.csproj -r win-x64 -p:NuGetLockFilePath=packages.win-x64.lock.json --force-evaluate
+          dotnet restore src/GAIP.Desktop/GAIP.Desktop.csproj -r linux-x64 -p:NuGetLockFilePath=packages.linux-x64.lock.json --force-evaluate
+          dotnet restore src/GAIP.Desktop/GAIP.Desktop.csproj -r linux-arm64 -p:NuGetLockFilePath=packages.linux-arm64.lock.json --force-evaluate
+
+      - name: Capturer les fichiers de verrouillage NuGet
+        if: ${{ matrix.name == 'Linux' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: nuget-lockfiles
+          path: |
+            **/packages*.lock.json
+          if-no-files-found: error
+
       - name: Compiler
         run: dotnet build GAIP.sln -c Release --no-restore
 

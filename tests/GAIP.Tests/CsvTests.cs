@@ -98,6 +98,67 @@ public sealed class CsvTests
         Assert.Equal(258, roundTrip.Data!.MulticastGroups.Sum(group => group.Flows.Count));
     }
 
+    [Fact]
+    public void MulticastCsvUsesMultilineCellsAndPreservesEmptyGroups()
+    {
+        var db = Example();
+        Subnet(db).Addresses.Add(new() { Address = "10.20.120.25", Hostname = "SRC-VIDEO" });
+        Subnet(db).Addresses.Add(new() { Address = "10.20.120.26", Hostname = "SRC-AUDIO" });
+        var audio = new Vlan { Vid = 130, Name = "AUDIO" };
+        db.Sites[0].Vlans.Add(audio);
+        db.MulticastGroups.Add(new()
+        {
+            Address = "239.10.20.15", Name = "PROGRAMME", Description = "Plusieurs natures sur la même adresse",
+            Flows =
+            [
+                new()
+                {
+                    Port = 5004, Content = "Vidéo", Sources = ["10.20.120.26", "10.20.120.25"],
+                    VlanIds = [audio.Id, db.Sites[0].Vlans[0].Id]
+                },
+                new() { Port = 5006, Content = "Audio" }
+            ]
+        });
+        db.MulticastGroups.Add(new()
+        {
+            Address = "239.10.20.16", Name = "RESERVE", Description = "Métadonnées sans flux"
+        });
+
+        var exported = CsvExchange.Export(db, CsvKind.Multicast);
+        Assert.DoesNotContain('|', exported);
+
+        var rows = CsvExchange.Parse(exported, ';');
+        Assert.Equal(4, rows.Count);
+        var video = rows.Single(row => row[0] == "239.10.20.15" && row[3] == "5004");
+        Assert.Equal("10.20.120.25\n10.20.120.26", video[6]);
+        Assert.Equal("LEVANT/120 — SERVEURS\nLEVANT/130 — AUDIO", video[7]);
+        var empty = rows.Single(row => row[0] == "239.10.20.16");
+        Assert.All(empty.Skip(3), Assert.Empty);
+
+        var target = JsonData.Clone(db);
+        target.MulticastGroups.Clear();
+        var imported = CsvExchange.Import(target, exported, CsvKind.Multicast);
+        Assert.Empty(imported.Errors);
+        var groups = imported.Data!.MulticastGroups.OrderBy(group => group.Address).ToArray();
+        Assert.Equal(2, groups.Length);
+        Assert.Equal(new[] { "Vidéo", "Audio" }, groups[0].Flows.OrderBy(flow => flow.Port).Select(flow => flow.Content).ToArray());
+        Assert.Empty(groups[1].Flows);
+        Assert.Equal("Métadonnées sans flux", groups[1].Description);
+    }
+
+    [Fact]
+    public void MulticastCsvRejectsConflictingGroupMetadata()
+    {
+        var text = CsvExchange.MulticastHeader +
+            "\n239.10.20.15;VIDEO;Description A;5000;Vidéo;;;" +
+            "\n239.10.20.15;AUDIO;Description B;5001;Audio;;;";
+
+        var result = CsvExchange.Import(Example(), text, CsvKind.Multicast);
+
+        Assert.Null(result.Data);
+        Assert.Contains(result.Errors, error => error.Contains("Métadonnées incohérentes", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("site;other\na;b")][InlineData("\"unterminated")][InlineData("a\"b;c")]
     public void InvalidCsvIsRejected(string text) => Assert.NotEmpty(CsvExchange.Import(Example(), text, CsvKind.Addresses).Errors);
