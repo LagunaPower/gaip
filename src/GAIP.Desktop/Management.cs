@@ -308,6 +308,7 @@ public sealed partial class MainWindow
         "content" => "Contenu",
         "sources" => "Sources",
         "vlans" => "VLAN",
+        "vlanReference" => "Association VLAN",
         "holder" => "Détenteur",
         "startRevision" => "Révision de départ",
         "startHash" => "Hash de départ",

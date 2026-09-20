@@ -369,6 +369,48 @@ public sealed class StorageTests
         config.MaxHomeColumns = 3; config.SyncSeconds = 0; Assert.Throws<InvalidDataException>(config.Validate);
     }
     [Fact]
+    public void VlanHistoryIncludesMulticastAssociationAddAndRemove()
+    {
+        using var temp = new TempDirectory();
+        var db = Example();
+        var vlanId = db.Sites[0].Vlans[0].Id;
+        db.MulticastGroups.Add(new()
+        {
+            Address = "239.10.20.15",
+            Name = "VIDEO",
+            Flows = [new() { Port = 5004, Content = "Vidéo principale" }]
+        });
+        var repo = temp.Repository();
+        var snapshot = repo.Initialize(db);
+
+        var added = JsonData.Clone(snapshot.Data);
+        added.MulticastGroups[0].Flows[0].VlanIds.Add(vlanId);
+        snapshot = repo.Commit(added, snapshot.Hash, null, "Modification", "Flux multicast", "239.10.20.15:5004").Snapshot;
+
+        var addedHistory = Assert.Single(repo.History(vlanId));
+        var addedEntry = JsonSerializer.Deserialize<AuditEntry>(addedHistory, JsonData.Options)!;
+        var addedChange = Assert.Single(addedEntry.Changes);
+        Assert.Equal("Flux multicast", addedChange.ObjectType);
+        Assert.Equal("239.10.20.15:5004", addedChange.Target);
+        Assert.Equal("vlanReference", addedChange.Field);
+        Assert.Equal(vlanId, addedChange.VlanId);
+        Assert.Null(addedChange.OldValue);
+        Assert.Equal("LEVANT/VLAN 120", addedChange.NewValue);
+
+        var removed = JsonData.Clone(snapshot.Data);
+        removed.MulticastGroups[0].Flows[0].VlanIds.Clear();
+        repo.Commit(removed, snapshot.Hash, null, "Modification", "Flux multicast", "239.10.20.15:5004");
+
+        var history = repo.History(vlanId);
+        Assert.Equal(2, history.Count);
+        var removedEntry = JsonSerializer.Deserialize<AuditEntry>(history[0], JsonData.Options)!;
+        var removedChange = Assert.Single(removedEntry.Changes);
+        Assert.Equal("vlanReference", removedChange.Field);
+        Assert.Equal("LEVANT/VLAN 120", removedChange.OldValue);
+        Assert.Null(removedChange.NewValue);
+    }
+
+    [Fact]
     public void MulticastHistoryStoresCompactDetailsAndCanBeFilteredByGroup()
     {
         using var temp = new TempDirectory();
@@ -397,7 +439,8 @@ public sealed class StorageTests
         Assert.Equal("239.10.20.15:5004", entry.Target);
         Assert.Contains(entry.Changes, change => change.Field == "content" && change.NewValue == "Vidéo principale");
         Assert.Contains(entry.Changes, change => change.Field == "sources" && change.NewValue == "10.20.120.25");
-        Assert.Contains(entry.Changes, change => change.Field == "vlans" && change.NewValue!.Contains("LEVANT/VLAN 120"));
+        Assert.Contains(entry.Changes, change => change.Field == "vlanReference" && change.VlanId == db.Sites[0].Vlans[0].Id &&
+            change.NewValue == "LEVANT/VLAN 120");
         Assert.DoesNotContain("Modification sans rapport", scoped);
     }
 

@@ -89,6 +89,8 @@ public static class AuditDiff
 
     private static void DiffMulticast(List<AuditChange> changes, Database before, Database after)
     {
+        var oldVlanReferences = VlanReferences(before);
+        var newVlanReferences = VlanReferences(after);
         var oldGroups = before.MulticastGroups.ToDictionary(g => g.Address, StringComparer.Ordinal);
         var newGroups = after.MulticastGroups.ToDictionary(g => g.Address, StringComparer.Ordinal);
         foreach (var address in oldGroups.Keys.Union(newGroups.Keys, StringComparer.Ordinal).OrderBy(Ipv4Network.ParseAddress))
@@ -112,9 +114,20 @@ public static class AuditDiff
                 Add(changes, null, null, "Flux multicast", target, "content", oldFlow?.Content, newFlow?.Content);
                 Add(changes, null, null, "Flux multicast", target, "description", oldFlow?.Description, newFlow?.Description);
                 Add(changes, null, null, "Flux multicast", target, "sources", Sources(oldFlow), Sources(newFlow));
-                Add(changes, null, null, "Flux multicast", target, "vlans",
-                    oldFlow is null ? null : Vlans(before, oldFlow.VlanIds),
-                    newFlow is null ? null : Vlans(after, newFlow.VlanIds));
+
+                var oldVlanIds = (oldFlow?.VlanIds ?? []).ToHashSet();
+                var newVlanIds = (newFlow?.VlanIds ?? []).ToHashSet();
+                foreach (var vlanId in oldVlanIds.Union(newVlanIds).OrderBy(id => id))
+                {
+                    var wasReferenced = oldVlanIds.Contains(vlanId);
+                    var isReferenced = newVlanIds.Contains(vlanId);
+                    if (wasReferenced == isReferenced) continue;
+
+                    var reference = isReferenced ? newVlanReferences[vlanId] : oldVlanReferences[vlanId];
+                    Add(changes, reference.SiteId, vlanId, "Flux multicast", target, "vlanReference",
+                        wasReferenced ? oldVlanReferences[vlanId].Label : null,
+                        isReferenced ? newVlanReferences[vlanId].Label : null);
+                }
             }
         }
     }
@@ -122,14 +135,9 @@ public static class AuditDiff
     private static string? Sources(MulticastFlow? flow) => flow is null ? null :
         string.Join(", ", flow.Sources.OrderBy(Ipv4Network.ParseAddress));
 
-    private static string Vlans(Database db, IEnumerable<Guid> ids)
-    {
-        var labels = db.Sites
-            .SelectMany(site => site.Vlans.Select(vlan => (vlan.Id, Label: $"{site.Code}/VLAN {vlan.Vid}")))
-            .ToDictionary(x => x.Id, x => x.Label);
-        return string.Join(", ", ids.Select(id => labels.TryGetValue(id, out var label) ? label : id.ToString())
-            .OrderBy(label => label, StringComparer.OrdinalIgnoreCase));
-    }
+    private static Dictionary<Guid, (Guid SiteId, string Label)> VlanReferences(Database db) => db.Sites
+        .SelectMany(site => site.Vlans.Select(vlan => (VlanId: vlan.Id, SiteId: site.Id, Label: $"{site.Code}/VLAN {vlan.Vid}")))
+        .ToDictionary(item => item.VlanId, item => (item.SiteId, item.Label));
 
     private static void Add(List<AuditChange> changes, Guid? siteId, Guid? vlanId, string objectType, string target,
         string field, string? oldValue, string? newValue)

@@ -25,7 +25,7 @@ Le candidat est une copie. Sous garde : validation, contrôle hash/verrou, sauve
 
 Si la vérification finale échoue, le résultat est annoncé incertain et l’édition partagée est interrompue. Actualiser avant de retenter. Historique/cache sont distincts du JSON : leurs erreurs post-publication sont signalées sans rollback aveugle. Une sauvegarde impossible bloque la publication ; une purge impossible laisse les sauvegardes et produit un avertissement.
 
-Historique : lignes JSON compactes contenant uniquement les différences métier champ par champ. Les IDs de site/VLAN sont portés par chaque changement afin de filtrer l’historique contextuel sans désérialiser deux copies de la base ; les groupes/flux multicast sont filtrés par leur identifiant naturel `adresse[:port]`. Aucune rétention automatique. Sauvegardes : horodatage UTC, révision précédente et suffixe unique. Aucun changement utilisateur en attente entre formulaires.
+Historique : lignes JSON compactes contenant uniquement les différences métier champ par champ. Les IDs de site/VLAN sont portés par chaque changement afin de filtrer l’historique contextuel sans désérialiser deux copies de la base ; l’ajout ou le retrait d’un VLAN dans un flux multicast produit un changement ciblé par `VlanId`, tandis que les groupes/flux multicast restent filtrés par leur identifiant naturel `adresse[:port]`. Aucune rétention automatique. Sauvegardes : horodatage UTC, révision précédente et suffixe unique. Aucun changement utilisateur en attente entre formulaires.
 
 ## Cache
 
