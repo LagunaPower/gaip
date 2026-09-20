@@ -1,5 +1,49 @@
 site_code;site_name;vid;vlan_name;vlan_description;cidr;gateway;gateway_comment
-DEMO-A;Site de démonstration A;10;EXEMPLE-POSTES;Postes fictifs;192.0.2.0/24;192.0.2.1;Passerelle fictive A
-DEMO-A;Site de démonstration A;20;EXEMPLE-SERVEURS;Serveurs fictifs;198.51.100.0/24;198.51.100.1;Passerelle fictive B
-DEMO-A;Site de démonstration A;30;EXEMPLE-SANS-RESEAU;VLAN fictif sans adressage;;;
-DEMO-B;Site de démonstration B;20;EXEMPLE-SERVICES;Services fictifs;203.0.113.0/24;203.0.113.1;Passerelle fictive C
+DEMO-ALPHA;Site de démonstration Alpha;10;ADMIN;Administration et équipements de gestion;10.10.0.0/27;10.10.0.1;Passerelle ADMIN
+DEMO-ALPHA;Site de démonstration Alpha;20;SERVEURS;Serveurs et services applicatifs;10.10.0.64/26;10.10.0.65;Passerelle SERVEURS
+DEMO-ALPHA;Site de démonstration Alpha;30;POSTES;Postes utilisateurs filaires;10.10.1.0/24;10.10.1.1;Passerelle POSTES
+DEMO-ALPHA;Site de démonstration Alpha;40;WIFI;Terminaux du réseau Wi-Fi;10.10.2.0/23;10.10.2.1;Passerelle WIFI
+DEMO-ALPHA;Site de démonstration Alpha;50;VOIP;Téléphonie sur IP;10.10.4.0/25;10.10.4.1;Passerelle VOIP
+DEMO-ALPHA;Site de démonstration Alpha;60;VIDEO;Vidéoprotection et flux vidéo;10.10.4.128/26;10.10.4.129;Passerelle VIDEO
+DEMO-ALPHA;Site de démonstration Alpha;70;IOT;Capteurs et équipements connectés;10.10.5.0/24;10.10.5.1;Passerelle IOT
+DEMO-ALPHA;Site de démonstration Alpha;80;SUPERVISION;Supervision et sondes techniques;10.10.6.0/28;10.10.6.1;Passerelle SUPERVISION
+DEMO-BRAVO;Site de démonstration Bravo;10;ADMIN;Administration et équipements de gestion;10.20.0.0/27;10.20.0.1;Passerelle ADMIN
+DEMO-BRAVO;Site de démonstration Bravo;20;SERVEURS;Serveurs et services applicatifs;10.20.0.64/26;10.20.0.65;Passerelle SERVEURS
+DEMO-BRAVO;Site de démonstration Bravo;30;POSTES;Postes utilisateurs filaires;10.20.1.0/24;10.20.1.1;Passerelle POSTES
+DEMO-BRAVO;Site de démonstration Bravo;40;WIFI;Terminaux du réseau Wi-Fi;10.20.2.0/23;10.20.2.1;Passerelle WIFI
+DEMO-BRAVO;Site de démonstration Bravo;50;VOIP;Téléphonie sur IP;10.20.4.0/25;10.20.4.1;Passerelle VOIP
+DEMO-BRAVO;Site de démonstration Bravo;60;VIDEO;Vidéoprotection et flux vidéo;10.20.4.128/26;10.20.4.129;Passerelle VIDEO
+DEMO-BRAVO;Site de démonstration Bravo;70;IOT;Capteurs et équipements connectés;10.20.5.0/24;10.20.5.1;Passerelle IOT
+DEMO-BRAVO;Site de démonstration Bravo;80;SUPERVISION;Supervision et sondes techniques;10.20.6.0/28;10.20.6.1;Passerelle SUPERVISION
+DEMO-CHARLIE;Site de démonstration Charlie;10;ADMIN;Administration et équipements de gestion;10.30.0.0/27;10.30.0.1;Passerelle ADMIN
+DEMO-CHARLIE;Site de démonstration Charlie;20;SERVEURS;Serveurs et services applicatifs;10.30.0.64/26;10.30.0.65;Passerelle SERVEURS
+DEMO-CHARLIE;Site de démonstration Charlie;30;POSTES;Postes utilisateurs filaires;10.30.1.0/24;10.30.1.1;Passerelle POSTES
+DEMO-CHARLIE;Site de démonstration Charlie;40;WIFI;Terminaux du réseau Wi-Fi;10.30.2.0/23;10.30.2.1;Passerelle WIFI
+DEMO-CHARLIE;Site de démonstration Charlie;50;VOIP;Téléphonie sur IP;10.30.4.0/25;10.30.4.1;Passerelle VOIP
+DEMO-CHARLIE;Site de démonstration Charlie;60;VIDEO;Vidéoprotection et flux vidéo;10.30.4.128/26;10.30.4.129;Passerelle VIDEO
+DEMO-CHARLIE;Site de démonstration Charlie;70;IOT;Capteurs et équipements connectés;10.30.5.0/24;10.30.5.1;Passerelle IOT
+DEMO-CHARLIE;Site de démonstration Charlie;80;SUPERVISION;Supervision et sondes techniques;10.30.6.0/28;10.30.6.1;Passerelle SUPERVISION
+DEMO-DELTA;Site de démonstration Delta;10;ADMIN;Administration et équipements de gestion;10.40.0.0/27;10.40.0.1;Passerelle ADMIN
+DEMO-DELTA;Site de démonstration Delta;20;SERVEURS;Serveurs et services applicatifs;10.40.0.64/26;10.40.0.65;Passerelle SERVEURS
+DEMO-DELTA;Site de démonstration Delta;30;POSTES;Postes utilisateurs filaires;10.40.1.0/24;10.40.1.1;Passerelle POSTES
+DEMO-DELTA;Site de démonstration Delta;40;WIFI;Terminaux du réseau Wi-Fi;10.40.2.0/23;10.40.2.1;Passerelle WIFI
+DEMO-DELTA;Site de démonstration Delta;50;VOIP;Téléphonie sur IP;10.40.4.0/25;10.40.4.1;Passerelle VOIP
+DEMO-DELTA;Site de démonstration Delta;60;VIDEO;Vidéoprotection et flux vidéo;10.40.4.128/26;10.40.4.129;Passerelle VIDEO
+DEMO-DELTA;Site de démonstration Delta;70;IOT;Capteurs et équipements connectés;10.40.5.0/24;10.40.5.1;Passerelle IOT
+DEMO-DELTA;Site de démonstration Delta;80;SUPERVISION;Supervision et sondes techniques;10.40.6.0/28;10.40.6.1;Passerelle SUPERVISION
+DEMO-ECHO;Site de démonstration Echo;10;ADMIN;Administration et équipements de gestion;10.50.0.0/27;10.50.0.1;Passerelle ADMIN
+DEMO-ECHO;Site de démonstration Echo;20;SERVEURS;Serveurs et services applicatifs;10.50.0.64/26;10.50.0.65;Passerelle SERVEURS
+DEMO-ECHO;Site de démonstration Echo;30;POSTES;Postes utilisateurs filaires;10.50.1.0/24;10.50.1.1;Passerelle POSTES
+DEMO-ECHO;Site de démonstration Echo;40;WIFI;Terminaux du réseau Wi-Fi;10.50.2.0/23;10.50.2.1;Passerelle WIFI
+DEMO-ECHO;Site de démonstration Echo;50;VOIP;Téléphonie sur IP;10.50.4.0/25;10.50.4.1;Passerelle VOIP
+DEMO-ECHO;Site de démonstration Echo;60;VIDEO;Vidéoprotection et flux vidéo;10.50.4.128/26;10.50.4.129;Passerelle VIDEO
+DEMO-ECHO;Site de démonstration Echo;70;IOT;Capteurs et équipements connectés;10.50.5.0/24;10.50.5.1;Passerelle IOT
+DEMO-ECHO;Site de démonstration Echo;80;SUPERVISION;Supervision et sondes techniques;10.50.6.0/28;10.50.6.1;Passerelle SUPERVISION
+DEMO-FOXTROT;Site de démonstration Foxtrot;10;ADMIN;Administration et équipements de gestion;10.60.0.0/27;10.60.0.1;Passerelle ADMIN
+DEMO-FOXTROT;Site de démonstration Foxtrot;20;SERVEURS;Serveurs et services applicatifs;10.60.0.64/26;10.60.0.65;Passerelle SERVEURS
+DEMO-FOXTROT;Site de démonstration Foxtrot;30;POSTES;Postes utilisateurs filaires;10.60.1.0/24;10.60.1.1;Passerelle POSTES
+DEMO-FOXTROT;Site de démonstration Foxtrot;40;WIFI;Terminaux du réseau Wi-Fi;10.60.2.0/23;10.60.2.1;Passerelle WIFI
+DEMO-FOXTROT;Site de démonstration Foxtrot;50;VOIP;Téléphonie sur IP;10.60.4.0/25;10.60.4.1;Passerelle VOIP
+DEMO-FOXTROT;Site de démonstration Foxtrot;60;VIDEO;Vidéoprotection et flux vidéo;10.60.4.128/26;10.60.4.129;Passerelle VIDEO
+DEMO-FOXTROT;Site de démonstration Foxtrot;70;IOT;Capteurs et équipements connectés;10.60.5.0/24;10.60.5.1;Passerelle IOT
+DEMO-FOXTROT;Site de démonstration Foxtrot;80;SUPERVISION;Supervision et sondes techniques;10.60.6.0/28;10.60.6.1;Passerelle SUPERVISION

@@ -58,6 +58,24 @@ public sealed class CsvTests
         var result = CsvExchange.Import(db, CsvExchange.AddressHeader + "\nLEVANT;120;10.20.120.2;NEW;", CsvKind.Addresses);
         Assert.Empty(result.Errors); Assert.Equal(2, Subnet(result.Data!).Addresses.Count); Assert.Equal("NEW", Subnet(result.Data!).Addresses[0].Hostname);
     }
+    [Fact]
+    public void DemoSamplesAreRichAndImportCleanly()
+    {
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../samples"));
+        var vlanImport = CsvExchange.Import(new(), File.ReadAllText(Path.Combine(root, "vlans.csv")), CsvKind.Vlans);
+        Assert.Empty(vlanImport.Errors); Assert.NotNull(vlanImport.Data);
+
+        var addressImport = CsvExchange.Import(vlanImport.Data!, File.ReadAllText(Path.Combine(root, "addresses.csv")), CsvKind.Addresses);
+        Assert.Empty(addressImport.Errors); var db = Assert.IsType<Database>(addressImport.Data);
+
+        Assert.Equal(6, db.Sites.Count);
+        Assert.Equal(48, db.Sites.Sum(s => s.Vlans.Count));
+        Assert.Equal(2775, db.Sites.Sum(s => s.Vlans.Sum(v => v.Subnet?.Addresses.Count ?? 0)));
+        Assert.All(db.Sites, site => Assert.InRange(site.Vlans.Count, 5, 15));
+        Assert.All(db.Sites.SelectMany(s => s.Vlans), vlan => Assert.InRange(vlan.Subnet!.Addresses.Count, 5, 200));
+        Assert.Equal(6, db.Sites.SelectMany(s => s.Vlans).Select(v => Ipv4Network.Parse(v.Subnet!.Cidr).Prefix).Distinct().Count());
+    }
+
     [Theory]
     [InlineData("site;other\na;b")][InlineData("\"unterminated")][InlineData("a\"b;c")]
     public void InvalidCsvIsRejected(string text) => Assert.NotEmpty(CsvExchange.Import(Example(), text, CsvKind.Addresses).Errors);
