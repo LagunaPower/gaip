@@ -51,7 +51,13 @@ public sealed partial class MainWindow
             }
             offset += size;
 
-            var card = Ui.Card(details);
+            var actions = Ui.Row(Ui.Button("Ajouter un multicast", () => Run(() => EditMulticastGroup(null)), CanWrite));
+            actions.HorizontalAlignment = HorizontalAlignment.Center;
+            var content = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), RowSpacing = 12 };
+            content.Children.Add(details);
+            Grid.SetRow(actions, 1); content.Children.Add(actions);
+
+            var card = Ui.Card(content);
             card.Name = "MulticastCard";
             card.Margin = new Thickness(0);
             card.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -119,10 +125,18 @@ public sealed partial class MainWindow
                 {
                     var site = sites[index];
                     var usedVlans = site.Vlans.Where(vlan => flow.VlanIds.Contains(vlan.Id)).OrderBy(vlan => vlan.Vid).ToArray();
-                    var mark = Ui.Text(usedVlans.Length > 0 ? "✔" : "✖", 16, true);
+                    var mark = new TextBlock
+                    {
+                        Text = usedVlans.Length > 0 ? "✓" : "✕",
+                        FontSize = 17,
+                        FontWeight = FontWeight.Bold,
+                        Foreground = new SolidColorBrush(usedVlans.Length > 0
+                            ? Color.Parse("#22C55E")
+                            : Color.Parse("#EF4444")),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Center
+                    };
                     mark.Name = $"MulticastSite_{flow.Port}_{site.Id:N}";
-                    mark.Foreground = usedVlans.Length > 0 ? Brushes.SeaGreen : Brushes.IndianRed;
-                    mark.HorizontalAlignment = HorizontalAlignment.Center;
                     if (usedVlans.Length > 0)
                         ToolTip.SetTip(mark, string.Join("\n", usedVlans.Select(vlan => $"VLAN {vlan.Vid} — {vlan.Name}")));
                     else ToolTip.SetTip(mark, "Aucun VLAN de ce site n’utilise ce flux.");

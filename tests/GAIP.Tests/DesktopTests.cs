@@ -5,6 +5,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using GAIP.Desktop;
 using Xunit;
@@ -418,6 +419,9 @@ public sealed partial class DesktopTests
         Assert.Equal(3, cards.Length);
         Assert.Equal(new[] { 6, 6, 5 }, cards.Select(card =>
             card.GetLogicalDescendants().OfType<Button>().Count(button => button.Name == "MulticastGroupRow")).ToArray());
+        Assert.All(cards, card =>
+            Assert.Contains(card.GetLogicalDescendants().OfType<Button>(),
+                button => button.Content as string == "Ajouter un multicast"));
 
         var firstGroup = cards[0].GetLogicalDescendants().OfType<Button>().First(button => button.Name == "MulticastGroupRow");
         Click(firstGroup);
@@ -432,8 +436,10 @@ public sealed partial class DesktopTests
             .Single(text => text.Name == $"MulticastSite_5004_{coudon.Id:N}");
         var levantMark = main.GetLogicalDescendants().OfType<TextBlock>()
             .Single(text => text.Name == $"MulticastSite_5004_{db.Sites[0].Id:N}");
-        Assert.Equal("✖", coudonMark.Text);
-        Assert.Equal("✔", levantMark.Text);
+        Assert.Equal("✕", coudonMark.Text);
+        Assert.Equal("✓", levantMark.Text);
+        Assert.Equal(Color.Parse("#EF4444"), Assert.IsType<SolidColorBrush>(coudonMark.Foreground).Color);
+        Assert.Equal(Color.Parse("#22C55E"), Assert.IsType<SolidColorBrush>(levantMark.Foreground).Color);
 
         Click(Button(main, "Accueil"));
         Click(Button(main, "Configuration"));
