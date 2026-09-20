@@ -4,7 +4,7 @@ Les paquets installables sont construits à partir de la publication **Experimen
 
 ## Windows MSI
 
-Le MSI est décrit par `windows/Package.wxs` et construit avec WiX Toolset 6.0.2. Il installe `GAIP.exe` dans `Program Files\LagunaPower\G@IP`, crée un raccourci dans le menu Démarrer, apparaît dans les applications installées et gère les mises à niveau majeures.
+Le MSI est décrit par `windows/Package.wxs` et construit avec WiX Toolset 6.0.2. Il installe `GAIP.exe` dans `Program Files\G@IP`, crée un raccourci dans le menu Démarrer, apparaît dans les applications installées et gère les mises à niveau majeures.
 
 Le MSI est généré à partir de l'exécutable trimmed. Lorsque SignPath est activé, le binaire inclus est déjà signé et le MSI est ensuite signé lui-même avant sa publication.
 
