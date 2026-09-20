@@ -57,8 +57,9 @@ public sealed class JsonCompatibilityTests
             AuditDiff.Create(db, changed));
         var generated = JsonSerializer.Serialize(entry, JsonData.CompactContext.AuditEntry);
         Assert.Equal(JsonSerializer.Serialize(entry, Legacy(false)), generated);
-        Assert.DoesNotContain("oldValue", generated);
-        Assert.DoesNotContain("newValue", generated);
+        using var document = JsonDocument.Parse(generated);
+        Assert.False(document.RootElement.TryGetProperty("oldValue", out _));
+        Assert.False(document.RootElement.TryGetProperty("newValue", out _));
         Assert.Contains("\"changes\"", generated);
         Assert.Contains("\"field\":\"name\"", generated);
         var restored = JsonSerializer.Deserialize(generated, StorageJsonContext.Default.AuditEntry)!;

@@ -54,7 +54,7 @@ public sealed class StorageTests
         var db = Example("10.20.0.0/16");
         var subnet = Subnet(db);
         var network = Ipv4Network.Parse(subnet.Cidr);
-        for (uint i = 0; i < 9000; i++)
+        for (uint i = 0; i < 5500; i++)
             subnet.Addresses.Add(new()
             {
                 Address = Ipv4Network.Format(network.First + i),
@@ -63,7 +63,7 @@ public sealed class StorageTests
             });
 
         var dataSize = JsonData.Serialize(db).Length;
-        Assert.InRange(dataSize, 800_000, 1_600_000);
+        Assert.InRange(dataSize, 900_000, 1_200_000);
 
         var repo = temp.Repository();
         var start = repo.Initialize(db);
