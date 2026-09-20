@@ -248,6 +248,12 @@ public sealed partial class DesktopTests
         search.Text = "SRV-SEARCH";
         await Until(() => entries.Count(e => e.IsVisible) == 1 &&
             (entries.Single(e => e.IsVisible).Header as string)?.Contains("Attribution", StringComparison.Ordinal) == true);
+        var attribution = entries.Single(e => e.IsVisible);
+        var details = Assert.IsType<TextBox>(attribution.Content).Text!;
+        Assert.Contains("Existence", details);
+        Assert.Contains("Hostname", details);
+        Assert.Contains("SRV-SEARCH", details);
+        Assert.DoesNotContain("IP 10.20.120.25", details);
 
         search.Text = "Modification LEVANT";
         await Until(() => entries.Count(e => e.IsVisible) == 1 &&

@@ -242,13 +242,27 @@ public sealed partial class MainWindow
     private static string HistoryDetails(AuditEntry entry)
     {
         if (entry.Changes.Count == 0) return "Aucun changement métier détaillé.";
+        var groups = entry.Changes
+            .GroupBy(change => (change.ObjectType, change.Target))
+            .ToList();
         var text = new StringBuilder();
-        foreach (var change in entry.Changes)
+
+        foreach (var group in groups)
         {
-            if (text.Length > 0) text.AppendLine();
-            text.Append(change.ObjectType).Append(' ').Append(change.Target).Append(" · ").Append(HistoryFieldLabel(change.Field)).AppendLine();
-            text.Append("  ").Append(HistoryValue(change.Field, change.OldValue))
-                .Append("  →  ").Append(HistoryValue(change.Field, change.NewValue));
+            if (text.Length > 0) text.AppendLine().AppendLine();
+            if (groups.Count > 1)
+                text.Append(group.Key.ObjectType).Append(' ').Append(group.Key.Target).AppendLine();
+
+            var changes = group.ToList();
+            for (var i = 0; i < changes.Count; i++)
+            {
+                if (i > 0) text.AppendLine().AppendLine();
+                var change = changes[i];
+                var indent = groups.Count > 1 ? "  " : "";
+                text.Append(indent).Append(HistoryFieldLabel(change.Field)).AppendLine();
+                text.Append(indent).Append("  ").Append(HistoryValue(change.Field, change.OldValue))
+                    .Append("  →  ").Append(HistoryValue(change.Field, change.NewValue));
+            }
         }
         return text.ToString();
     }
