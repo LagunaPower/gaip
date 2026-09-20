@@ -370,6 +370,12 @@ public sealed partial class MainWindow : Window
                     release.Click += (_, _) => Run(async () => { await ReleaseAddress(site.Id, vlan.Id, row); });
                     item.ContextMenu = new ContextMenu { ItemsSource = new Control[] { edit, release } };
                 }
+                else if (!row.IsUsed)
+                {
+                    var assign = new MenuItem { Header = "Affecter", IsEnabled = CanWrite };
+                    assign.Click += (_, _) => Run(() => EditAddress(site.Id, vlan.Id, row));
+                    item.ContextMenu = new ContextMenu { ItemsSource = new Control[] { assign } };
+                }
                 return item;
             })
         };

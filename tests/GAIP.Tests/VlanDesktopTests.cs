@@ -154,6 +154,21 @@ public sealed partial class DesktopTests
                 .OfType<ListBoxItem>()
                 .Any());
 
+        var freeItem = list.GetVisualDescendants().OfType<Border>().First(b =>
+            b.Tag is AddressRow row && !row.IsUsed);
+        Assert.NotNull(freeItem.ContextMenu);
+        var assign = freeItem.ContextMenu!.ItemsSource!.Cast<MenuItem>().Single();
+        Assert.Equal("Affecter", assign.Header as string);
+        Assert.True(assign.IsEnabled);
+        var freeAddress = ((AddressRow)freeItem.Tag!).Address;
+        Click(assign);
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        var assignForm = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Assert.Contains("Ajouter une adresse IP", assignForm.Title);
+        Assert.Equal(freeAddress, assignForm.Fields.GetLogicalDescendants().OfType<TextBox>().First().Text);
+        assignForm.Close(false);
+        await Until(() => !assignForm.IsVisible);
+
         // Keep the useful viewport large, including when the window is resized.
         Assert.InRange(
             list.TranslatePoint(default, main)!.Value.Y,
