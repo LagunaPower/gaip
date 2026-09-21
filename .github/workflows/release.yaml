@@ -94,10 +94,12 @@ jobs:
           dotnet restore
           src/GAIP.Desktop/GAIP.Desktop.csproj
           -r win-x64
+          -p:PublishTrimmed=true
+          -p:TrimMode=full
           -p:NuGetLockFilePath=packages.win-x64.lock.json
           --locked-mode
 
-      - name: Publier G@IP Windows standard
+      - name: Publier G@IP Windows Release
         run: >
           dotnet publish
           src/GAIP.Desktop/GAIP.Desktop.csproj
@@ -110,26 +112,12 @@ jobs:
           -p:IncludeSourceRevisionInInformationalVersion=false
           --no-restore
 
-      - name: Publier G@IP Windows trimmed
-        run: >
-          dotnet publish
-          src/GAIP.Desktop/GAIP.Desktop.csproj
-          -c Release
-          -r win-x64
-          -p:PublishProfile=ExperimentalTrimmed
-          -p:Version=${{ needs.validate-tag.outputs.version }}
-          -p:InformationalVersion=${{ needs.validate-tag.outputs.version }}
-          -p:FileVersion=${{ needs.validate-tag.outputs.file_version }}
-          -p:IncludeSourceRevisionInInformationalVersion=false
-          --no-restore
-
       - name: Préparer les exécutables pour SignPath
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path signing-input | Out-Null
-          Copy-Item "artifacts/Release/win-x64/GAIP.exe" "signing-input/GAIP-standard.exe"
-          Copy-Item "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe" "signing-input/GAIP-trimmed.exe"
+          Copy-Item "artifacts/Release/win-x64/GAIP.exe" "signing-input/GAIP.exe"
 
       - name: Charger les exécutables non signés
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
@@ -157,50 +145,38 @@ jobs:
             version: "${{ needs.validate-tag.outputs.version }}"
             fileVersion: "${{ needs.validate-tag.outputs.file_version }}"
 
-      - name: Vérifier les signatures Authenticode
+      - name: Vérifier la signature Authenticode
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         shell: pwsh
         run: |
-          $files = @(
-            "signing-output/GAIP-standard.exe",
-            "signing-output/GAIP-trimmed.exe"
-          )
-          foreach ($file in $files) {
-            if (-not (Test-Path $file)) { throw "Exécutable signé introuvable: $file" }
-            $signature = Get-AuthenticodeSignature $file
-            Write-Host "$file : $($signature.Status) - $($signature.SignerCertificate.Subject)"
-            if ($signature.Status -ne "Valid") {
-              throw "Signature Authenticode invalide pour $file : $($signature.Status)"
-            }
-          }
+          $file = "signing-output/GAIP.exe"
+          if (-not (Test-Path $file)) { throw "Exécutable signé introuvable: $file" }
+          $signature = Get-AuthenticodeSignature $file
+          Write-Host "$file : $($signature.Status) - $($signature.SignerCertificate.Subject)"
+          if ($signature.Status -ne "Valid") { throw "Signature Authenticode invalide pour $file : $($signature.Status)" }
 
       - name: Préparer les fichiers Windows
         shell: pwsh
         env:
           SIGNPATH_ENABLED: ${{ vars.SIGNPATH_ENABLED }}
         run: |
-          New-Item -ItemType Directory -Force -Path package-standard | Out-Null
-          New-Item -ItemType Directory -Force -Path package-trimmed | Out-Null
-          if ($env:SIGNPATH_ENABLED -eq "true") {
-            $standardSource = "signing-output/GAIP-standard.exe"
-            $trimmedSource = "signing-output/GAIP-trimmed.exe"
-          }
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+          if ($env:SIGNPATH_ENABLED -eq "true") { $source = "signing-output/GAIP.exe" }
           else {
-            Write-Warning "SignPath n'est pas activé : les binaires Windows seront non signés."
-            $standardSource = "artifacts/Release/win-x64/GAIP.exe"
-            $trimmedSource = "artifacts/ExperimentalTrimmed/win-x64/GAIP.exe"
+            Write-Warning "SignPath n'est pas activé : le binaire Windows sera non signé."
+            $source = "artifacts/Release/win-x64/GAIP.exe"
           }
-          Copy-Item $standardSource "package-standard/GAIP.exe"
-          Copy-Item $trimmedSource "package-trimmed/GAIP.exe"
+          Copy-Item $source "package/GAIP.exe"
+          $size = (Get-Item "package/GAIP.exe").Length
+          if ($size -gt 36700160) { throw "Exécutable Release anormalement volumineux ($size octets) : trimming probablement inactif." }
 
-      - name: Créer les archives Windows
+      - name: Créer l'archive Windows
         shell: pwsh
         env:
           TAG: ${{ github.ref_name }}
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Compress-Archive -Path "package-standard/GAIP.exe" -DestinationPath "dist/GAIP-$env:TAG-win-x64.zip" -Force
-          Compress-Archive -Path "package-trimmed/GAIP.exe" -DestinationPath "dist/GAIP-$env:TAG-win-x64-trimmed.zip" -Force
+          Compress-Archive -Path "package/GAIP.exe" -DestinationPath "dist/GAIP-$env:TAG-win-x64.zip" -Force
 
       - name: Installer WiX Toolset
         shell: pwsh
@@ -210,11 +186,11 @@ jobs:
           & $wix --version
           "WIX_EXE=$wix" >> $env:GITHUB_ENV
 
-      - name: Construire le MSI trimmed
+      - name: Construire le MSI
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path signing-msi-input | Out-Null
-          $gaipExe = (Resolve-Path "package-trimmed/GAIP.exe").Path
+          $gaipExe = (Resolve-Path "package/GAIP.exe").Path
           $gaipIcon = (Resolve-Path "src/GAIP.Desktop/Assets/GAIP.ico").Path
           & $env:WIX_EXE build `
             "packaging/windows/Package.wxs" `
@@ -310,10 +286,12 @@ jobs:
           dotnet restore
           src/GAIP.Desktop/GAIP.Desktop.csproj
           -r linux-x64
+          -p:PublishTrimmed=true
+          -p:TrimMode=full
           -p:NuGetLockFilePath=packages.linux-x64.lock.json
           --locked-mode
 
-      - name: Publier G@IP Linux standard
+      - name: Publier G@IP Linux Release
         run: >
           dotnet publish
           src/GAIP.Desktop/GAIP.Desktop.csproj
@@ -325,30 +303,18 @@ jobs:
           -p:IncludeSourceRevisionInInformationalVersion=false
           --no-restore
 
-      - name: Publier G@IP Linux trimmed
-        run: >
-          dotnet publish
-          src/GAIP.Desktop/GAIP.Desktop.csproj
-          -c Release
-          -r linux-x64
-          -p:PublishProfile=ExperimentalTrimmed
-          -p:Version=${{ needs.validate-tag.outputs.version }}
-          -p:InformationalVersion=${{ needs.validate-tag.outputs.version }}
-          -p:IncludeSourceRevisionInInformationalVersion=false
-          --no-restore
-
       - name: Installer les outils de packaging Linux
         run: |
           sudo apt-get update
           sudo apt-get install -y rpm
 
-      - name: Construire DEB et RPM à partir du binaire trimmed
+      - name: Construire DEB et RPM
         env:
           VERSION: ${{ needs.validate-tag.outputs.version }}
         run: |
           chmod +x packaging/linux/build-packages.sh packaging/linux/gaip
-          chmod +x artifacts/ExperimentalTrimmed/linux-x64/GAIP
-          packaging/linux/build-packages.sh "$VERSION" "artifacts/ExperimentalTrimmed/linux-x64" dist
+          chmod +x artifacts/Release/linux-x64/GAIP
+          packaging/linux/build-packages.sh "$VERSION" "artifacts/Release/linux-x64" dist
 
       - name: Vérifier les paquets Linux
         env:
@@ -371,15 +337,18 @@ jobs:
               test -x /usr/bin/gaip
             "
 
-      - name: Créer les archives Linux
+      - name: Créer l'archive Linux
         env:
           TAG: ${{ github.ref_name }}
         run: |
           mkdir -p dist
           chmod +x artifacts/Release/linux-x64/GAIP
+          size="$(stat -c%s artifacts/Release/linux-x64/GAIP)"
+          if (( size > 36700160 )); then
+            echo "Exécutable Release anormalement volumineux ($size octets) : trimming probablement inactif." >&2
+            exit 1
+          fi
           tar -C artifacts/Release/linux-x64 -czf "dist/GAIP-$TAG-linux-x64.tar.gz" .
-          chmod +x artifacts/ExperimentalTrimmed/linux-x64/GAIP
-          tar -C artifacts/ExperimentalTrimmed/linux-x64 -czf "dist/GAIP-$TAG-linux-x64-trimmed.tar.gz" .
 
       - name: Conserver les fichiers Linux pour la Release
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
