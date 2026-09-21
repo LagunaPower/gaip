@@ -84,7 +84,9 @@ public sealed class FormWindow : Window
     public StackPanel Fields { get; } = new() { Spacing = 14 };
     public TextBlock Error { get; } = Ui.Text("");
     public Button Save { get; }
+    public Button? SaveAndAdd { get; private set; }
     public Func<Task>? Submit { get; set; }
+    private readonly WrapPanel _actions;
     public FormWindow(string title, string submit = "Enregistrer", double width = 610)
     {
         Title = $"G@IP — {title}"; Width = width; Height = 640; MinWidth = 400; MinHeight = 320;
@@ -98,7 +100,8 @@ public sealed class FormWindow : Window
             catch (Exception ex) { Error.Text = ex.Message; }
             finally { Save.IsEnabled = true; }
         });
-        var footer = Ui.Column(Error, Ui.Row(Save, Ui.Button("Annuler", () => Close(false))));
+        _actions = Ui.Row(Save, Ui.Button("Annuler", () => Close(false)));
+        var footer = Ui.Column(Error, _actions);
         var dock = new DockPanel { Margin = new Thickness(24), LastChildFill = true };
         var heading = Ui.Text(title, 22, true); heading.Margin = new Thickness(0, 0, 0, 20);
         DockPanel.SetDock(heading, Dock.Top); dock.Children.Add(heading);
@@ -106,4 +109,32 @@ public sealed class FormWindow : Window
         dock.Children.Add(Ui.Scroll(Fields)); Content = dock;
     }
     public void Add(string label, Control input) => Fields.Children.Add(Ui.Field(label, input));
+
+    public void SetSubmitEnabled(bool enabled)
+    {
+        Save.IsEnabled = enabled;
+        if (SaveAndAdd is not null) SaveAndAdd.IsEnabled = enabled;
+    }
+
+    public Button EnableSaveAndAdd(Func<Task> submit)
+    {
+        if (SaveAndAdd is not null) return SaveAndAdd;
+        Button? button = null;
+        button = Ui.Button("Enregistrer et en ajouter un autre", async () =>
+        {
+            button!.IsEnabled = false;
+            Save.IsEnabled = false;
+            Error.Text = "";
+            try { await submit(); }
+            catch (Exception ex) { Error.Text = ex.Message; }
+            finally
+            {
+                Save.IsEnabled = true;
+                button.IsEnabled = true;
+            }
+        });
+        SaveAndAdd = button;
+        _actions.Children.Insert(1, button);
+        return button;
+    }
 }
