@@ -28,11 +28,5 @@ foreach ($rid in $Runtime) {
 
     if ($Profile -eq 'Release') {
         Assert-SingleFilePublish (Join-Path $projectRoot "artifacts/Release/$rid") "Release $rid"
-
-        if ($rid -in @('win-x64', 'linux-x64')) {
-            & $dotnetCommand publish $project -c Release -r $rid "-p:PublishProfile=ExperimentalTrimmed"
-            if ($LASTEXITCODE -ne 0) { throw "Échec de publication ExperimentalTrimmed pour $rid" }
-            Assert-SingleFilePublish (Join-Path $projectRoot "artifacts/ExperimentalTrimmed/$rid") "ExperimentalTrimmed $rid"
-        }
     }
 }
