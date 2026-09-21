@@ -9,7 +9,7 @@ Validation fonctionnelle de référence mise à jour le 21 septembre 2026, sur W
 - À partir de la V1.0.1, Release est l’unique publication distribuable et active le trimming complet. Le profil séparé `ExperimentalTrimmed` est supprimé. Les workflows restaurent et publient explicitement avec le trimming actif et refusent un binaire Release supérieur à 35 Mio. Le rapport historique du 19 septembre documente côté Windows 0 avertissement de trimming et 21,76 Mio. Voir [le rapport de taille](PUBLICATION_SIZE.md).
 - Nouvel exécutable Release Windows copié seul et réellement démarré : fenêtre native `G@IP — Gestion d’Adresses IP` détectée, fermeture normale, **code de sortie 0**, stderr vide.
 - Nouvel exécutable Release Linux copié seul dans un dossier temporaire et réellement démarré sous Ubuntu 24.04/WSLg : fenêtre X11 détectée par PID, base de test initialisée, fermeture normale, **code de sortie 0**, stderr vide. `DISPLAY=:0`, `WAYLAND_DISPLAY=wayland-0` et `XDG_SESSION_TYPE` absent : sélection X11/XWayland confirmée.
-- Restauration NuGet verrouillée par les `packages*.lock.json` versionnés et SDK fixé à **10.0.401** ; les actions tierces des workflows CI/Release sont épinglées sur des SHA immuables.
+- Restauration NuGet verrouillée par les `packages*.lock.json` versionnés et SDK fixé à **10.0.401** ; les lockfiles RID Windows/Linux incluent les dépendances du trimming actif ; les actions tierces des workflows CI/Release sont épinglées sur des SHA immuables.
 - La CI installe réellement le RPM produit dans un conteneur **AlmaLinux 8** via `dnf install`, puis vérifie le paquet et les lanceurs installés.
 
 ## Couverture
