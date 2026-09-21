@@ -1,6 +1,6 @@
 # Taille et validation des publications — 19 septembre 2026
 
-> **Rapport historique daté.** Les nombres de tests, tailles et constats ci-dessous décrivent l’état mesuré le 19 septembre 2026. Pour l’état courant du dépôt et le nombre actuel de tests, voir [`VALIDATION.md`](VALIDATION.md).
+> **Rapport historique daté.** Les nombres de tests, tailles et constats ci-dessous décrivent l’état mesuré le 19 septembre 2026. Depuis la V1.0.1, la variante trimmed est devenue l’unique profil Release et `ExperimentalTrimmed.pubxml` a été supprimé. Les comparaisons ci-dessous sont conservées pour expliquer ce choix. Pour l’état courant, voir [`VALIDATION.md`](VALIDATION.md).
 
 Mesures locales avec SDK .NET 10.0.401, runtime 10.0.12 et Avalonia 12.1.0. Aucune montée de version ni NativeAOT. Les tailles sont en octets et en Mio (1 Mio = 1 048 576 octets).
 
@@ -42,6 +42,6 @@ Les appels System.Text.Json dépendant de la réflexion ont été remplacés par
 
 La cible reste **Windows 10 1809 x64 build 17763**. Aucun ajout d'API Windows plus récente, aucun changement de framework/runtime/package, manifeste Windows 10 conservé. Les deux exécutables Windows ont un en-tête PE AMD64 (8664), versions OS et sous-système 6.0 inchangées. Ces contrôles ne remplacent pas une exécution sur la version minimale : la machine de test tourne sous Windows 11 build 26200, et aucun poste 17763 n'est disponible ici.
 
-Le trimming reste expérimental. Une validation complète des parcours du binaire trimé, de Windows 10 1809 et d'une vraie session GNOME/KDE Wayland reste nécessaire avant de lui donner le statut de Release par défaut.
+Le trimming documenté ici est devenu le profil Release unique à partir de la V1.0.1. Windows 10 1809 reste à valider sur machine réelle ; Wayland natif demeure optionnel et X11/XWayland est le backend Linux par défaut.
 
 Mesures brutes : `artifacts/size-before-optimization.json`, `artifacts/size-after-optimization.json`. Manifestes : `artifacts/bundle-Release-win-x64.json`, `artifacts/bundle-Release-linux-x64.json`, `artifacts/bundle-ExperimentalTrimmed-win-x64.json`. Empreinte SHA-256 inchangée de Development.pubxml : `2A5BA5C886501ABE3F91B4DAE335A0B45ABE7027A5930C4CB9A7922CF98A72C7`.
