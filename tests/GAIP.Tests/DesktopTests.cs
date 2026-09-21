@@ -536,6 +536,8 @@ public sealed partial class DesktopTests
         form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
         Assert.NotNull(Button(form, "Enregistrer et en ajouter une autre"));
         Assert.Equal(HorizontalAlignment.Right, form.Cancel.HorizontalAlignment);
+        Assert.Equal(1, Grid.GetColumn(form.Cancel));
+        Assert.Equal(VerticalAlignment.Center, form.Cancel.VerticalAlignment);
         var fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
         fields[1].Text = "SRV-01";
         await Until(() => form.Save.IsEnabled);
