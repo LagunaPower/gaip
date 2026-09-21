@@ -122,15 +122,15 @@ public sealed class FormWindow : Window
         Button? button = null;
         button = Ui.Button("Enregistrer et en ajouter un autre", async () =>
         {
+            var wasEnabled = Save.IsEnabled;
             button!.IsEnabled = false;
             Save.IsEnabled = false;
             Error.Text = "";
             try { await submit(); }
-            catch (Exception ex) { Error.Text = ex.Message; }
-            finally
+            catch (Exception ex)
             {
-                Save.IsEnabled = true;
-                button.IsEnabled = true;
+                Error.Text = ex.Message;
+                SetSubmitEnabled(wasEnabled);
             }
         });
         SaveAndAdd = button;
