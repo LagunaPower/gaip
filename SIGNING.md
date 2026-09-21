@@ -6,7 +6,7 @@ Free code signing provided by [SignPath.io](https://signpath.io/), certificate b
 
 ## Scope
 
-The Windows release executables and MSI installer produced by the GitHub Actions release workflow are intended to be Authenticode-signed through SignPath. The standard and trimmed Windows executables are built from this public repository on GitHub-hosted runners before they are submitted for signing. The MSI is built from the signed trimmed executable and is then submitted for its own Authenticode signature.
+The Windows release executables and MSI installer produced by the GitHub Actions release workflow are intended to be Authenticode-signed through SignPath. A single trimmed Windows Release executable is built from this public repository on GitHub-hosted runners before it is submitted for signing. The MSI is built from that signed Release executable and is then submitted for its own Authenticode signature.
 
 Unsigned development builds and local builds are not covered by this policy.
 
