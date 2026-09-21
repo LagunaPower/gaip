@@ -87,7 +87,7 @@ public sealed class FormWindow : Window
     public Button Cancel { get; }
     public Button? SaveAndAdd { get; private set; }
     public Func<Task>? Submit { get; set; }
-    private readonly WrapPanel _primaryActions;
+    private readonly StackPanel _primaryActions;
     public FormWindow(string title, string submit = "Enregistrer", double width = 610)
     {
         Title = $"G@IP — {title}"; Width = width; Height = 640; MinWidth = 400; MinHeight = 320;
@@ -103,24 +103,58 @@ public sealed class FormWindow : Window
         });
         Cancel = Ui.Button("Annuler", () => Close(false));
         Cancel.HorizontalAlignment = HorizontalAlignment.Right;
-        Cancel.Margin = new Thickness(8, 0, 0, 8);
+        Cancel.VerticalAlignment = VerticalAlignment.Center;
 
-        _primaryActions = Ui.Row(Save);
+        _primaryActions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        _primaryActions.Children.Add(Save);
+
         var actions = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            HorizontalAlignment = HorizontalAlignment.Stretch
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Center
         };
         actions.Children.Add(_primaryActions);
         Grid.SetColumn(Cancel, 1);
         actions.Children.Add(Cancel);
 
-        var footer = Ui.Column(Error, actions);
-        var dock = new DockPanel { Margin = new Thickness(24), LastChildFill = true };
-        var heading = Ui.Text(title, 22, true); heading.Margin = new Thickness(0, 0, 0, 20);
-        DockPanel.SetDock(heading, Dock.Top); dock.Children.Add(heading);
-        DockPanel.SetDock(footer, Dock.Bottom); footer.Margin = new Thickness(0, 16, 0, 0); dock.Children.Add(footer);
-        dock.Children.Add(Ui.Scroll(Fields)); Content = dock;
+        Error.MinHeight = 20;
+        Error.Margin = new Thickness(0, 0, 0, 8);
+
+        var footer = new Grid
+        {
+            RowDefinitions = new RowDefinitions("Auto,Auto"),
+            Margin = new Thickness(0, 16, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        footer.Children.Add(Error);
+        Grid.SetRow(actions, 1);
+        footer.Children.Add(actions);
+
+        var root = new Grid
+        {
+            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
+            Margin = new Thickness(24)
+        };
+
+        var heading = Ui.Text(title, 22, true);
+        heading.Margin = new Thickness(0, 0, 0, 20);
+        root.Children.Add(heading);
+
+        var content = Ui.Scroll(Fields);
+        Grid.SetRow(content, 1);
+        root.Children.Add(content);
+
+        Grid.SetRow(footer, 2);
+        root.Children.Add(footer);
+
+        Content = root;
     }
     public void Add(string label, Control input) => Fields.Children.Add(Ui.Field(label, input));
 
