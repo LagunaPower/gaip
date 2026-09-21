@@ -226,7 +226,7 @@ public sealed partial class MainWindow
                 }
                 address.Text = free;
                 address.Focus();
-            });
+            }, "Enregistrer et en ajouter une autre");
         if (row?.IsUsed == true) form.Fields.Children.Add(Ui.Button("Libérer l’adresse", async () =>
         {
             try
