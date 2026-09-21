@@ -48,13 +48,14 @@ public static class Program
 #endif
 #if !GAIP_WINDOWS
         if (ShouldUseNativeWayland(OperatingSystem.IsLinux(), Environment.GetEnvironmentVariable("XDG_SESSION_TYPE"),
-            Environment.GetEnvironmentVariable("GAIP_USE_X11"))) builder = builder.UseWayland();
+            Environment.GetEnvironmentVariable("GAIP_USE_WAYLAND"))) builder = builder.UseWayland();
 #endif
         return builder.WithInterFont().LogToTrace();
     }
 
-    // WSLg exposes WAYLAND_DISPLAY without declaring a native Wayland session.
-    // Keep the default X11 backend in that case to permit X11/XWayland.
-    public static bool ShouldUseNativeWayland(bool isLinux, string? sessionType, string? forceX11) =>
-        isLinux && string.Equals(sessionType, "wayland", StringComparison.OrdinalIgnoreCase) && forceX11 != "1";
+    // X11/XWayland is the stable Linux default. Native Wayland remains opt-in.
+    public static bool ShouldUseNativeWayland(bool isLinux, string? sessionType, string? forceWayland) =>
+        isLinux &&
+        string.Equals(sessionType, "wayland", StringComparison.OrdinalIgnoreCase) &&
+        forceWayland == "1";
 }
