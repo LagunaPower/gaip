@@ -14,9 +14,9 @@ public sealed partial class MainWindow
             try
             {
                 var copy = JsonData.Clone(Db); mutation()(copy); ModelValidator.EnsureValid(copy);
-                form.Error.Text = ""; form.Save.IsEnabled = CanWrite;
+                form.Error.Text = ""; form.SetSubmitEnabled(CanWrite);
             }
-            catch (Exception ex) { form.Error.Text = ex.Message; form.Save.IsEnabled = false; }
+            catch (Exception ex) { form.Error.Text = ex.Message; form.SetSubmitEnabled(false); }
         }
         foreach (var field in fields) field.TextChanged += (_, _) => Validate();
         form.Opened += (_, _) => Validate();
@@ -134,8 +134,8 @@ public sealed partial class MainWindow
         LiveValidation(form, Mutation, textFields);
         foreach (var field in networks) field.Selected.IsCheckedChanged += (_, _) =>
         {
-            try { var copy = JsonData.Clone(Db); Mutation()(copy); ModelValidator.EnsureValid(copy); form.Error.Text = ""; form.Save.IsEnabled = CanWrite; }
-            catch (Exception ex) { form.Error.Text = ex.Message; form.Save.IsEnabled = false; }
+            try { var copy = JsonData.Clone(Db); Mutation()(copy); ModelValidator.EnsureValid(copy); form.Error.Text = ""; form.SetSubmitEnabled(CanWrite); }
+            catch (Exception ex) { form.Error.Text = ex.Message; form.SetSubmitEnabled(false); }
         };
         form.Submit = async () =>
         {
@@ -145,6 +145,22 @@ public sealed partial class MainWindow
                 _selectedSite = null; _selectedVlan = null; Render();
             }
         };
+        if (existing is null)
+            form.EnableSaveAndAdd(async () =>
+            {
+                await Save(Mutation(), "Création multi-sites", "VLAN", vid.Text ?? "");
+                _selectedSite = null; _selectedVlan = null; Render();
+                vid.Text = "";
+                name.Text = "";
+                description.Text = "";
+                foreach (var field in networks)
+                {
+                    field.Cidr.Text = "";
+                    field.Gateway.Text = "";
+                    field.Comment.Text = "";
+                }
+                vid.Focus();
+            });
         if (existing is not null && owner is not null) form.Fields.Children.Add(Ui.Button("Supprimer le VLAN", async () =>
         {
             try
@@ -194,6 +210,23 @@ public sealed partial class MainWindow
         }
         LiveValidation(form, Mutation, address, hostname, description);
         form.Submit = () => Save(Mutation(), row?.IsUsed == true ? "Modification" : "Attribution", "IP", address.Text ?? "");
+        if (row?.IsUsed != true)
+            form.EnableSaveAndAdd(async () =>
+            {
+                await Save(Mutation(), "Attribution", "IP", address.Text ?? "");
+                var free = Queries.NextFree(Subnet(Db));
+                hostname.Text = "";
+                description.Text = "";
+                if (free is null)
+                {
+                    form.Error.Text = "Aucune adresse IP libre dans ce sous-réseau.";
+                    form.SetSubmitEnabled(false);
+                    nextFreeButton!.IsEnabled = false;
+                    return;
+                }
+                address.Text = free;
+                address.Focus();
+            });
         if (row?.IsUsed == true) form.Fields.Children.Add(Ui.Button("Libérer l’adresse", async () =>
         {
             try
