@@ -242,6 +242,19 @@ public sealed partial class MainWindow
             Render();
         };
 
+        if (existing is null)
+            form.EnableSaveAndAdd(async () =>
+            {
+                var normalized = Ipv4Network.Format(Ipv4Network.ParseAddress(address.Text?.Trim() ?? ""));
+                await Save(Mutation(), "Création", "Multicast", normalized);
+                _selectedMulticast = null;
+                Render();
+                address.Text = "";
+                name.Text = "";
+                description.Text = "";
+                address.Focus();
+            });
+
         if (existing is not null)
             form.Fields.Children.Add(Ui.Button("Supprimer le multicast", async () =>
             {
@@ -427,12 +440,12 @@ public sealed partial class MainWindow
                 Mutation()(copy);
                 ModelValidator.EnsureValid(copy);
                 form.Error.Text = "";
-                form.Save.IsEnabled = CanWrite;
+                form.SetSubmitEnabled(CanWrite);
             }
             catch (Exception ex)
             {
                 form.Error.Text = ex.Message;
-                form.Save.IsEnabled = false;
+                form.SetSubmitEnabled(false);
             }
         }
 
@@ -450,6 +463,16 @@ public sealed partial class MainWindow
 
         form.Submit = () => Save(Mutation(), existing is null ? "Création" : "Modification", "Flux multicast",
             $"{group.Address}:{port.Text?.Trim()}");
+
+        if (existing is null)
+            form.EnableSaveAndAdd(async () =>
+            {
+                await Save(Mutation(), "Création", "Flux multicast", $"{group.Address}:{port.Text?.Trim()}");
+                port.Text = "";
+                content.Text = "";
+                description.Text = "";
+                port.Focus();
+            });
 
         if (existing is not null)
             form.Fields.Children.Add(Ui.Button("Supprimer le flux", async () =>
