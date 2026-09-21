@@ -513,4 +513,54 @@ public sealed partial class DesktopTests
         Assert.NotEmpty(Directory.GetFiles(System.IO.Path.Combine(data, "local", "backup")));
         main.Close(); await Until(() => !main.IsVisible);
     }
+    [AvaloniaFact]
+    public async Task CreationFormsOfferSaveAndAddAnother()
+    {
+        using var temp = new TempDirectory();
+        var data = temp.Sub("data");
+        var db = TestData.Example();
+        db.MulticastGroups.Add(new() { Address = "239.10.20.15", Name = "VIDEO" });
+        new GAIP.Storage.FileRepository(temp.Sub("data/local"), "test", "pc").Initialize(db);
+        var main = new MainWindow(data, temp.Sub("config")); main.Show(); await UntilReady(main);
+
+        Click(Button(main, "Ajouter un VLAN"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        var form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Assert.NotNull(Button(form, "Enregistrer et en ajouter un autre"));
+        form.Close(false); await Until(() => !form.IsVisible);
+
+        var vlanButton = main.GetLogicalDescendants().OfType<Button>().First(b => b.Content is Grid g &&
+            g.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == "10.20.120.0/24"));
+        Click(vlanButton); Click(Button(main, "Ajouter une IP"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        var fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
+        fields[1].Text = "SRV-01";
+        await Until(() => form.Save.IsEnabled);
+        var first = fields[0].Text;
+        Click(Button(form, "Enregistrer et en ajouter un autre"));
+        await Until(() => TestData.Subnet(main.Session!.Data).Addresses.Count == 1);
+        Assert.True(form.IsVisible);
+        Assert.NotEqual(first, fields[0].Text);
+        Assert.Equal("", fields[1].Text);
+        form.Close(false); await Until(() => !form.IsVisible);
+
+        Click(Button(main, "Accueil")); Click(Button(main, "Ajouter un multicast"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Assert.NotNull(Button(form, "Enregistrer et en ajouter un autre"));
+        form.Close(false); await Until(() => !form.IsVisible);
+
+        var card = main.GetLogicalDescendants().OfType<Border>().Single(b => b.Name == "MulticastCard");
+        Click(card.GetLogicalDescendants().OfType<Button>().Single(b => b.Name == "MulticastGroupRow"));
+        await Until(() => main.GetLogicalDescendants().OfType<Button>().Any(b => b.Content as string == "Ajouter un flux"));
+        Click(Button(main, "Ajouter un flux"));
+        await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
+        form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Assert.NotNull(Button(form, "Enregistrer et en ajouter un autre"));
+        form.Close(false);
+
+        main.Close(); await Until(() => !main.IsVisible);
+    }
+
 }
