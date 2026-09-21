@@ -84,9 +84,10 @@ public sealed class FormWindow : Window
     public StackPanel Fields { get; } = new() { Spacing = 14 };
     public TextBlock Error { get; } = Ui.Text("");
     public Button Save { get; }
+    public Button Cancel { get; }
     public Button? SaveAndAdd { get; private set; }
     public Func<Task>? Submit { get; set; }
-    private readonly WrapPanel _actions;
+    private readonly WrapPanel _primaryActions;
     public FormWindow(string title, string submit = "Enregistrer", double width = 610)
     {
         Title = $"G@IP — {title}"; Width = width; Height = 640; MinWidth = 400; MinHeight = 320;
@@ -100,8 +101,21 @@ public sealed class FormWindow : Window
             catch (Exception ex) { Error.Text = ex.Message; }
             finally { Save.IsEnabled = true; }
         });
-        _actions = Ui.Row(Save, Ui.Button("Annuler", () => Close(false)));
-        var footer = Ui.Column(Error, _actions);
+        Cancel = Ui.Button("Annuler", () => Close(false));
+        Cancel.HorizontalAlignment = HorizontalAlignment.Right;
+        Cancel.Margin = new Thickness(8, 0, 0, 8);
+
+        _primaryActions = Ui.Row(Save);
+        var actions = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        actions.Children.Add(_primaryActions);
+        Grid.SetColumn(Cancel, 1);
+        actions.Children.Add(Cancel);
+
+        var footer = Ui.Column(Error, actions);
         var dock = new DockPanel { Margin = new Thickness(24), LastChildFill = true };
         var heading = Ui.Text(title, 22, true); heading.Margin = new Thickness(0, 0, 0, 20);
         DockPanel.SetDock(heading, Dock.Top); dock.Children.Add(heading);
@@ -116,11 +130,11 @@ public sealed class FormWindow : Window
         if (SaveAndAdd is not null) SaveAndAdd.IsEnabled = enabled;
     }
 
-    public Button EnableSaveAndAdd(Func<Task> submit)
+    public Button EnableSaveAndAdd(Func<Task> submit, string label = "Enregistrer et en ajouter un autre")
     {
         if (SaveAndAdd is not null) return SaveAndAdd;
         Button? button = null;
-        button = Ui.Button("Enregistrer et en ajouter un autre", async () =>
+        button = Ui.Button(label, async () =>
         {
             var wasEnabled = Save.IsEnabled;
             button!.IsEnabled = false;
@@ -134,7 +148,7 @@ public sealed class FormWindow : Window
             }
         });
         SaveAndAdd = button;
-        _actions.Children.Insert(1, button);
+        _primaryActions.Children.Insert(1, button);
         return button;
     }
 }
