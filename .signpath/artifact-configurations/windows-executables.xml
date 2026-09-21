@@ -4,16 +4,7 @@
     <parameter name="fileVersion" required="true" />
   </parameters>
   <zip-file>
-    <pe-file path="GAIP-standard.exe"
-             product-name="G@IP — Gestion d’Adresses IP"
-             product-version="${version}"
-             file-version="${fileVersion}"
-             company-name="Yannick D."
-             copyright="Copyright © Yannick D. 2026"
-             original-filename="GAIP.exe">
-      <authenticode-sign />
-    </pe-file>
-    <pe-file path="GAIP-trimmed.exe"
+    <pe-file path="GAIP.exe"
              product-name="G@IP — Gestion d’Adresses IP"
              product-version="${version}"
              file-version="${fileVersion}"
