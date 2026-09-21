@@ -534,11 +534,13 @@ public sealed partial class DesktopTests
         Click(vlanButton); Click(Button(main, "Ajouter une IP"));
         await Until(() => main.OwnedWindows.OfType<FormWindow>().Any(w => w.IsVisible));
         form = main.OwnedWindows.OfType<FormWindow>().Last(w => w.IsVisible);
+        Assert.NotNull(Button(form, "Enregistrer et en ajouter une autre"));
+        Assert.Equal(HorizontalAlignment.Right, form.Cancel.HorizontalAlignment);
         var fields = form.Fields.GetLogicalDescendants().OfType<TextBox>().ToArray();
         fields[1].Text = "SRV-01";
         await Until(() => form.Save.IsEnabled);
         var first = fields[0].Text;
-        Click(Button(form, "Enregistrer et en ajouter un autre"));
+        Click(Button(form, "Enregistrer et en ajouter une autre"));
         await Until(() => TestData.Subnet(main.Session!.Data).Addresses.Count == 1);
         await Until(() => fields[0].Text != first);
         Assert.True(form.IsVisible);
