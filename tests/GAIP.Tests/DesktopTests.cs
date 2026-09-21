@@ -540,6 +540,7 @@ public sealed partial class DesktopTests
         var first = fields[0].Text;
         Click(Button(form, "Enregistrer et en ajouter un autre"));
         await Until(() => TestData.Subnet(main.Session!.Data).Addresses.Count == 1);
+        await Until(() => fields[0].Text != first);
         Assert.True(form.IsVisible);
         Assert.NotEqual(first, fields[0].Text);
         Assert.Equal("", fields[1].Text);
