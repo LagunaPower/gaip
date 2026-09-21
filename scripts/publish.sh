@@ -20,12 +20,5 @@ for rid in "$@"; do
 
   if [ "$profile" = Release ]; then
     verify_single_file "$root/artifacts/Release/$rid" "Release $rid"
-
-    case "$rid" in
-      win-x64|linux-x64)
-        dotnet publish "$root/src/GAIP.Desktop/GAIP.Desktop.csproj" -c Release -r "$rid" -p:PublishProfile=ExperimentalTrimmed
-        verify_single_file "$root/artifacts/ExperimentalTrimmed/$rid" "ExperimentalTrimmed $rid"
-        ;;
-    esac
   fi
 done
