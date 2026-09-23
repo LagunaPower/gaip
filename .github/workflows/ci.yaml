@@ -76,7 +76,11 @@ jobs:
           -p:PublishTrimmed=true
           -p:TrimMode=full
           -p:NuGetLockFilePath=packages.win-x64.lock.json
-          --locked-mode
+          --force-evaluate
+
+      - name: Afficher les changements des lockfiles Windows
+        shell: bash
+        run: git diff -- src/*/packages.win-x64.lock.json
 
       - name: Publier G@IP Windows Release
         run: >
@@ -161,7 +165,10 @@ jobs:
           -p:PublishTrimmed=true
           -p:TrimMode=full
           -p:NuGetLockFilePath=packages.linux-x64.lock.json
-          --locked-mode
+          --force-evaluate
+
+      - name: Afficher les changements des lockfiles Linux
+        run: git diff -- src/*/packages.linux-x64.lock.json
 
       - name: Publier G@IP Linux Release
         run: >
